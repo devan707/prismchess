@@ -164,16 +164,16 @@ export const PRESETS: Preset[] = [
         return PRESETS[0].build(rows, cols);
       }
       // White rows 0..1 + one portal at center of own half; mirrored for black.
-      // Row 0 — back rank:  J J A M D Q K H Z A J J
-      //   Juggernaut pairs at each end. Archers just inside them.
-      //   Queen side: Necromancer, then Dragon. King side: King's Hand, then Assassin.
-      // Row 1 — shapeshifter pawns, with a single Wizard at the far edge
-      //   (col 11) so it sits on a light square for White / dark square for Black,
-      //   and its first attack stares straight into a Juggernaut's invulnerable front.
+      // Row 0 — back rank:  J J A M D Q K H Z W J J
+      //   Juggernauts on each flank, Archer on the queen wing.
+      //   Queen side: Necromancer, then Dragon. King side: King's Hand, then Assassin, then Wizard.
+      //   The king-side Wizard sits on a light square for White / dark square for Black,
+      //   so each side's Wizard is correctly bound to its own color.
+      // Row 1 — shapeshifter pawns all the way across.
       // Portal (T) is placed centrally on each side, not on the back rank.
-      const row0: PieceId[] = ["J", "J", "A", "M", "D", "Q", "K", "H", "Z", "A", "J", "J"];
+      const row0: PieceId[] = ["J", "J", "A", "M", "D", "Q", "K", "H", "Z", "W", "J", "J"];
       const row1: PieceId[] = [
-        "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "W",
+        "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "S",
       ];
       const white: Placement[] = [];
       row0.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 0, c }));
