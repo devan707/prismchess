@@ -228,6 +228,11 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                   </Button>
                 </div>
                 <div className="flex gap-2">
+                  <Button onClick={takeback} size="sm" variant="outline" className="flex-1" disabled={state.history.length === 0 || terminal}>
+                    <Undo className="h-4 w-4 mr-1" /> Take back last move
+                  </Button>
+                </div>
+                <div className="flex gap-2">
                   <Button onClick={() => setFlipped(!flipped)} variant="outline" size="sm" className="flex-1">
                     <FlipVertical2 className="h-4 w-4 mr-1" /> Flip board
                   </Button>
