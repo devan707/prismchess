@@ -129,8 +129,25 @@ function buildDiagram(id: PieceId): Diagram | null {
           markers.push({ r: cr + dr, c: cc + dc, type: "b" });
         }
       }
-      return { rows, cols, center, markers };
+      // Worked example: friendly Pawn blocks the direct northern lane, so the
+      // Assassin must curve NW → N → E to slip around and capture the enemy.
+      const scenario: Scenario = {
+        rows: 5,
+        cols: 5,
+        self: { r: 3, c: 2 },
+        friends: [{ r: 2, c: 2, id: "P" }],
+        enemies: [{ r: 1, c: 2, id: "R" }],
+        path: [
+          { r: 2, c: 1 }, // step 1: NW (around the friendly)
+          { r: 1, c: 1 }, // step 2: N
+          { r: 1, c: 2 }, // step 3: E — captures the Rook
+        ],
+        caption:
+          "Friendly Pawn blocks the direct lane. Assassin curves NW → N → E to step around it and capture on the third move.",
+      };
+      return { rows, cols, center, markers, scenario };
     }
+
 
 
     case "W":
