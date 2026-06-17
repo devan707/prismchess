@@ -34,7 +34,7 @@ export function pseudoLegalMovesFrom(board: Board, from: Square): Move[] {
     if (target && target.color === p.color) return;
     if (p.type === "P" && to.r === promotionRank(p.color)) {
       // generate all promotion options
-      for (const promo of ["Q", "R", "N", "B"] as const) {
+      for (const promo of ["R", "N", "B"] as const) {
         moves.push({ from, to, piece: p, captured: target ?? null, promotion: promo });
       }
     } else {
@@ -72,22 +72,6 @@ export function pseudoLegalMovesFrom(board: Board, from: Square): Move[] {
     }
   } else if (p.type === "B") {
     for (const [dr, dc] of BISHOP_DIRS) {
-      let r = from.r + dr;
-      let c = from.c + dc;
-      while (inBounds({ r, c })) {
-        const t = board[r][c];
-        if (!t) {
-          push({ r, c });
-        } else {
-          if (t.color !== p.color) push({ r, c });
-          break;
-        }
-        r += dr;
-        c += dc;
-      }
-    }
-  } else if (p.type === "Q") {
-    for (const [dr, dc] of [...ROOK_DIRS, ...BISHOP_DIRS]) {
       let r = from.r + dr;
       let c = from.c + dc;
       while (inBounds({ r, c })) {

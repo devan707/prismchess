@@ -6,7 +6,7 @@ import type { Color } from "@/game/types";
 interface Props {
   open: boolean;
   color: Color;
-  onChoose: (p: "Q" | "R" | "N" | "B") => void;
+  onChoose: (p: "R" | "N" | "B") => void;
 }
 
 export function PromotionDialog({ open, color, onChoose }: Props) {
@@ -17,7 +17,7 @@ export function PromotionDialog({ open, color, onChoose }: Props) {
           <DialogTitle className="font-display">Promote pawn</DialogTitle>
         </DialogHeader>
         <div className="flex justify-center gap-4 py-2">
-          {(["Q", "R", "N", "B"] as const).map((t) => (
+          {(["R", "N", "B"] as const).map((t) => (
             <Button
               key={t}
               variant="outline"
