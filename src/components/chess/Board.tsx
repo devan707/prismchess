@@ -217,15 +217,33 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 const g = ghostMap.get(`${r},${c}`)!;
                 const gdef = state.registry[g.id];
                 const isEnemy = g.originalOwner !== humanColor;
+                const adjacent = selected
+                  ? Math.max(Math.abs(selected.r - r), Math.abs(selected.c - c)) === 1
+                  : false;
+                // Subtle violet haze for every corpse; adjacent ones (raisable
+                // right now) get a brighter ring so the player knows to tap.
                 return (
-                  <div
-                    className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none"
-                    style={{ opacity: 0.45 }}
-                    aria-hidden
-                    title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " (will rise as Undead)" : ""}`}
-                  >
-                    <PieceGlyph piece={{ id: g.id, color: g.color, undead: isEnemy }} def={gdef} />
-                  </div>
+                  <>
+                    <div
+                      className="absolute inset-1 rounded-md pointer-events-none"
+                      aria-hidden
+                      style={{
+                        background:
+                          "radial-gradient(circle, rgba(168,85,247,0.35) 0%, rgba(168,85,247,0.12) 55%, transparent 75%)",
+                        boxShadow: adjacent
+                          ? "inset 0 0 0 2px rgba(168,85,247,0.85), 0 0 12px rgba(168,85,247,0.55)"
+                          : undefined,
+                      }}
+                    />
+                    <div
+                      className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none"
+                      style={{ opacity: adjacent ? 0.85 : 0.6 }}
+                      aria-hidden
+                      title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " — will rise as Undead" : ""}`}
+                    >
+                      <PieceGlyph piece={{ id: g.id, color: g.color, undead: isEnemy }} def={gdef} />
+                    </div>
+                  </>
                 );
               })()}
             </div>
