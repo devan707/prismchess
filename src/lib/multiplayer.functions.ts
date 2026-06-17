@@ -39,6 +39,9 @@ export const createChallenge = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const budget = TC_BUDGET_MS[data.timeControl];
+    // Open challenges auto-expire after 15 min of inactivity so unjoined invites
+    // don't pile up if the host closes the tab without cancelling.
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     const { data: row, error } = await context.supabase
       .from("matches")
       .insert({
@@ -52,6 +55,7 @@ export const createChallenge = createServerFn({ method: "POST" })
         white_time_ms: budget,
         black_time_ms: budget,
         turn: "w",
+        expires_at: expiresAt,
       })
       .select("id, share_token")
       .single();
