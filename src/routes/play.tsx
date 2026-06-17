@@ -97,6 +97,12 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const [tipsOn, setTipsOn] = useState<boolean>(() => {
     try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
   });
+  const [takebackOn, setTakebackOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("play:takeback") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("play:takeback", takebackOn ? "1" : "0"); } catch {}
+  }, [takebackOn]);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
 
   // History navigation: viewIndex = number of moves to show (0..history.length).
