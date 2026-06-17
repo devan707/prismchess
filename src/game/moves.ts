@@ -521,7 +521,10 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
           if (m.kind === "resurrect") continue;
-          // dragonAttack does capture.
+          // juggernaut shift/charge are repositioning; trampling captures the cell directly.
+          // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
+          // but here `to` IS the destination — so it's a real capture path.
+          if (m.kind === "juggShift" || m.kind === "juggExit") continue;
           return true;
         }
       }
