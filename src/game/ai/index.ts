@@ -1,5 +1,5 @@
 import type { Difficulty, GameState, Move } from "../types";
-import { allLegalMoves, applyMoveToBoard, inCheck } from "../moves";
+import { allLegalMoves, applyMoveToBoard, ctxFromState, inCheck } from "../moves";
 import { evaluate } from "./evaluate";
 
 function pickRandom<T>(arr: T[]): T {
@@ -9,7 +9,7 @@ function pickRandom<T>(arr: T[]): T {
 const PIECE_VAL: Record<string, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 100 };
 
 function easyMove(state: GameState): Move | null {
-  const moves = allLegalMoves(state.board, state.turn);
+  const moves = allLegalMoves(state.board, state.turn, ctxFromState(state));
   if (moves.length === 0) return null;
   const captures = moves.filter((m) => m.captured);
   if (captures.length > 0) {
@@ -65,7 +65,7 @@ function search(
 }
 
 function rootSearch(state: GameState, depth: number, useAB: boolean): Move | null {
-  const moves = allLegalMoves(state.board, state.turn);
+  const moves = allLegalMoves(state.board, state.turn, ctxFromState(state));
   if (moves.length === 0) return null;
   let best = moves[0];
   let bestScore = -Infinity;
