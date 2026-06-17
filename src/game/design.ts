@@ -227,7 +227,21 @@ export function loadDesign(): Design | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as Design;
+    const d = JSON.parse(raw) as Design;
+    // Back-compat: fix stale prism coords from old saves.
+    if (d.rows === 12 && d.cols === 12) {
+      let changed = false;
+      const next = d.placements.map((p) => {
+        if (p.pieceId === "Y" && p.c === 7) { changed = true; return { ...p, c: 5 }; }
+        return p;
+      });
+      if (changed) {
+        const fixed = { ...d, placements: next };
+        try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(fixed)); } catch {}
+        return fixed;
+      }
+    }
+    return d;
   } catch { return null; }
 }
 
