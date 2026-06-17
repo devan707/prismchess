@@ -199,21 +199,33 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
             </Button>
           )}
           {match.status === "active" && amPlayer && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Resign"><Flag className="h-4 w-4" /></Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Resign this game?</AlertDialogTitle>
-                  <AlertDialogDescription>Your opponent will be awarded the win.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep playing</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResign}>Resign</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Offer draw"
+                title={myPendingDrawOffer ? "Draw offer sent — waiting" : "Offer a draw"}
+                disabled={!!myPendingDrawOffer || !!incomingDrawOffer}
+                onClick={sendDrawOffer}
+              >
+                <Handshake className={`h-4 w-4 ${myPendingDrawOffer ? "text-primary" : ""}`} />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Resign"><Flag className="h-4 w-4" /></Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Resign this game?</AlertDialogTitle>
+                    <AlertDialogDescription>Your opponent will be awarded the win.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep playing</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleResign}>Resign</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
         </div>
       </header>
