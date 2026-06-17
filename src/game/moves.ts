@@ -437,11 +437,24 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       { dr:  0, dc: -1 }, // 6: W
       { dr: -1, dc: -1 }, // 7: NW
     ];
+    // (a) Single king-step moves — collected into the same `finals` map so
+    //     the 3-step walker can later upgrade a "land on empty" entry to a
+    //     "capture" entry on the same square (capture variant preferred).
+    const finals = new Map<string, Piece | null>();
+    for (const d of DIRS_8) {
+      const nr = from.r + d.dr;
+      const nc = from.c + d.dc;
+      if (!inB(nr, nc)) continue;
+      const occ = board[nr][nc];
+      if (isBarricade(occ, state.registry)) continue;
+      if (isFixture(occ, state.registry)) continue;
+      if (occ && occ.color === piece.color) continue;
+      finals.set(`${nr},${nc}`, occ ?? null);
+    }
     const turnOK = (prevIdx: number, nextIdx: number) => {
       const d = Math.abs(prevIdx - nextIdx);
       return d <= 1 || d === 7; // 7 ↔ 0 wraparound = also 45°
     };
-    const finals = new Map<string, Piece | null>();
     const visited = new Set<string>();
     visited.add(`${from.r},${from.c}`);
     const dirIdxHistory: number[] = [];
