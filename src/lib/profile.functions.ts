@@ -13,7 +13,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("profiles")
-      .select("id, username, display_name, created_at, onboarded")
+      .select("id, username, display_name, created_at, onboarded, avatar")
       .eq("id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
