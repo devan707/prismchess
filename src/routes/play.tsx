@@ -85,7 +85,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
-    state, status, tryMove, tryDrop, legalFor, legalDropSquares,
+    state, status, tryMove, tryDrop, tryResurrect, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
     undo, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
@@ -95,13 +95,26 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
   });
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
-  const handleSelectionChange = useCallback((sq: Square | null) => setSelectedSquare(sq), []);
+  const [resurrectChoice, setResurrectChoice] = useState<PieceId | null>(null);
+  const handleSelectionChange = useCallback((sq: Square | null) => {
+    setSelectedSquare(sq);
+    setResurrectChoice(null);
+  }, []);
   useEffect(() => {
     try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
   }, [tipsOn]);
 
   const selectedPiece = selectedSquare ? state.board[selectedSquare.r][selectedSquare.c] : null;
   const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+  const isHumanNecromancer = !!(
+    selectedPiece &&
+    selectedPiece.color === humanColor &&
+    state.registry[selectedPiece.id]?.special === "necromancer"
+  );
+  // Friendly fallen = pieces of humanColor that the opponent captured.
+  const humansFallen = state.captured[humanColor === "w" ? "b" : "w"];
+  const resurrectMode = isHumanNecromancer && humansFallen.length > 0;
+
 
 
   const check = status.kind === "playing" ? status.check : false;
