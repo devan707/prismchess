@@ -153,6 +153,16 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
             <Badge variant="secondary"><Sparkles className="h-3 w-3 mr-1" />{playbook.lessons.length} lessons</Badge>
             <Badge variant="secondary">caution ×{playbook.cautionMultiplier.toFixed(2)}</Badge>
             <Badge variant="secondary">aggression {playbook.aggressionBonus >= 0 ? "+" : ""}{Math.round(playbook.aggressionBonus)}</Badge>
+            {Object.entries(playbook.pieceValueMultipliers).map(([id, m]) => (
+              <Badge key={`pv-${id}`} variant="secondary" title="Piece value multiplier the engine applies next game">
+                {state.registry[id]?.name ?? id} ×{m.toFixed(2)}
+              </Badge>
+            ))}
+            {Object.entries(playbook.squareDefenseBonuses).map(([sq, w]) => (
+              <Badge key={`sq-${sq}`} variant={w >= 0 ? "default" : "destructive"} title="Square the engine actively fights to control next game">
+                {sq} {w >= 0 ? "+" : ""}{Math.round(w)}
+              </Badge>
+            ))}
             <Badge variant="secondary">{playbook.gamesReviewed} games reviewed</Badge>
             <Button size="sm" variant="ghost" className="ml-auto h-7 px-2" onClick={onReset} title="Wipe all learned lessons">
               <RotateCcw className="h-3 w-3 mr-1" /> Reset playbook
