@@ -10,12 +10,12 @@ import { Board } from "@/components/chess/Board";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
 import { ReservesPanel } from "@/components/designer/ReservesPanel";
-import { Home, Flag, RefreshCw, Clock, Copy } from "lucide-react";
+import { Home, Flag, RefreshCw, Clock, Copy, Handshake } from "lucide-react";
 import {
   getMatch, resign, claimTimeout,
 } from "@/lib/multiplayer.functions";
 import {
-  formatClock, liveTimeRemaining, useMultiplayerGame, type MatchSnapshot,
+  formatClock, liveTimeRemaining, useMultiplayerGame, type MatchEvent, type MatchSnapshot,
 } from "@/hooks/useMultiplayerGame";
 import { toast } from "sonner";
 import type { Color, Move } from "@/game/types";
@@ -70,6 +70,7 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
     design_name: bootstrap.match.design_name,
   };
   const initialMoves = (bootstrap.moves ?? []).map((m) => m.move as unknown as Move);
+  const initialEvents = (bootstrap.events ?? []) as unknown as MatchEvent[];
 
   return (
     <ActiveGameView
@@ -77,6 +78,7 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
       meId={bootstrap.meId}
       initialMatch={initialMatch}
       initialMoves={initialMoves}
+      initialEvents={initialEvents}
       hostName={bootstrap.match.host?.display_name ?? bootstrap.match.host?.username ?? "Host"}
       guestName={bootstrap.match.guest?.display_name ?? bootstrap.match.guest?.username ?? null}
     />
@@ -88,13 +90,14 @@ interface AGV {
   meId: string;
   initialMatch: MatchSnapshot;
   initialMoves: Move[];
+  initialEvents: MatchEvent[];
   hostName: string;
   guestName: string | null;
 }
 
-function ActiveGameView({ matchId, meId, initialMatch, initialMoves, hostName, guestName }: AGV) {
+function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEvents, hostName, guestName }: AGV) {
   const navigate = useNavigate();
-  const game = useMultiplayerGame({ matchId, meId, initialMatch, initialMoves });
+  const game = useMultiplayerGame({ matchId, meId, initialMatch, initialMoves, initialEvents });
   const resignFn = useServerFn(resign);
   const claimFn = useServerFn(claimTimeout);
 
@@ -105,7 +108,12 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, hostName, g
     return () => clearInterval(t);
   }, []);
 
-  const { match, state, status, terminal, myColor, amPlayer, tryMove, tryDrop, legalFor, legalDropSquares, selectedDrop, setSelectedDrop, pendingPromotion, promotionOptions, confirmPromotion, cancelPromotion } = game;
+  const {
+    match, state, status, terminal, myColor, amPlayer,
+    tryMove, tryDrop, legalFor, legalDropSquares, selectedDrop, setSelectedDrop,
+    pendingPromotion, promotionOptions, confirmPromotion, cancelPromotion,
+    incomingDrawOffer, myPendingDrawOffer, sendDrawOffer, respondToDraw,
+  } = game;
 
   const whiteRemaining = liveTimeRemaining(match, "w", now);
   const blackRemaining = liveTimeRemaining(match, "b", now);
@@ -191,26 +199,55 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, hostName, g
             </Button>
           )}
           {match.status === "active" && amPlayer && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Resign"><Flag className="h-4 w-4" /></Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Resign this game?</AlertDialogTitle>
-                  <AlertDialogDescription>Your opponent will be awarded the win.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep playing</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResign}>Resign</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Offer draw"
+                title={myPendingDrawOffer ? "Draw offer sent — waiting" : "Offer a draw"}
+                disabled={!!myPendingDrawOffer || !!incomingDrawOffer}
+                onClick={sendDrawOffer}
+              >
+                <Handshake className={`h-4 w-4 ${myPendingDrawOffer ? "text-primary" : ""}`} />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Resign"><Flag className="h-4 w-4" /></Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Resign this game?</AlertDialogTitle>
+                    <AlertDialogDescription>Your opponent will be awarded the win.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep playing</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleResign}>Resign</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
         </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center gap-3 p-3">
+        {incomingDrawOffer && amPlayer && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card px-3 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Handshake className="h-4 w-4 text-primary" />
+              <span>Opponent offers a draw</span>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => respondToDraw(false)}>Decline</Button>
+              <Button size="sm" onClick={() => respondToDraw(true)}>Accept</Button>
+            </div>
+          </div>
+        )}
+        {myPendingDrawOffer && amPlayer && !incomingDrawOffer && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card/50 px-3 py-1.5 text-xs text-muted-foreground text-center">
+            Draw offer sent — waiting for opponent
+          </div>
+        )}
         <PlayerStrip name={topName} time={topTime} isTurn={topIsTurn} tc={match.time_control} />
 
         {hasReserves && (

@@ -405,11 +405,61 @@ export const offerDraw = createServerFn({ method: "POST" })
     z.object({ matchId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { data: match, error: mErr } = await context.supabase
+      .from("matches")
+      .select("host_id, guest_id, status")
+      .eq("id", data.matchId)
+      .maybeSingle();
+    if (mErr) throw new Error(mErr.message);
+    if (!match) throw new Error("Match not found.");
+    if (match.status !== "active") throw new Error("Match is not active.");
+    if (context.userId !== match.host_id && context.userId !== match.guest_id) {
+      throw new Error("Not a player in this match.");
+    }
+
+    // Check for an existing pending offer (no response or move since it was made).
+    const { data: lastOffer } = await context.supabase
+      .from("match_events")
+      .select("id, actor_id, payload, created_at")
+      .eq("match_id", data.matchId)
+      .eq("kind", "draw_offer")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastOffer) {
+      const { data: lastResp } = await context.supabase
+        .from("match_events")
+        .select("created_at")
+        .eq("match_id", data.matchId)
+        .in("kind", ["draw_accept", "draw_decline"])
+        .gt("created_at", lastOffer.created_at)
+        .limit(1)
+        .maybeSingle();
+      const offerPly = (lastOffer.payload as { ply?: number } | null)?.ply ?? 0;
+      const { count: movesSince } = await context.supabase
+        .from("match_moves")
+        .select("ply", { count: "exact", head: true })
+        .eq("match_id", data.matchId)
+        .gte("ply", offerPly);
+      const stillPending = !lastResp && (movesSince ?? 0) === 0;
+      if (stillPending) {
+        if (lastOffer.actor_id === context.userId) {
+          throw new Error("You already have a pending draw offer.");
+        }
+        throw new Error("Your opponent already has a pending draw offer — respond to it instead.");
+      }
+    }
+
+    const { count: movesCount } = await context.supabase
+      .from("match_moves")
+      .select("ply", { count: "exact", head: true })
+      .eq("match_id", data.matchId);
+
     const { error } = await context.supabase.from("match_events").insert({
       match_id: data.matchId,
       kind: "draw_offer",
       actor_id: context.userId,
-      payload: {},
+      payload: { ply: movesCount ?? 0 },
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -421,6 +471,40 @@ export const respondDraw = createServerFn({ method: "POST" })
     z.object({ matchId: z.string().uuid(), accept: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { data: match, error: mErr } = await context.supabase
+      .from("matches")
+      .select("host_id, guest_id, status")
+      .eq("id", data.matchId)
+      .maybeSingle();
+    if (mErr) throw new Error(mErr.message);
+    if (!match) throw new Error("Match not found.");
+    if (match.status !== "active") throw new Error("Match is not active.");
+    if (context.userId !== match.host_id && context.userId !== match.guest_id) {
+      throw new Error("Not a player in this match.");
+    }
+
+    const { data: lastOffer } = await context.supabase
+      .from("match_events")
+      .select("id, actor_id, payload, created_at")
+      .eq("match_id", data.matchId)
+      .eq("kind", "draw_offer")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!lastOffer) throw new Error("No draw offer to respond to.");
+    if (lastOffer.actor_id === context.userId) {
+      throw new Error("You can't respond to your own draw offer.");
+    }
+    const { data: laterResp } = await context.supabase
+      .from("match_events")
+      .select("id")
+      .eq("match_id", data.matchId)
+      .in("kind", ["draw_accept", "draw_decline"])
+      .gt("created_at", lastOffer.created_at)
+      .limit(1)
+      .maybeSingle();
+    if (laterResp) throw new Error("That draw offer was already answered.");
+
     await context.supabase.from("match_events").insert({
       match_id: data.matchId,
       kind: data.accept ? "draw_accept" : "draw_decline",
@@ -437,6 +521,7 @@ export const respondDraw = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
 
 // ─── Claim opponent's timeout (lazy enforcement when no one moves) ─────────
 export const claimTimeout = createServerFn({ method: "POST" })

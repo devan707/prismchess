@@ -5,8 +5,16 @@ import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/ga
 import { allLegalMoves, legalMovesFrom } from "@/game/moves";
 import type { Color, Design, GameState, Move, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { submitMove, markFinished } from "@/lib/multiplayer.functions";
+import { submitMove, markFinished, offerDraw, respondDraw } from "@/lib/multiplayer.functions";
 import { toast } from "sonner";
+
+export interface MatchEvent {
+  id: string;
+  kind: string;
+  actor_id: string | null;
+  payload: unknown;
+  created_at: string;
+}
 
 export interface MatchSnapshot {
   id: string;
@@ -30,16 +38,20 @@ export interface UseMultiplayerGameOpts {
   meId: string;
   initialMatch: MatchSnapshot;
   initialMoves: Move[];
+  initialEvents?: MatchEvent[];
 }
 
 export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
   const { matchId, meId } = opts;
   const [match, setMatch] = useState<MatchSnapshot>(opts.initialMatch);
   const [moves, setMoves] = useState<Move[]>(opts.initialMoves);
+  const [events, setEvents] = useState<MatchEvent[]>(opts.initialEvents ?? []);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [selectedDrop, setSelectedDrop] = useState<PieceId | null>(null);
   const submitFn = useServerFn(submitMove);
   const markFinishedFn = useServerFn(markFinished);
+  const offerDrawFn = useServerFn(offerDraw);
+  const respondDrawFn = useServerFn(respondDraw);
   const lastTerminalReportedRef = useRef<string | null>(null);
 
   const myColor: Color =
@@ -103,9 +115,57 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
           if (row.move?.captured) sfx.capture(); else sfx.move();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `match_id=eq.${matchId}` },
+        (payload) => {
+          const row = payload.new as MatchEvent;
+          setEvents((prev) => (prev.some((e) => e.id === row.id) ? prev : [...prev, row]));
+          if (row.actor_id && row.actor_id !== meId) {
+            if (row.kind === "draw_offer") toast.message("Opponent offered a draw");
+            else if (row.kind === "draw_accept") toast.success("Draw accepted");
+            else if (row.kind === "draw_decline") toast.message("Draw declined");
+          }
+        },
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [matchId]);
+  }, [matchId, meId]);
+
+  // A draw offer from either side is "pending" until a response or a subsequent move
+  // (a new move auto-declines per chess convention).
+  const pendingDrawOffer = useMemo<MatchEvent | null>(() => {
+    if (match.status !== "active") return null;
+    let lastOffer: MatchEvent | null = null;
+    for (const e of events) {
+      if (e.kind === "draw_offer") lastOffer = e;
+      else if (e.kind === "draw_accept" || e.kind === "draw_decline") lastOffer = null;
+    }
+    if (!lastOffer) return null;
+    const offerPly = (lastOffer.payload as { ply?: number } | null)?.ply ?? 0;
+    if (moves.length > offerPly) return null;
+    return lastOffer;
+  }, [events, match.status, moves.length]);
+
+  const incomingDrawOffer = pendingDrawOffer && pendingDrawOffer.actor_id !== meId ? pendingDrawOffer : null;
+  const myPendingDrawOffer = pendingDrawOffer && pendingDrawOffer.actor_id === meId ? pendingDrawOffer : null;
+
+  const sendDrawOffer = useCallback(async () => {
+    try {
+      await offerDrawFn({ data: { matchId } });
+      toast.success("Draw offer sent");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send offer");
+    }
+  }, [offerDrawFn, matchId]);
+
+  const respondToDraw = useCallback(async (accept: boolean) => {
+    try {
+      await respondDrawFn({ data: { matchId, accept } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to respond");
+    }
+  }, [respondDrawFn, matchId]);
 
   const playMoveOptimistic = useCallback(
     (m: Move) => {
@@ -209,6 +269,11 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
     legalDropSquares,
     selectedDrop,
     setSelectedDrop,
+    events,
+    incomingDrawOffer,
+    myPendingDrawOffer,
+    sendDrawOffer,
+    respondToDraw,
     pendingPromotion,
     promotionOptions,
     cancelPromotion: () => setPendingPromotion(null),
