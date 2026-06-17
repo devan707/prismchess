@@ -355,12 +355,12 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       moves.push({ from, to: nF, piece, captured: null, kind: "juggShift" });
     }
 
-    // CHARGE forward — single maximal move; tramples enemies, stops before friendly, exits off enemy edge.
+    // CHARGE forward — player picks how many squares to advance. Each reachable
+    // step emits its own move; tramples accumulate, stops before friendly/barricade,
+    // exits off the enemy edge as a juggExit.
     const stepDr = wide ? 0 : dir;
     const stepDc = wide ? dir : 0;
     const trampled: Piece[] = [];
-    let steps = 0;
-    let exited = false;
     let curF = { ...from };
     let curP = { ...partner };
     while (true) {
@@ -368,7 +368,13 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       const nP = { r: curP.r + stepDr, c: curP.c + stepDc };
       const outF = !inB(nF.r, nF.c);
       const outP = !inB(nP.r, nP.c);
-      if (outF && outP) { exited = true; break; }
+      if (outF && outP) {
+        moves.push({
+          from, to: { ...from }, piece, captured: null, kind: "juggExit",
+          juggTrampled: trampled.length ? [...trampled] : undefined,
+        });
+        break;
+      }
       if (outF || outP) break;
       const t1 = board[nF.r][nF.c];
       const t2 = board[nP.r][nP.c];
@@ -378,17 +384,11 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       if (t1 && t1.color !== piece.color) trampled.push(t1);
       if (t2 && t2.color !== piece.color) trampled.push(t2);
       curF = nF; curP = nP;
-      steps++;
-    }
-    if (exited) {
       moves.push({
-        from, to: { ...from }, piece, captured: null, kind: "juggExit",
-        juggTrampled: trampled.length ? trampled : undefined,
-      });
-    } else if (steps > 0) {
-      moves.push({
-        from, to: curF, piece, captured: trampled[0] ?? null, kind: "juggCharge",
-        juggTrampled: trampled.length ? trampled : undefined,
+        from, to: { ...curF }, piece,
+        captured: trampled[0] ?? null,
+        kind: "juggCharge",
+        juggTrampled: trampled.length ? [...trampled] : undefined,
       });
     }
     return moves;
