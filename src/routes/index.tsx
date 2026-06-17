@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
 import { saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
