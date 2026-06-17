@@ -1,4 +1,4 @@
-import type { Difficulty, GameState, Move, Square } from "../types";
+import type { Color, Difficulty, GameState, Move, Square } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 import { evaluate, valueFor } from "./evaluate";
 import { loadPlaybook } from "./playbook";
@@ -42,6 +42,29 @@ function recaptureLoss(state: GameState, m: Move): number {
   return defended ? movingValue * 0.25 : movingValue * 0.9;
 }
 
+/**
+ * How many of the recent plies were quiet moves chaining back from `sq` for
+ * `color`. Used to discourage the AI from shuffling the same piece
+ * (Dragon/Necromancer/Wizard) back and forth across turns.
+ */
+function recentShuffleCount(state: GameState, sq: Square, color: Color, window = 6): number {
+  const h = state.history;
+  if (!h || h.length === 0) return 0;
+  const start = Math.max(0, h.length - window);
+  let count = 0;
+  let chasingSq: Square | null = sq;
+  for (let i = h.length - 1; i >= start && chasingSq; i--) {
+    const m = h[i];
+    if (m.piece.color !== color) continue;
+    if (m.captured) break;
+    if (m.to.r === chasingSq.r && m.to.c === chasingSq.c) {
+      count += 1;
+      chasingSq = m.from;
+    }
+  }
+  return count;
+}
+
 function moveScore(state: GameState, m: Move): number {
   let s = 0;
   const pb = loadPlaybook();
@@ -50,7 +73,6 @@ function moveScore(state: GameState, m: Move): number {
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
   if ((m.kind === "resurrect" || m.kind === "necroRaise") && m.resurrectPieceId) {
     const v = valueFor(m.resurrectPieceId, state.registry[m.resurrectPieceId]);
-    // Stealing an enemy corpse is worth more than recovering our own.
     const ownBonus =
       m.kind === "necroRaise" && m.resurrectOriginalOwner && m.resurrectOriginalOwner !== m.piece.color ? 1.25 : 1.0;
     s += v * 0.7 * ownBonus;
@@ -60,6 +82,14 @@ function moveScore(state: GameState, m: Move): number {
   }
   if (m.kind === "juggExit") s -= 900;
   if (m.kind === "juggCharge") s += 20;
+  if (!m.captured && m.from) {
+    const sp = state.registry[m.piece.id]?.special;
+    const shuffles = recentShuffleCount(state, m.from, m.piece.color);
+    if (shuffles > 0) {
+      const weight = sp === "dragon" || sp === "portal" || sp === "necromancer" || sp === "wizard" ? 110 : 55;
+      s -= shuffles * weight;
+    }
+  }
   s -= recaptureLoss(state, m);
   return s;
 }
@@ -90,13 +120,42 @@ function orderMoves(state: GameState, moves: Move[]): Move[] {
   return moves.slice().sort((a, b) => moveScore(state, b) - moveScore(state, a));
 }
 
+/**
+ * Quiescence search: at search horizon, keep playing only "loud" moves
+ * (captures, promotions, juggernaut trample, shapeshift-captures) so the
+ * static eval is taken on a stable position. This is the single biggest
+ * fix for "the AI didn't see the trade two plies away".
+ */
+function qsearch(state: GameState, alpha: number, beta: number, depthLeft: number): number {
+  const standPat = evaluate(state, state.turn);
+  if (depthLeft <= 0) return standPat;
+  if (standPat >= beta) return beta;
+  if (standPat > alpha) alpha = standPat;
+  const moves = allLegalMoves(state);
+  const loud: Move[] = [];
+  for (const m of moves) {
+    if (m.captured || m.promotion || m.shapeshiftTo || (m.juggTrampled && m.juggTrampled.length)) {
+      loud.push(m);
+    }
+  }
+  if (loud.length === 0) return standPat;
+  loud.sort((a, b) => moveScore(state, b) - moveScore(state, a));
+  for (const m of loud) {
+    const next = applyMoveToState(state, m);
+    const score = -qsearch(next, -beta, -alpha, depthLeft - 1);
+    if (score >= beta) return beta;
+    if (score > alpha) alpha = score;
+  }
+  return alpha;
+}
+
 function search(state: GameState, depth: number, alpha: number, beta: number, useAB: boolean): number {
   const moves = allLegalMoves(state);
   if (moves.length === 0) {
     if (inCheck(state, state.turn)) return -100000 - depth;
     return 0;
   }
-  if (depth === 0) return evaluate(state, state.turn);
+  if (depth === 0) return qsearch(state, alpha, beta, 4);
   let best = -Infinity;
   for (const m of orderMoves(state, moves)) {
     const next = applyMoveToState(state, m);
