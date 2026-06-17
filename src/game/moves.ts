@@ -513,7 +513,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const t = board[r][c];
         if (!t) {
           moves.push({ from, to: { r, c }, piece, captured: null });
-        } else if (t.color === piece.color) {
+        } else if (t.color === piece.color || isFixture(t, state.registry)) {
           break;
         } else {
           moves.push({ from, to: { r, c }, piece, captured: t });
@@ -534,7 +534,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const t = board[r][c];
         if (!t) {
           moves.push({ from, to: { r, c }, piece, captured: null });
-        } else if (t.color === piece.color) {
+        } else if (t.color === piece.color || isFixture(t, state.registry)) {
           break;
         } else {
           moves.push({ from, to: { r, c }, piece, captured: t });
