@@ -72,11 +72,10 @@ function emitFromSpec(
 }
 
 function pawnDir(color: Color): number { return color === "w" ? 1 : -1; }
-function pawnStartRow(board: Board, color: Color): number {
-  return color === "w" ? 1 : board.length - 2;
-}
-function pawnPromoRank(board: Board, color: Color): number {
-  return color === "w" ? board.length - 1 : 0;
+
+function boardIsWide(board: Board): boolean {
+  const { rows, cols } = rowsCols(board);
+  return cols > rows;
 }
 
 function promotionOptionsFor(state: GameState): PieceId[] {
