@@ -37,8 +37,26 @@ function Home() {
 
   useEffect(() => { setSaved(loadSavedGames()); }, []);
 
-  const play = (design: Design) => {
+  const playBuiltin = (g: GameType) => {
+    const design = g.build();
     saveDesign(design);
+    saveCurrentMeta({
+      id: `builtin:${g.id}`,
+      name: g.name,
+      description: g.description,
+      tutorial: tutorialForBuiltin(g),
+    });
+    navigate({ to: "/play" });
+  };
+
+  const playSaved = (g: SavedGame) => {
+    saveDesign(g.design);
+    saveCurrentMeta({
+      id: `saved:${g.id}`,
+      name: g.name,
+      description: g.description,
+      tutorial: tutorialForSaved(g),
+    });
     navigate({ to: "/play" });
   };
 
