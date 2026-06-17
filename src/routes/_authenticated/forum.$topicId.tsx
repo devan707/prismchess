@@ -56,12 +56,41 @@ function TopicPage() {
         </Link>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        <article className="rounded-xl border bg-card p-5">
+        <article className={`rounded-xl border bg-card p-5 ${topic.is_featured ? "border-primary/60 bg-primary/5" : ""}`}>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            {topic.is_pinned && <Pin className="h-3.5 w-3.5 text-muted-foreground" aria-label="Pinned" />}
+            {topic.is_featured && (
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">
+                <Star className="h-3 w-3" /> Featured
+              </span>
+            )}
+          </div>
           <h1 className="font-display text-2xl font-bold">{topic.title}</h1>
           <p className="text-xs text-muted-foreground mt-1">
             by {topic.author?.display_name ?? topic.author?.username ?? "unknown"} · {new Date(topic.created_at).toLocaleString()}
           </p>
           <p className="mt-4 whitespace-pre-wrap text-sm">{topic.body}</p>
+          {topic.shared_design && (
+            <div className="mt-4 rounded-lg border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-sm min-w-0">
+                <Gamepad2 className="h-4 w-4 text-primary shrink-0" />
+                <span className="truncate"><strong>{topic.shared_design_name ?? "Custom game"}</strong></span>
+              </span>
+              <Button
+                size="sm"
+                onClick={() => {
+                  try {
+                    saveDesign(topic.shared_design as unknown as Design);
+                    navigate({ to: "/play" });
+                  } catch {
+                    toast.error("Couldn't load that game.");
+                  }
+                }}
+              >
+                <Play className="h-3.5 w-3.5 mr-1" /> Play
+              </Button>
+            </div>
+          )}
           <div className="mt-4">
             <button
               onClick={() => onLike("topic", topic.id)}
