@@ -163,21 +163,21 @@ export const PRESETS: Preset[] = [
         // Fall back to classic if the board is too small to host the layout.
         return PRESETS[0].build(rows, cols);
       }
-      // White rows 0..2; black mirrored to rows 9..11.
-      // Row 0 — back rank:  R N B W Q K H M W B N R
-      // Row 1 — support:   Z . . . J J D D . . . Z   (all major pieces behind the pawn line)
-      // Row 2 — front line: P S A P P P P P P A S P   (pawns form the vanguard)
-      // (Barricades come in via default reserves.)
-      const row0: PieceId[] = ["R", "N", "B", "W", "Q", "K", "H", "M", "W", "B", "N", "R"];
-      const row1: Array<PieceId | null> = [
-        "Z", null, null, null, "J", "J", "D", "D", null, null, null, "Z",
+      // White rows 0..1; mirrored to rows 10..11 for black.
+      // Row 0 — back rank:  J J H A D Q K M T Z J J
+      //   (juggernaut pairs at each end; one of each custom piece flanking K & Q)
+      // Row 1 — front line: all shapeshifter pawns, with a Wizard on each color
+      //   network (cols 3 & 8 land on opposite-colored squares).
+      // Barricades come in via default reserves.
+      const row0: PieceId[] = ["J", "J", "H", "A", "D", "Q", "K", "M", "T", "Z", "J", "J"];
+      const row1: PieceId[] = [
+        "S", "S", "S", "W", "S", "S", "S", "S", "W", "S", "S", "S",
       ];
-      const row2: PieceId[] = ["P", "S", "A", "P", "P", "P", "P", "P", "P", "A", "S", "P"];
       const white: Placement[] = [];
       row0.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 0, c }));
-      row1.forEach((id, c) => { if (id) white.push({ color: "w", pieceId: id, r: 1, c }); });
-      row2.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 2, c }));
+      row1.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 1, c }));
       return mirror(white, rows, cols);
+
     },
   },
   {
