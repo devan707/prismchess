@@ -80,11 +80,10 @@ function buildDiagram(id: PieceId): Diagram | null {
       markers.push({ r: cr - 1, c: cc + 1, type: "a" });
       return { rows, cols, center, markers };
     case "A":
-      // Move 1 orthogonal; jump 1/2/3 diagonal (non-capturing).
+      // Move 1 orthogonal (no capture); diagonal 1/2/3 = jump OR attack (both).
       for (const [dr, dc] of ORTHO) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
-      // Diagonal range 1 = move only; diagonal range 2 & 3 = both (jump-move OR fire-attack).
       for (const [dr, dc] of DIAG) {
-        markers.push({ r: cr + dr, c: cc + dc, type: "m" });
+        markers.push({ r: cr + dr, c: cc + dc, type: "b" });
         markers.push({ r: cr + dr * 2, c: cc + dc * 2, type: "b" });
         markers.push({ r: cr + dr * 3, c: cc + dc * 3, type: "b" });
       }
@@ -94,19 +93,20 @@ function buildDiagram(id: PieceId): Diagram | null {
       for (const [dr, dc] of DIAG) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
       return { rows, cols, center, markers };
     case "Z":
-      // Assassin: 0–2 diagonal glide, then 1 step in any direction (captures only on final).
-      // Show 2-diagonal reach plus the 1-step ring around each diag landing.
+      // Assassin: 0–2 diagonal glide, then 1 step in any direction. Every
+      // landing square is reachable as either a move OR a capture → "both".
       for (const [dr, dc] of DIAG) {
         for (let k = 1; k <= 2; k++) {
           const r = cr + dr * k;
           const c = cc + dc * k;
-          markers.push({ r, c, type: "m" });
-          for (const [ddr, ddc] of ALL8) markers.push({ r: r + ddr, c: c + ddc, type: "a" });
+          markers.push({ r, c, type: "b" });
+          for (const [ddr, ddc] of ALL8) markers.push({ r: r + ddr, c: c + ddc, type: "b" });
         }
       }
-      // Also the "0 glide + 1 step" landing squares — adjacent ring as capture.
-      for (const [dr, dc] of ALL8) markers.push({ r: cr + dr, c: cc + dc, type: "a" });
+      // 0-glide + 1-step landing squares — adjacent ring is also "both".
+      for (const [dr, dc] of ALL8) markers.push({ r: cr + dr, c: cc + dc, type: "b" });
       return { rows, cols, center, markers };
+
     case "W":
       // Wizard: diagonals like a bishop + orthogonal same-color squares (every other step).
       for (const [dr, dc] of DIAG) ray(markers, cr, cc, dr, dc, 3, "b");
