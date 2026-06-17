@@ -97,6 +97,12 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const [tipsOn, setTipsOn] = useState<boolean>(() => {
     try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
   });
+  const [takebackOn, setTakebackOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("play:takeback") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("play:takeback", takebackOn ? "1" : "0"); } catch {}
+  }, [takebackOn]);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
 
   // History navigation: viewIndex = number of moves to show (0..history.length).
@@ -231,6 +237,14 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                   <Button onClick={takeback} size="sm" variant="outline" className="flex-1" disabled={state.history.length === 0 || terminal}>
                     <Undo className="h-4 w-4 mr-1" /> Take back last move
                   </Button>
+                  <Button
+                    onClick={() => setTakebackOn((v) => !v)}
+                    size="sm"
+                    variant={takebackOn ? "secondary" : "outline"}
+                    aria-pressed={takebackOn}
+                  >
+                    {takebackOn ? "On-board: On" : "On-board: Off"}
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => setFlipped(!flipped)} variant="outline" size="sm" className="flex-1">
@@ -311,6 +325,17 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           disabled={viewingPast || terminal}
           onSelectionChange={handleSelectionChange}
         />
+
+        {takebackOn && state.history.length > 0 && !terminal && !viewingPast && (
+          <Button
+            onClick={takeback}
+            size="sm"
+            variant="secondary"
+            className="h-7 px-2 text-xs"
+          >
+            <Undo className="h-3.5 w-3.5 mr-1" /> Take back
+          </Button>
+        )}
 
         {/* History scrubber */}
         {state.history.length > 0 && (
