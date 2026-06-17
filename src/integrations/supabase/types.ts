@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      dm_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "dm_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dm_threads: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: []
+      }
       forum_likes: {
         Row: {
           created_at: string
@@ -123,6 +203,139 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      friendships: {
+        Row: {
+          created_at: string
+          id: string
+          requested_by: string
+          status: string
+          updated_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requested_by: string
+          status?: string
+          updated_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: []
+      }
+      game_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          game_id: string
+          id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          game_id: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          game_id?: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_comments_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "published_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "game_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_likes: {
+        Row: {
+          created_at: string
+          game_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_likes_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "published_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          match_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          match_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          match_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_chat_messages_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       match_events: {
         Row: {
@@ -299,6 +512,48 @@ export type Database = {
         }
         Relationships: []
       }
+      published_games: {
+        Row: {
+          author_id: string
+          comment_count: number
+          created_at: string
+          description: string
+          design: Json
+          id: string
+          like_count: number
+          name: string
+          slug: string
+          tutorial: Json | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          comment_count?: number
+          created_at?: string
+          description?: string
+          design: Json
+          id?: string
+          like_count?: number
+          name: string
+          slug: string
+          tutorial?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          comment_count?: number
+          created_at?: string
+          description?: string
+          design?: Json
+          id?: string
+          like_count?: number
+          name?: string
+          slug?: string
+          tutorial?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ratings: {
         Row: {
           design_family: string
@@ -323,6 +578,33 @@ export type Database = {
           rating?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+          target_id?: string
+          target_type?: string
         }
         Relationships: []
       }
@@ -430,6 +712,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -437,10 +720,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_blocked_either: { Args: { _a: string; _b: string }; Returns: boolean }
       is_match_participant: {
         Args: { _match_id: string; _user_id: string }
         Returns: boolean
       }
+      share_active_match: { Args: { _a: string; _b: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

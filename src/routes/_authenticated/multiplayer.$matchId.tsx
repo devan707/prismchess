@@ -10,7 +10,9 @@ import { Board } from "@/components/chess/Board";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
 import { ReservesPanel } from "@/components/designer/ReservesPanel";
-import { Home, Flag, RefreshCw, Clock, Copy, Handshake } from "lucide-react";
+import { Home, Flag, RefreshCw, Clock, Copy, Handshake, UserPlus } from "lucide-react";
+import { MatchChatPanel } from "@/components/MatchChatPanel";
+import { sendFriendRequest } from "@/lib/social.functions";
 import {
   getMatch, resign, claimTimeout,
 } from "@/lib/multiplayer.functions";
@@ -100,6 +102,7 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
   const game = useMultiplayerGame({ matchId, meId, initialMatch, initialMoves, initialEvents });
   const resignFn = useServerFn(resign);
   const claimFn = useServerFn(claimTimeout);
+  const addFriendFn = useServerFn(sendFriendRequest);
 
   const [flipped] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -142,6 +145,13 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
   const bottomTime = myColor === "w" ? whiteRemaining : blackRemaining;
   const topIsTurn = match.turn === (myColor === "w" ? "b" : "w") && match.status === "active";
   const bottomIsTurn = match.turn === myColor && match.status === "active";
+
+  const opponentId = match.host_id === meId ? match.guest_id : match.host_id;
+  const handleAddFriend = async () => {
+    if (!opponentId) return;
+    try { await addFriendFn({ data: { targetId: opponentId } }); toast.success("Friend request sent"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't send request"); }
+  };
 
   const check = status.kind === "playing" ? status.check : false;
 
@@ -193,6 +203,11 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
         </Link>
         <div className="text-sm font-display truncate">{banner}</div>
         <div className="flex items-center gap-1">
+          {opponentId && amPlayer && (
+            <Button variant="ghost" size="icon" aria-label="Add friend" title="Add opponent as friend" onClick={handleAddFriend}>
+              <UserPlus className="h-4 w-4" />
+            </Button>
+          )}
           {match.status === "open" && (
             <Button variant="ghost" size="sm" onClick={copyShare}>
               <Copy className="h-3 w-3 mr-1" /> Invite
@@ -300,6 +315,9 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
           color={myColor}
           onChoose={(p) => { confirmPromotion(p); cancelPromotion(); }}
         />
+      )}
+      {amPlayer && (match.status === "active" || match.status === "finished") && (
+        <MatchChatPanel matchId={matchId} meId={meId} />
       )}
     </div>
   );

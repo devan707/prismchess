@@ -11,7 +11,7 @@ import {
   type SavedGame,
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
@@ -87,6 +87,16 @@ function Home() {
           <Link to="/sandbox">
             <Button size="lg" variant="outline">
               <Hammer className="h-4 w-4 mr-2" /> Sandbox mode
+            </Button>
+          </Link>
+          <Link to="/friends">
+            <Button size="lg" variant="outline">
+              <Users className="h-4 w-4 mr-2" /> Friends
+            </Button>
+          </Link>
+          <Link to="/messages">
+            <Button size="lg" variant="outline">
+              <Mail className="h-4 w-4 mr-2" /> Messages
             </Button>
           </Link>
           <Link to="/forum">

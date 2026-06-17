@@ -13,10 +13,11 @@ import { saveSavedGame } from "@/game/library";
 import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
 import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
-import { ArrowLeft, Play, Save, Sparkles, Wand2 } from "lucide-react";
+import { ArrowLeft, Play, Save, Sparkles, Wand2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
+import { publishGame } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/sandbox")({
   head: () => ({
@@ -41,6 +42,8 @@ function Sandbox() {
   const [selectedPiece, setSelectedPiece] = useState<PieceId | "erase" | null>(null);
   const suggestDesc = useServerFn(suggestGameDescription);
   const genTutorial = useServerFn(generateGameTutorial);
+  const publish = useServerFn(publishGame);
+  const [publishing, setPublishing] = useState(false);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
@@ -272,6 +275,36 @@ function Sandbox() {
     }
   };
 
+  const handlePublish = async () => {
+    if (validationError) { toast.error(validationError); return; }
+    const name = saveName.trim() || `Custom ${design.rows}×${design.cols}`;
+    const desc = description.trim();
+    if (!desc) {
+      toast.error("Add a description before sharing — players need to know how the game works.");
+      return;
+    }
+    setPublishing(true);
+    try {
+      toast.info("Publishing — generating tutorial…");
+      const tutorial = await buildTutorialBestEffort(name, desc);
+      const { slug } = await publish({
+        data: {
+          name,
+          description: desc,
+          design: design as unknown as Record<string, unknown>,
+          tutorial: (tutorial ?? null) as unknown as Record<string, unknown> | null,
+        },
+      });
+      const url = `${window.location.origin}/g/${slug}`;
+      try { await navigator.clipboard.writeText(url); } catch {}
+      toast.success("Published! Share link copied to clipboard.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't publish");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="max-w-7xl mx-auto px-4 pt-6 pb-4 flex items-center justify-between flex-wrap gap-3">
@@ -293,8 +326,11 @@ function Sandbox() {
             placeholder="Name this game"
             className="h-9 w-44"
           />
-          <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving}>
+          <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving || publishing}>
             <Save className="h-4 w-4 mr-1" /> {saving ? "Saving…" : "Save"}
+          </Button>
+          <Button onClick={handlePublish} variant="outline" size="sm" disabled={!!validationError || saving || publishing}>
+            <Share2 className="h-4 w-4 mr-1" /> {publishing ? "Publishing…" : "Share"}
           </Button>
           <Button onClick={startGame} size="sm" disabled={!!validationError}>
             <Play className="h-4 w-4 mr-1" /> Play

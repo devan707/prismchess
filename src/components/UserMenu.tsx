@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogIn, User as UserIcon, LogOut, MessagesSquare } from "lucide-react";
+import { LogIn, User as UserIcon, LogOut, MessagesSquare, Users, Mail } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function UserMenu() {
@@ -49,6 +49,12 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
           <UserIcon className="h-4 w-4 mr-2" /> Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/friends" })}>
+          <Users className="h-4 w-4 mr-2" /> Friends
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/messages" })}>
+          <Mail className="h-4 w-4 mr-2" /> Messages
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/forum" })}>
           <MessagesSquare className="h-4 w-4 mr-2" /> Community
