@@ -169,6 +169,14 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"
                   style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 2px var(--color-board-legal)" }} />
               )}
+              {isInspect && !isInspectCapture && (
+                <div className="absolute rounded-full pointer-events-none"
+                  style={{ width: "24%", height: "24%", background: "var(--color-board-inspect)" }} />
+              )}
+              {isInspect && isInspectCapture && (
+                <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
+                  style={{ borderColor: "var(--color-board-inspect)", boxShadow: "inset 0 0 0 4px var(--color-board-inspect)" }} />
+              )}
               {piece && (() => {
                 const isJugg = state.registry[piece.id]?.special === "juggernaut";
                 if (isJugg) {
