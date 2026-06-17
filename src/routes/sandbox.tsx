@@ -63,13 +63,22 @@ function Sandbox() {
 
   /** Write a piece (or empty) at a square, honoring mirror. */
   const writeAt = (sq: Square, pieceId: PieceId | null, color: Color) => {
-    const { rows } = design;
+    const { rows, cols } = design;
+    const wide = cols > rows;
     const filtered = design.placements.filter((p) => !(p.r === sq.r && p.c === sq.c));
-    const mirrored = mirror ? filtered.filter((p) => !(p.r === rows - 1 - sq.r && p.c === sq.c)) : filtered;
+    const mirrored = mirror
+      ? wide
+        ? filtered.filter((p) => !(p.r === sq.r && p.c === cols - 1 - sq.c))
+        : filtered.filter((p) => !(p.r === rows - 1 - sq.r && p.c === sq.c))
+      : filtered;
     const next: Placement[] = mirrored;
     if (pieceId) next.push({ r: sq.r, c: sq.c, pieceId, color });
     if (mirror && pieceId) {
-      next.push({ r: rows - 1 - sq.r, c: sq.c, pieceId, color: color === "w" ? "b" : "w" });
+      if (wide) {
+        next.push({ r: sq.r, c: cols - 1 - sq.c, pieceId, color: color === "w" ? "b" : "w" });
+      } else {
+        next.push({ r: rows - 1 - sq.r, c: sq.c, pieceId, color: color === "w" ? "b" : "w" });
+      }
     }
     setPlacements(next);
   };
