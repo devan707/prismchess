@@ -282,26 +282,28 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           onSelectionChange={handleSelectionChange}
         />
 
-        {tipsOn && selectedDef && selectedPiece && (
-          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card px-3 py-2 text-sm flex items-start gap-2 shadow-sm">
-            <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-            <div className="flex-1 min-w-0">
-              <div className="font-display font-semibold text-foreground">
-                {selectedPiece.color === "w" ? "White" : "Black"} {selectedDef.name}
+        {tipsOn && (
+          <div
+            className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card px-3 py-2 text-sm shadow-sm overflow-y-auto"
+            style={{ height: "9rem" }}
+          >
+            {selectedDef && selectedPiece ? (
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-display font-semibold text-foreground">
+                    {selectedPiece.color === "w" ? "White" : "Black"} {selectedDef.name}
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-snug mt-1">
+                    {selectedDef.description}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                {selectedDef.description}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 -mr-1 -mt-1 shrink-0"
-              aria-label="Hide piece tips"
-              onClick={() => setTipsOn(false)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+                Click any piece to see how it moves.
+              </div>
+            )}
           </div>
         )}
 
