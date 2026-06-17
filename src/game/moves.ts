@@ -884,6 +884,21 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       }
     }
   }
+  // Juggernaut sideways shift: trampled enemies sit on the two destination cells.
+  if (move.juggTrampled && move.juggTrampled.length && move.from && move.kind === "juggShift") {
+    const wide = boardIsWide(state.board);
+    const partner = findJuggPartner(state.board, move.from, move.piece.color, state.registry);
+    const dRow = move.to.r - move.from.r;
+    const dCol = move.to.c - move.from.c;
+    const cells: Square[] = [{ r: move.to.r, c: move.to.c }];
+    if (partner) cells.push({ r: partner.r + dRow, c: partner.c + dCol });
+    void wide;
+    for (const cell of cells) {
+      const pre = state.board[cell.r]?.[cell.c];
+      if (pre && pre.color !== move.piece.color && !pre.raisedOnce) {
+        nextCorpses.push({ square: cell, pieceId: pre.id, originalOwner: pre.color });
+      }
+    }
   // necroRaise: the target square is no longer a corpse square — clear ALL
   // corpses there so it cannot be raised from again.
   if (move.kind === "necroRaise") {
