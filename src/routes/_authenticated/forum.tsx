@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/forum")({
   head: () => ({
     meta: [
-      { title: "Community — Kingdom Chess" },
+      { title: "Community — Prism Chess" },
       { name: "description", content: "Discuss strategy, share variant designs, and report bugs." },
     ],
   }),

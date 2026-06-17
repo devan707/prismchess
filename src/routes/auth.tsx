@@ -14,8 +14,8 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in — Kingdom Chess" },
-      { name: "description", content: "Sign in or create an account to join the Kingdom Chess community." },
+      { title: "Sign in — Prism Chess" },
+      { name: "description", content: "Sign in or create an account to join the Prism Chess community." },
     ],
   }),
   component: AuthPage,
@@ -79,8 +79,8 @@ function AuthPage() {
       </header>
       <main className="max-w-md w-full mx-auto px-4 py-8 flex-1">
         <div className="text-center mb-6">
-          <img src={logoUrl} alt="Kingdom Chess" width={96} height={96} className="mx-auto h-24 w-24" />
-          <h1 className="font-display text-3xl font-bold mt-3">Kingdom Chess</h1>
+          <img src={logoUrl} alt="Prism Chess" width={96} height={96} className="mx-auto h-24 w-24" />
+          <h1 className="font-display text-3xl font-bold mt-3">Prism Chess</h1>
           <p className="text-sm text-muted-foreground mt-1">Join the community to post in the forum.</p>
         </div>
 
