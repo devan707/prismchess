@@ -265,7 +265,7 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
             if (id === "J") {
               const isFront = diag.center[1] && r === diag.center[1].r && c === diag.center[1].c;
               centerNode = isFront ? (
-                <JuggernautGlyph color={color} orientation="vertical" facing="down" />
+                <JuggernautGlyph color={color} orientation="vertical" facing="up" />
               ) : null;
             } else {
               centerNode = (
