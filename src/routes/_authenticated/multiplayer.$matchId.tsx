@@ -203,6 +203,11 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
         </Link>
         <div className="text-sm font-display truncate">{banner}</div>
         <div className="flex items-center gap-1">
+          {opponentId && amPlayer && (
+            <Button variant="ghost" size="icon" aria-label="Add friend" title="Add opponent as friend" onClick={handleAddFriend}>
+              <UserPlus className="h-4 w-4" />
+            </Button>
+          )}
           {match.status === "open" && (
             <Button variant="ghost" size="sm" onClick={copyShare}>
               <Copy className="h-3 w-3 mr-1" /> Invite
