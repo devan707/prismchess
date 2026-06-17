@@ -3,6 +3,7 @@ import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
 const BASE_VALUES: Record<string, number> = {
   K: 20000, Q: 900, R: 500, B: 330, N: 320, P: 100,
   H: 280, A: 350, D: 850, X: 50,
+  T: 350, M: 600, S: 140,
 };
 
 function valueFor(id: PieceId, def: PieceDef | undefined): number {
