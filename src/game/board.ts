@@ -8,7 +8,7 @@ export function emptyBoard(): Board {
 
 export function initialBoard(): Board {
   const b = emptyBoard();
-  const back: Piece["type"][] = ["N", "B", "K", "B", "N"];
+  const back: Piece["type"][] = ["B", "N", "K", "N", "B"];
   for (let c = 0; c < BOARD_SIZE; c++) {
     b[0][c] = { type: back[c], color: "w" };
     b[1][c] = { type: "P", color: "w" };

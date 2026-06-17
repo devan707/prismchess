@@ -62,7 +62,10 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, disabled }
   return (
     <div
       className="grid aspect-square w-full max-w-[min(92vw,560px)] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-border"
-      style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, minmax(0, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(${BOARD_SIZE}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${BOARD_SIZE}, minmax(0, 1fr))`,
+      }}
     >
       {displayRows.map((r) =>
         displayCols.map((c) => {
