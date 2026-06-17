@@ -57,21 +57,31 @@ export interface Variant {
   name: string;
   size: number;
   backRank: PieceType[];
+  description: string;
 }
 
 export const VARIANTS: Record<string, Variant> = {
-  "5x5": {
-    id: "5x5",
-    name: "Mini 5×5",
+  "5x5-classic": {
+    id: "5x5-classic",
+    name: "Classic (5×5)",
     size: 5,
     backRank: ["R", "K", "B", "N", "R"],
+    description: "Rook, king, bishop, knight, rook — the original compact 5×5 setup.",
   },
-  "6x6": {
-    id: "6x6",
-    name: "Mini 6×6",
+  "5x5-knights": {
+    id: "5x5-knights",
+    name: "Battle of the Knights (5×5)",
+    size: 5,
+    backRank: ["N", "N", "K", "N", "N"],
+    description: "Four knights per side guarding the king. No rooks, no castling — pure tactics.",
+  },
+  "6x6-royal": {
+    id: "6x6-royal",
+    name: "Royal (6×6)",
     size: 6,
     backRank: ["R", "B", "K", "Q", "B", "R"],
+    description: "Rook, bishop, king, queen, bishop, rook — a full 6×6 court.",
   },
 };
 
-export const DEFAULT_VARIANT_ID = "5x5";
+export const DEFAULT_VARIANT_ID = "5x5-classic";
