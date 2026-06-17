@@ -245,7 +245,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               )}
               {isLegal && isCapture && (
                 <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
-                  style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 4px var(--color-board-legal)" }} />
+                  style={{ borderColor: "var(--color-board-capture)", boxShadow: "inset 0 0 0 4px var(--color-board-capture)" }} />
               )}
               {isDropTarget && (
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"

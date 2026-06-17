@@ -75,19 +75,28 @@ function dynamicBonus(state: GameState, color: Color): number {
 
       switch (def.special) {
         case "dragon": {
-          // Strike threats within Chebyshev 2.
+          // Strike threats: orthogonal or diagonal at distance 1 or 2
+          // (NOT knight-style). Distance-2 lines are blocked by an intervening piece.
           let threatVal = 0;
           let supportCount = 0;
           for (let dr = -2; dr <= 2; dr++) {
             for (let dc = -2; dc <= 2; dc++) {
               if (dr === 0 && dc === 0) continue;
+              const isOrth = dr === 0 || dc === 0;
+              const isDiag = Math.abs(dr) === Math.abs(dc);
+              if (!isOrth && !isDiag) continue;
               const nr = r + dr, nc = c + dc;
               if (!inB(board, nr, nc)) continue;
+              const dist = Math.max(Math.abs(dr), Math.abs(dc));
+              if (dist === 2) {
+                const midR = r + dr / 2, midC = c + dc / 2;
+                if (board[midR][midC]) continue; // blocked
+              }
               const t = board[nr][nc];
               if (!t) continue;
               if (t.color === opp) {
                 threatVal += valueFor(t.id, state.registry[t.id]) * 0.18;
-              } else if (Math.max(Math.abs(dr), Math.abs(dc)) === 1) {
+              } else if (dist === 1) {
                 supportCount += 1;
               }
             }
