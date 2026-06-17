@@ -106,7 +106,8 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
 
   const moves: Move[] = [];
 
-  if (def.special === "pawn") {
+  if (def.special === "pawn" || def.special === "shapeshifter") {
+    const isShifter = def.special === "shapeshifter";
     const wide = boardIsWide(board);
     const { rows, cols } = rowsCols(board);
     const dir = pawnDir(piece.color);
