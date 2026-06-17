@@ -78,6 +78,36 @@ function boardIsWide(board: Board): boolean {
   return cols > rows;
 }
 
+/** Juggernaut helpers — a J piece is always one half of an adjacent pair. */
+function juggPerpOffsets(wide: boolean): Offset[] {
+  // Pair members sit side-by-side perpendicular to facing.
+  // wide boards face along the column axis → partners differ by row.
+  return wide ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }] : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+}
+function findJuggPartner(
+  board: Board,
+  sq: Square,
+  color: Color,
+  registry: Record<PieceId, PieceDef>,
+): Square | null {
+  const wide = boardIsWide(board);
+  for (const o of juggPerpOffsets(wide)) {
+    const r = sq.r + o.dr;
+    const c = sq.c + o.dc;
+    if (!inBoardBounds(board, { r, c })) continue;
+    const t = board[r][c];
+    if (t && t.color === color && registry[t.id]?.special === "juggernaut") return { r, c };
+  }
+  return null;
+}
+/** True if `attacker` lies in the juggernaut's front arc (strictly ahead along facing). */
+function attackerInJuggFrontArc(jugSq: Square, attacker: Square, juggColor: Color, wide: boolean): boolean {
+  const dir = juggColor === "w" ? 1 : -1;
+  const jf = wide ? jugSq.c : jugSq.r;
+  const af = wide ? attacker.c : attacker.r;
+  return (af - jf) * dir > 0;
+}
+
 function promotionOptionsFor(state: GameState): PieceId[] {
   const out: PieceId[] = [];
   for (const id of Object.keys(state.registry)) {
