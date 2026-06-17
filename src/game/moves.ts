@@ -367,6 +367,10 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
         if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
           // dragon teleport attacks empty squares; doesn't capture there. Filter:
           if (m.kind === "normal" && state.registry[p.id]?.special === "dragon") continue;
+          // portal swaps land on friendly squares (never an enemy king square anyway).
+          if (m.kind === "portalSwap") continue;
+          // resurrect places a friendly piece on an empty square — not an attack.
+          if (m.kind === "resurrect") continue;
           // dragonAttack does capture.
           return true;
         }
