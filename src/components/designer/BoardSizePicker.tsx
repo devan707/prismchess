@@ -12,8 +12,8 @@ const PRESETS: Array<[number, number, string]> = [
   [6, 6, "6×6"],
   [8, 8, "8×8"],
   [10, 10, "10×10"],
-  [3, 12, "3×12"],
-  [5, 8, "5×8"],
+  [12, 3, "12×3"],
+  [8, 5, "8×5"],
 ];
 
 export function BoardSizePicker({ rows, cols, onChange }: Props) {
