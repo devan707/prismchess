@@ -134,19 +134,111 @@ export const analyzeGame = createServerFn({ method: "POST" })
     const conversation = data.priorTurns.map((t) => ({ role: t.role, content: t.content } as const));
     conversation.push({ role: "user" as const, content: promptParts.join("\n\n") });
 
+    const jsonInstruction = `Respond with ONLY a single JSON object (no markdown, no prose around it) matching this shape exactly:
+{
+  "analysis": "markdown string addressed to the developer",
+  "updatedPlaybook": {
+    "lessons": ["short imperative lesson", ...],   // up to 24 strings, each <=280 chars
+    "pieceValueMultipliers": { "<pieceId>": <number 0.3..2.5>, ... },
+    "cautionMultiplier": <number 0.3..2.5>,
+    "aggressionBonus": <number -150..150>
+  }
+}`;
+    const lastUser = conversation[conversation.length - 1];
+    lastUser.content = `${lastUser.content}\n\n${jsonInstruction}`;
+
     try {
-      const { experimental_output: output } = await generateText({
+      const { text } = await generateText({
         model,
         system: SYSTEM_PROMPT,
         messages: conversation,
-        experimental_output: Output.object({ schema: OutputSchema }),
+        maxOutputTokens: 4096,
       });
-      return { ok: true as const, ...output };
+      const parsed = extractAndValidate(text, data.currentPlaybook);
+      if (!parsed.ok) {
+        return { ok: false as const, code: 500, error: parsed.error };
+      }
+      return { ok: true as const, analysis: parsed.analysis, updatedPlaybook: parsed.updatedPlaybook };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Surface gateway billing/rate errors clearly so the UI can react.
       if (/402/.test(msg)) return { ok: false as const, code: 402, error: "AI credits exhausted. Add credits in Workspace → Usage." };
       if (/429/.test(msg)) return { ok: false as const, code: 429, error: "AI rate limit hit. Try again in a moment." };
       return { ok: false as const, code: 500, error: msg };
     }
   });
+
+/** Strip code fences and locate the first balanced JSON object in the text. */
+function extractJsonString(text: string): string | null {
+  let s = text.trim();
+  // Remove ```json ... ``` or ``` ... ``` fences.
+  s = s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  const start = s.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (ch === "\\") { esc = true; continue; }
+      if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return s.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+function extractAndValidate(
+  text: string,
+  current: z.infer<typeof PlaybookSchema>,
+):
+  | { ok: true; analysis: string; updatedPlaybook: z.infer<typeof OutputSchema>["updatedPlaybook"] }
+  | { ok: false; error: string } {
+  const jsonStr = extractJsonString(text);
+  if (!jsonStr) {
+    return { ok: false, error: "AI response was not valid JSON. Try again." };
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(jsonStr);
+  } catch (e) {
+    return { ok: false, error: `AI returned malformed JSON: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  // Lenient normalization — keep current values if AI omitted/garbled a field.
+  const obj = (raw ?? {}) as Record<string, unknown>;
+  const analysis = typeof obj.analysis === "string" && obj.analysis.trim().length > 0
+    ? obj.analysis
+    : "(The AI didn't return any commentary this round.)";
+  const upRaw = (obj.updatedPlaybook ?? {}) as Record<string, unknown>;
+  const clampNum = (v: unknown, min: number, max: number, fallback: number) =>
+    typeof v === "number" && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback;
+  const lessons = Array.isArray(upRaw.lessons)
+    ? (upRaw.lessons as unknown[])
+        .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+        .map((s) => s.slice(0, 280))
+        .slice(0, 24)
+    : current.lessons;
+  const multsRaw = (upRaw.pieceValueMultipliers ?? {}) as Record<string, unknown>;
+  const pieceValueMultipliers: Record<string, number> = {};
+  for (const [k, v] of Object.entries(multsRaw)) {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      pieceValueMultipliers[k] = Math.max(0.3, Math.min(2.5, v));
+    }
+  }
+  const updatedPlaybook = {
+    lessons,
+    pieceValueMultipliers: Object.keys(pieceValueMultipliers).length
+      ? pieceValueMultipliers
+      : current.pieceValueMultipliers,
+    cautionMultiplier: clampNum(upRaw.cautionMultiplier, 0.3, 2.5, current.cautionMultiplier),
+    aggressionBonus: clampNum(upRaw.aggressionBonus, -150, 150, current.aggressionBonus),
+  };
+  return { ok: true, analysis, updatedPlaybook };
+}
