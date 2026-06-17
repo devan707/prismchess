@@ -412,17 +412,18 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "assassin") {
-    // Assassin: ALWAYS takes exactly 3 king-steps (orthogonal or diagonal) per
-    // turn. Rules:
-    //   • All 4 path squares (start + 3 landings) must be distinct.
-    //   • The first 2 landing squares must be empty (no jumping, no early
-    //     captures, no friendlies/barricades).
-    //   • The 3rd/final square may be empty or hold an enemy — capture
-    //     happens only on the final step.
-    //   • The 3 step directions cannot ALL be the same (no straight line of 3).
-    //   • Between consecutive steps the turn must be ≤ 45° — i.e. each new
-    //     step direction is the same as, or adjacent to, the previous one on
-    //     the 8-direction compass.
+    // Assassin: each turn picks ONE of two move types:
+    //   (a) A single king-step (1 square orthogonal or diagonal) that may
+    //       capture an enemy or land on an empty square — basic survival move.
+    //   (b) A full 3-step infiltration:
+    //         • All 4 path squares (start + 3 landings) must be distinct.
+    //         • The first 2 landing squares must be empty (no jumping).
+    //         • The 3rd/final square may be empty or hold an enemy — capture
+    //           happens only on the final step.
+    //         • The 3 step directions cannot ALL be the same (no straight line of 3).
+    //         • Between consecutive steps the turn must be ≤ 45° — each new
+    //           step direction is the same as, or adjacent to, the previous one
+    //           on the 8-direction compass.
     const { rows, cols } = rowsCols(board);
     const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
     // Compass order (clockwise from N) — adjacent indices are 45° apart.
