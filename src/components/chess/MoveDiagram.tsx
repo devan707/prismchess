@@ -445,3 +445,149 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
     </div>
   );
 }
+
+/** Compact worked-example grid: friendlies, enemies, and a numbered path. */
+function ScenarioGrid({
+  scenario,
+  color,
+  cellSize,
+}: {
+  scenario: Scenario;
+  color: "w" | "b";
+  cellSize: number;
+}) {
+  const enemyColor: "w" | "b" = color === "w" ? "b" : "w";
+  const size = Math.max(20, Math.floor(cellSize * 0.85));
+  const stepIndex = new Map<string, number>();
+  scenario.path.forEach((p, i) => stepIndex.set(`${p.r},${p.c}`, i + 1));
+  const finalKey = scenario.path.length
+    ? `${scenario.path[scenario.path.length - 1].r},${scenario.path[scenario.path.length - 1].c}`
+    : "";
+  const friendAt = (r: number, c: number) =>
+    scenario.friends.find((f) => f.r === r && f.c === c);
+  const enemyAt = (r: number, c: number) =>
+    scenario.enemies.find((e) => e.r === r && e.c === c);
+
+  return (
+    <div className="flex flex-col items-center gap-1 mt-2 border-t border-border/40 pt-2 w-full">
+      <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+        Example
+      </span>
+      <div
+        className="rounded-md border bg-muted/30 p-1"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${scenario.cols}, ${size}px)`,
+          gridTemplateRows: `repeat(${scenario.rows}, ${size}px)`,
+          gap: 1,
+        }}
+        aria-hidden
+      >
+        {Array.from({ length: scenario.rows * scenario.cols }, (_, idx) => {
+          const r = Math.floor(idx / scenario.cols);
+          const c = idx % scenario.cols;
+          const checker = (r + c) % 2 === 0 ? "bg-background/60" : "bg-muted/60";
+          const isSelf = scenario.self.r === r && scenario.self.c === c;
+          const friend = friendAt(r, c);
+          const enemy = enemyAt(r, c);
+          const step = stepIndex.get(`${r},${c}`);
+          const isFinal = `${r},${c}` === finalKey;
+
+          return (
+            <div
+              key={`s-${r}-${c}`}
+              className={`relative ${checker} rounded-[2px] flex items-center justify-center`}
+              style={{ overflow: "visible" }}
+            >
+              {step !== undefined && !isFinal && (
+                <span
+                  className="absolute inset-1 rounded-full"
+                  style={{
+                    border: `1.5px dashed ${MOVE_FILL}`,
+                    background: "transparent",
+                  }}
+                />
+              )}
+              {step !== undefined && isFinal && (
+                <span
+                  className="absolute inset-1 rounded-sm animate-pulse"
+                  style={{
+                    border: `2px solid ${CAPTURE_BORDER}`,
+                    background: CAPTURE_FILL,
+                  }}
+                />
+              )}
+
+              {isSelf && (
+                <PieceById
+                  id="Z"
+                  color={color}
+                  def={PIECE_LIBRARY["Z"]}
+                  className="h-[78%] w-[78%]"
+                />
+              )}
+              {friend && (
+                <PieceById
+                  id={friend.id}
+                  color={color}
+                  def={PIECE_LIBRARY[friend.id]}
+                  className="h-[78%] w-[78%]"
+                />
+              )}
+              {enemy && (
+                <PieceById
+                  id={enemy.id}
+                  color={enemyColor}
+                  def={PIECE_LIBRARY[enemy.id]}
+                  className="h-[78%] w-[78%]"
+                />
+              )}
+
+              {step !== undefined && (
+                <span
+                  className="absolute -top-1 -left-1 rounded-full text-[8px] font-bold flex items-center justify-center"
+                  style={{
+                    width: 12,
+                    height: 12,
+                    background: isFinal ? CAPTURE_BORDER : MOVE_FILL,
+                    color: "white",
+                    boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  {step}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-3 text-[9px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <span
+            className="inline-block rounded-full"
+            style={{ width: 8, height: 8, border: `1.5px dashed ${MOVE_FILL}` }}
+          />
+          Path step
+        </span>
+        <span className="flex items-center gap-1">
+          <span
+            className="inline-block rounded-sm"
+            style={{
+              width: 9,
+              height: 9,
+              border: `2px solid ${CAPTURE_BORDER}`,
+              background: CAPTURE_FILL,
+            }}
+          />
+          Capture
+        </span>
+      </div>
+
+      <p className="text-[10px] text-muted-foreground italic text-center max-w-[240px] leading-snug">
+        {scenario.caption}
+      </p>
+    </div>
+  );
+}
+
