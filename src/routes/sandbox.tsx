@@ -6,12 +6,17 @@ import { PiecePalette } from "@/components/designer/PiecePalette";
 import { DesignerBoard } from "@/components/designer/DesignerBoard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveDesign, validateDesign } from "@/game/design";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveCurrentMeta, saveDesign, validateDesign } from "@/game/design";
 import { saveSavedGame } from "@/game/library";
+import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
 import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
-import { ArrowLeft, Play, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Save, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
 
 export const Route = createFileRoute("/sandbox")({
   head: () => ({
