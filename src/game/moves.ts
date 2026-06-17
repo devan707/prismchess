@@ -1,4 +1,4 @@
-import type { Board, Color, GameState, Move, MovementSpec, Piece, PieceDef, PieceId, Square } from "./types";
+import type { Board, Color, GameState, Move, MovementSpec, Offset, Piece, PieceDef, PieceId, Square } from "./types";
 import { cloneBoard, findRoyals, inBoardBounds } from "./board";
 
 function rowsCols(board: Board): { rows: number; cols: number } {
@@ -76,6 +76,36 @@ function pawnDir(color: Color): number { return color === "w" ? 1 : -1; }
 function boardIsWide(board: Board): boolean {
   const { rows, cols } = rowsCols(board);
   return cols > rows;
+}
+
+/** Juggernaut helpers — a J piece is always one half of an adjacent pair. */
+function juggPerpOffsets(wide: boolean): Offset[] {
+  // Pair members sit side-by-side perpendicular to facing.
+  // wide boards face along the column axis → partners differ by row.
+  return wide ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }] : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+}
+function findJuggPartner(
+  board: Board,
+  sq: Square,
+  color: Color,
+  registry: Record<PieceId, PieceDef>,
+): Square | null {
+  const wide = boardIsWide(board);
+  for (const o of juggPerpOffsets(wide)) {
+    const r = sq.r + o.dr;
+    const c = sq.c + o.dc;
+    if (!inBoardBounds(board, { r, c })) continue;
+    const t = board[r][c];
+    if (t && t.color === color && registry[t.id]?.special === "juggernaut") return { r, c };
+  }
+  return null;
+}
+/** True if `attacker` lies in the juggernaut's front arc (strictly ahead along facing). */
+function attackerInJuggFrontArc(jugSq: Square, attacker: Square, juggColor: Color, wide: boolean): boolean {
+  const dir = juggColor === "w" ? 1 : -1;
+  const jf = wide ? jugSq.c : jugSq.r;
+  const af = wide ? attacker.c : attacker.r;
+  return (af - jf) * dir > 0;
 }
 
 function promotionOptionsFor(state: GameState): PieceId[] {
@@ -267,6 +297,72 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     return moves;
   }
 
+  if (def.special === "juggernaut") {
+    const partner = findJuggPartner(board, from, piece.color, state.registry);
+    if (!partner) return moves; // orphan J can't act
+    const { rows, cols } = rowsCols(board);
+    const wide = boardIsWide(board);
+    const dir = piece.color === "w" ? 1 : -1;
+    const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
+    const isSelfCell = (r: number, c: number) =>
+      (r === from.r && c === from.c) || (r === partner.r && c === partner.c);
+
+    // SHIFT ±1 along the perpendicular axis (sideways).
+    for (const sign of [1, -1]) {
+      const dRow = wide ? sign : 0;
+      const dCol = wide ? 0 : sign;
+      const nF = { r: from.r + dRow, c: from.c + dCol };
+      const nP = { r: partner.r + dRow, c: partner.c + dCol };
+      if (!inB(nF.r, nF.c) || !inB(nP.r, nP.c)) continue;
+      const okCell = (r: number, c: number) => {
+        if (isSelfCell(r, c)) return true;
+        return board[r][c] === null;
+      };
+      if (!okCell(nF.r, nF.c) || !okCell(nP.r, nP.c)) continue;
+      moves.push({ from, to: nF, piece, captured: null, kind: "juggShift" });
+    }
+
+    // CHARGE forward — single maximal move; tramples enemies, stops before friendly, exits off enemy edge.
+    const stepDr = wide ? 0 : dir;
+    const stepDc = wide ? dir : 0;
+    const trampled: Piece[] = [];
+    let steps = 0;
+    let exited = false;
+    let curF = { ...from };
+    let curP = { ...partner };
+    while (true) {
+      const nF = { r: curF.r + stepDr, c: curF.c + stepDc };
+      const nP = { r: curP.r + stepDr, c: curP.c + stepDc };
+      const outF = !inB(nF.r, nF.c);
+      const outP = !inB(nP.r, nP.c);
+      if (outF && outP) { exited = true; break; }
+      if (outF || outP) break;
+      const t1 = board[nF.r][nF.c];
+      const t2 = board[nP.r][nP.c];
+      const blocks = (t: Piece | null) =>
+        !!t && (t.color === piece.color || isBarricade(t, state.registry));
+      if (blocks(t1) || blocks(t2)) break;
+      if (t1 && t1.color !== piece.color) trampled.push(t1);
+      if (t2 && t2.color !== piece.color) trampled.push(t2);
+      curF = nF; curP = nP;
+      steps++;
+    }
+    if (exited) {
+      moves.push({
+        from, to: { ...from }, piece, captured: null, kind: "juggExit",
+        juggTrampled: trampled.length ? trampled : undefined,
+      });
+    } else if (steps > 0) {
+      moves.push({
+        from, to: curF, piece, captured: trampled[0] ?? null, kind: "juggCharge",
+        juggTrampled: trampled.length ? trampled : undefined,
+      });
+    }
+    return moves;
+  }
+
+
+
 
   // Generic data-driven piece
   if (def.movement || def.capture) {
@@ -338,6 +434,61 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
     return b;
   }
+  if (move.kind === "juggShift" || move.kind === "juggCharge" || move.kind === "juggExit") {
+    if (!move.from) return b;
+    const color = move.piece.color;
+    const wide = boardIsWide(b);
+    const { rows, cols } = rowsCols(b);
+    // Find partner adjacent on perp axis
+    let partner: Square | null = null;
+    for (const o of juggPerpOffsets(wide)) {
+      const r = move.from.r + o.dr;
+      const c = move.from.c + o.dc;
+      if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+      const t = b[r][c];
+      if (t && t.color === color && t.id === "J") { partner = { r, c }; break; }
+    }
+    if (!partner) return b;
+    // Clear current pair cells.
+    b[move.from.r][move.from.c] = null;
+    b[partner.r][partner.c] = null;
+    if (move.kind === "juggExit") return b;
+    const dr = move.to.r - move.from.r;
+    const dc = move.to.c - move.from.c;
+    // For charges, clear any trampled cells along the path on the partner lane too.
+    if (move.kind === "juggCharge") {
+      const stepCount = Math.abs(dr) + Math.abs(dc);
+      const sDr = dr === 0 ? 0 : Math.sign(dr);
+      const sDc = dc === 0 ? 0 : Math.sign(dc);
+      const trampledJuggs: { sq: Square; color: Color }[] = [];
+      for (let s = 1; s <= stepCount; s++) {
+        const fr = move.from.r + s * sDr;
+        const fc = move.from.c + s * sDc;
+        const pr = partner.r + s * sDr;
+        const pc = partner.c + s * sDc;
+        for (const cell of [{ r: fr, c: fc }, { r: pr, c: pc }]) {
+          const t = b[cell.r][cell.c];
+          if (t && t.id === "J" && t.color !== color) trampledJuggs.push({ sq: cell, color: t.color });
+        }
+        b[fr][fc] = null;
+        b[pr][pc] = null;
+      }
+      // Destroy partners of any trampled juggernauts (they lie on perpendicular cells).
+      const wideB = boardIsWide(b);
+      for (const tj of trampledJuggs) {
+        for (const o of juggPerpOffsets(wideB)) {
+          const r = tj.sq.r + o.dr;
+          const c = tj.sq.c + o.dc;
+          if (r < 0 || r >= b.length || c < 0 || c >= b[0].length) continue;
+          const t = b[r][c];
+          if (t && t.id === "J" && t.color === tj.color) { b[r][c] = null; break; }
+        }
+      }
+    }
+    b[move.to.r][move.to.c] = { id: "J", color };
+    b[partner.r + dr][partner.c + dc] = { id: "J", color };
+    return b;
+  }
   if (move.from) {
     b[move.from.r][move.from.c] = null;
   }
@@ -350,6 +501,21 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   b[move.to.r][move.to.c] = piece;
   if (move.kind === "ep" && move.epCapture) {
     b[move.epCapture.r][move.epCapture.c] = null;
+  }
+  // Side/rear capture of a juggernaut destroys its partner too.
+  if (move.captured && move.captured.id === "J") {
+    const wide = boardIsWide(b);
+    const { rows, cols } = rowsCols(b);
+    for (const o of juggPerpOffsets(wide)) {
+      const r = move.to.r + o.dr;
+      const c = move.to.c + o.dc;
+      if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+      const t = b[r][c];
+      if (t && t.id === "J" && t.color === move.captured.color) {
+        b[r][c] = null;
+        break;
+      }
+    }
   }
   return b;
 }
@@ -371,7 +537,10 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
           if (m.kind === "resurrect") continue;
-          // dragonAttack does capture.
+          // juggernaut shift/charge are repositioning; trampling captures the cell directly.
+          // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
+          // but here `to` IS the destination — so it's a real capture path.
+          if (m.kind === "juggShift" || m.kind === "juggExit") continue;
           return true;
         }
       }
@@ -398,11 +567,22 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
   let captured = state.captured;
-  if (move.captured || move.kind === "resurrect") {
+  if (move.captured || move.kind === "resurrect" || move.juggTrampled) {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
-    if (move.captured) {
-      (state.turn === "w" ? w : b).push(move.captured as Piece);
+    const targetPool = state.turn === "w" ? w : b;
+    // For juggCharge, `captured` is also the first entry in juggTrampled — don't double-count.
+    if (move.captured && move.kind !== "juggCharge") {
+      targetPool.push(move.captured as Piece);
+      if (move.captured.id === "J") {
+        targetPool.push({ id: "J", color: move.captured.color });
+      }
+    }
+    if (move.juggTrampled) {
+      for (const p of move.juggTrampled) {
+        targetPool.push(p);
+        if (p.id === "J") targetPool.push({ id: "J", color: p.color });
+      }
     }
     if (move.kind === "resurrect" && move.resurrectPieceId) {
       const friendly = state.turn === "w" ? b : w;
@@ -428,7 +608,26 @@ function applyMoveToState(state: GameState, move: Move): GameState {
 export function legalMovesFrom(state: GameState, from: Square): Move[] {
   const p = state.board[from.r][from.c];
   if (!p || p.color !== state.turn) return [];
+  const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
+    // Front-arc immunity: a juggernaut cannot be captured from the front.
+    if (m.captured && m.captured.id === "J" && m.from) {
+      if (attackerInJuggFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+    }
+    // Juggernaut charge trampling also obeys front-arc immunity for any enemy J in path.
+    if (m.juggTrampled && m.juggTrampled.some((p) => p.id === "J") && m.from) {
+      // The juggernaut chargers come head-on (their forward = enemy J's front) — so
+      // a charge tramples an enemy J only if approaching from the rear arc. Reject head-on.
+      const enemyColor = m.juggTrampled.find((p) => p.id === "J")!.color;
+      const dir = m.piece.color === "w" ? 1 : -1;
+      if (m.piece.color !== enemyColor && dir === (enemyColor === "w" ? 1 : -1)) {
+        // same direction means they face same way — possible (e.g. both white). Different
+        // colors charging head-on would always be front-arc for the defender. Block it.
+        return false;
+      }
+      // Different-color juggernauts always face opposite — head-on charge would be front-arc, illegal.
+      if (m.piece.color !== enemyColor) return false;
+    }
     const next = applyMoveToState(state, m);
     return !inCheck({ ...next, turn: state.turn }, state.turn);
   });

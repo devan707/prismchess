@@ -47,7 +47,7 @@ export interface PieceDef {
   /** Optional separate capture pattern. */
   capture?: MovementSpec;
   /** Special hand-coded behavior. */
-  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter";
+  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter" | "juggernaut";
   /** Royal: loss of all royal pieces of a color = game over. */
   royal?: boolean;
   /** Cannot move; blocks travel; cannot be captured. */
@@ -62,7 +62,10 @@ export interface PieceDef {
   builtinCustom?: boolean;
 }
 
-export type MoveKind = "normal" | "double" | "ep" | "drop" | "dragonAttack" | "portalSwap" | "resurrect";
+export type MoveKind =
+  | "normal" | "double" | "ep" | "drop"
+  | "dragonAttack" | "portalSwap" | "resurrect"
+  | "juggShift" | "juggCharge" | "juggExit";
 
 export interface Move {
   /** Null only for drops. */
@@ -81,6 +84,8 @@ export interface Move {
   resurrectPieceId?: PieceId;
   /** Shapeshifter capture: piece id to transform into (= captured.id). */
   shapeshiftTo?: PieceId;
+  /** Juggernaut: enemy pieces trampled during a charge. */
+  juggTrampled?: Piece[];
 }
 
 export type Reserves = Record<PieceId, number>;

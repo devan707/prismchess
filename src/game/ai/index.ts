@@ -12,6 +12,11 @@ function moveScore(state: GameState, m: Move): number {
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) - 100;
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
   if (m.kind === "resurrect" && m.resurrectPieceId) s += valueFor(m.resurrectPieceId, state.registry[m.resurrectPieceId]) * 0.6;
+  if (m.juggTrampled) {
+    for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]);
+  }
+  if (m.kind === "juggExit") s -= 900; // losing both J squares is costly; only do it for tactical reasons
+  if (m.kind === "juggCharge") s += 20; // tiny bias toward forward progress
   return s;
 }
 

@@ -6,7 +6,7 @@ import { PiecePalette } from "@/components/designer/PiecePalette";
 import { DesignerBoard } from "@/components/designer/DesignerBoard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildDefaultDesign, PRESETS, saveDesign, validateDesign } from "@/game/design";
+import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveDesign, validateDesign } from "@/game/design";
 import { saveSavedGame } from "@/game/library";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
 import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
@@ -61,23 +61,53 @@ function Sandbox() {
     }));
   };
 
-  /** Write a piece (or empty) at a square, honoring mirror. */
+  /** Write a piece (or empty) at a square, honoring mirror. Juggernauts auto-place their partner. */
   const writeAt = (sq: Square, pieceId: PieceId | null, color: Color) => {
     const { rows, cols } = design;
     const wide = cols > rows;
-    const filtered = design.placements.filter((p) => !(p.r === sq.r && p.c === sq.c));
-    const mirrored = mirror
-      ? wide
-        ? filtered.filter((p) => !(p.r === sq.r && p.c === cols - 1 - sq.c))
-        : filtered.filter((p) => !(p.r === rows - 1 - sq.r && p.c === sq.c))
-      : filtered;
-    const next: Placement[] = mirrored;
-    if (pieceId) next.push({ r: sq.r, c: sq.c, pieceId, color });
-    if (mirror && pieceId) {
-      if (wide) {
-        next.push({ r: sq.r, c: cols - 1 - sq.c, pieceId, color: color === "w" ? "b" : "w" });
-      } else {
-        next.push({ r: rows - 1 - sq.r, c: sq.c, pieceId, color: color === "w" ? "b" : "w" });
+    const mirrorOf = (s: Square): Square =>
+      wide ? { r: s.r, c: cols - 1 - s.c } : { r: rows - 1 - s.r, c: s.c };
+
+    // Cells we want to clear before writing (so re-clicks toggle cleanly).
+    const cellsToClear: Square[] = [sq];
+    if (mirror) cellsToClear.push(mirrorOf(sq));
+
+    let next: Placement[] = design.placements.filter(
+      (p) => !cellsToClear.some((s) => s.r === p.r && s.c === p.c),
+    );
+
+    if (pieceId === "J") {
+      // Place primary pair
+      for (const o of juggPartnerCandidates(rows, cols)) {
+        const pr = sq.r + o.dr, pc = sq.c + o.dc;
+        if (pr < 0 || pr >= rows || pc < 0 || pc >= cols) continue;
+        if (next.some((p) => p.r === pr && p.c === pc)) continue;
+        next = next.filter((p) => !(p.r === sq.r && p.c === sq.c));
+        next.push({ r: sq.r, c: sq.c, pieceId: "J", color });
+        next.push({ r: pr, c: pc, pieceId: "J", color });
+        if (mirror) {
+          const mSq = mirrorOf(sq);
+          const mPartner = mirrorOf({ r: pr, c: pc });
+          const mColor: Color = color === "w" ? "b" : "w";
+          // Clear any existing pieces on mirror cells
+          next = next.filter((p) =>
+            !(p.r === mSq.r && p.c === mSq.c) && !(p.r === mPartner.r && p.c === mPartner.c),
+          );
+          next.push({ r: mSq.r, c: mSq.c, pieceId: "J", color: mColor });
+          next.push({ r: mPartner.r, c: mPartner.c, pieceId: "J", color: mColor });
+        }
+        setPlacements(next);
+        return;
+      }
+      toast.error("No adjacent square available to pair the Juggernaut.");
+      return;
+    }
+
+    if (pieceId) {
+      next.push({ r: sq.r, c: sq.c, pieceId, color });
+      if (mirror) {
+        const mSq = mirrorOf(sq);
+        next.push({ r: mSq.r, c: mSq.c, pieceId, color: color === "w" ? "b" : "w" });
       }
     }
     setPlacements(next);
@@ -211,9 +241,10 @@ function Sandbox() {
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
             <p className="text-[11px] text-muted-foreground">
-              Seven custom pieces are built-in: King's Hand, Archer, Dragon, Barricade,
+              Eight custom pieces are built-in: King's Hand, Archer, Dragon, Barricade,
               Portal (swap with a friendly piece), Necromancer (resurrect a captured ally),
-              and Shapeshifter Pawn (transforms into whatever it captures). User-defined pieces are coming soon.
+              Shapeshifter Pawn (transforms into whatever it captures), and Juggernaut
+              (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front).
             </p>
           </div>
         </aside>
