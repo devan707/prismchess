@@ -51,11 +51,12 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
       if (selected.r === sq.r && selected.c === sq.c) { setSelected(null); return; }
       const ok = onMove(selected, sq);
       if (ok) { setSelected(null); return; }
-      if (p && p.color === state.turn) { setSelected(sq); return; }
+      if (p) { setSelected(sq); return; }
       setSelected(null);
     } else {
-      if (p && p.color === state.turn) setSelected(sq);
+      if (p) setSelected(sq);
     }
+
   };
 
   // Aspect ratio: cols / rows
