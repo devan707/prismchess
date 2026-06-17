@@ -1,74 +1,78 @@
-## 1. Rebrand to Kingdom Chess
+## Multiplayer (PvP) — Phased Plan
 
-Palette: emerald `#0B3D2E`, gold `#D4AF37`, parchment `#F5E9C8`, ink `#1A1A1A`. Already loosely fits the current emerald/gold theme — tighten tokens in `src/styles.css` so accents are gold and primary is emerald.
+Build a dedicated **Multiplayer** area accessible from the main menu, designed so today's basic version cleanly extends to a full chess.com-style experience (lobbies, ratings, history, tournaments) without rework.
 
-- Update `<title>`, meta description, OG/Twitter tags in `src/routes/__root.tsx` and per-route `head()` to "Kingdom Chess".
-- Replace site name everywhere it appears in the UI (main menu, headers, footer).
-- Generate three brand assets with `imagegen`:
-  - `src/assets/logo.png` — emerald shield with a stylized gold king crown + "Kingdom Chess" wordmark (premium, transparent bg).
-  - `public/favicon.ico`-equivalent (generate `src/assets/favicon-512.png`, wire as PNG icon in head + manifest).
-  - `src/assets/og-banner.jpg` — 1200×630 social banner (premium).
-- Wire the logo into the main menu hero on `src/routes/index.tsx`.
+### Phase 1 — Scope (what ships now)
 
-## 2. Enable Lovable Cloud + auth
+- **New top-level route**: `/multiplayer` (lobby) + `/multiplayer/$matchId` (live game).
+- **Two ways to start a match**:
+  - **Shareable challenge link** — pick design + time control, get a URL to send to a friend. First signed-in visitor who isn't the host joins as the opponent.
+  - **Public lobby** — list of open challenges anyone signed in can accept; create / cancel your own.
+- **Variant support**: any design works — built-in presets *and* user-saved custom designs (Menagerie, Grand Menagerie, etc.). Host picks; opponent inherits.
+- **Time controls (3 presets)**:
+  - 10 min (rapid)
+  - 30 min (long rapid)
+  - 3 days/move (correspondence)
+  - Server-authoritative clocks; flagging ends the game.
+- **Live play**: realtime move sync, in-game move list, captured pieces, resign, offer/accept draw, takeback request (opponent must accept).
+- **Result handling**: checkmate / resign / draw / timeout / royal-loss → match marked `finished`, stored permanently with full move history.
+- **Profile tab**: "My games" list — active + finished, links back into each match.
+- **Rating scaffolded, not computed**: every finished rated game records both players, result, and design id. Elo calculation is a later phase.
 
-Enable Lovable Cloud (Supabase). Configure:
-- **Email + password** sign-in.
-- **Google** OAuth via Lovable broker (`lovable.auth.signInWithOAuth("google", …)`), then `supabase--configure_social_auth` for Google.
+### Phase 2+ (scaffolded, not built now)
 
-Schema (migration):
-- `profiles` table: `id uuid PK references auth.users(id) on delete cascade`, `username text unique not null`, `display_name text`, `created_at`. Trigger on `auth.users` insert auto-creates a row with a placeholder username derived from email; user is prompted to set it on first login. RLS: anyone signed-in can read; only owner can update. GRANTs per template rules.
-- `user_roles` + `app_role` enum + `has_role()` security-definer per template (used later for forum moderation; seed nothing).
+The schema and code seams are designed so these slot in without migration churn:
+- Elo / Glicko rating calculation + leaderboards
+- Quick-match queue (random pairing by rating band)
+- More time controls (bullet, blitz, custom increments)
+- Spectating, chat, post-game analysis (reuses existing `analyze-game` server fn)
+- Tournaments, arenas, daily puzzles, friends list
 
-New routes:
-- `src/routes/auth.tsx` — public; tabs for Sign in / Sign up; Google button.
-- `src/routes/_authenticated/profile.tsx` — edit display name + username.
-- Header avatar/menu in main shell with Sign in / Sign out.
+### How it fits the existing app
 
-## 3. Basic forum
+- The `GameState` engine (`src/game/`) is unchanged — both clients run the same legal-move/rules code locally; the server stores moves and validates turn order + clock, not chess rules. This keeps custom pieces working for free.
+- Reuses Lovable Cloud auth (already wired) and the existing profiles table.
+- Realtime via Lovable Cloud Realtime channels per match.
+- Main menu gets a "Multiplayer" entry next to the existing solo / designer entries.
 
-Schema (one migration, with GRANTs + RLS):
-- `forum_topics`: `id`, `author_id → auth.users`, `title`, `body`, `created_at`, `reply_count int default 0`, `like_count int default 0`.
-- `forum_replies`: `id`, `topic_id → forum_topics on delete cascade`, `author_id`, `body`, `created_at`, `like_count int default 0`.
-- `forum_likes`: `id`, `user_id`, `target_type text check in ('topic','reply')`, `target_id uuid`, unique `(user_id, target_type, target_id)`.
-- Triggers to keep `like_count` and `reply_count` in sync.
+---
 
-RLS:
-- Topics/replies: `SELECT` to `authenticated` (forum is sign-in-gated v1 — simpler, prevents spam); `INSERT` where `author_id = auth.uid()`; `UPDATE/DELETE` by author or admin.
-- Likes: `SELECT/INSERT/DELETE` scoped to `auth.uid()`.
+### Technical section
 
-Routes (all under `_authenticated/`):
-- `_authenticated/forum.tsx` — list topics, "New topic" button, like buttons, sort by recent.
-- `_authenticated/forum.$topicId.tsx` — topic detail + replies + reply composer.
-- `_authenticated/forum.new.tsx` — new topic form.
+**Database (new tables, all RLS-protected)**
 
-Server fns in `src/lib/forum.functions.ts` (use `requireSupabaseAuth`): `listTopics`, `getTopic`, `createTopic`, `createReply`, `toggleLike`. Reads via TanStack Query (`ensureQueryData` in loader + `useSuspenseQuery` in component).
+- `designs` — shareable design snapshot (id, owner_id, name, design JSON, is_public). Lets a match reference a stable design even if the host edits theirs later.
+- `matches` — id, host_id, guest_id (nullable until accepted), design_id, time_control (`'10min' | '30min' | '3day'`), status (`'open' | 'active' | 'finished' | 'aborted'`), host_color, result (`'w' | 'b' | 'draw' | null`), result_reason (`'checkmate' | 'resign' | 'timeout' | 'draw_agreed' | 'royal_loss' | 'stalemate' | null`), rated (bool, scaffolding), white_time_ms, black_time_ms, last_clock_update_at, turn (`'w' | 'b'`), created_at, started_at, finished_at, share_token (for link-based join).
+- `match_moves` — id, match_id, ply, move JSON (matches existing `Move` type), played_at, time_left_ms. Append-only; full game replay = ordered rows.
+- `match_events` — id, match_id, kind (`'draw_offer' | 'draw_decline' | 'takeback_request' | 'takeback_decline' | 'resign' | 'chat'`), actor_id, payload, created_at. Single table covers all non-move interactions and future chat.
+- `ratings` — user_id, design_family (`'classic' | 'custom'` to start), rating (default 1200), games_played, updated_at. Populated but not mutated in Phase 1.
 
-Main menu adds a "Community" tile linking to `/forum` (redirects unauthenticated visitors to `/auth`).
+RLS: hosts/guests can read their own matches; open challenges readable by all authenticated users; moves/events insertable only by the player whose turn it is (enforced via server fn).
 
-## 4. Installable PWA (manifest only)
+**Server functions** (`createServerFn`, `requireSupabaseAuth`)
+- `createChallenge({ designId, timeControl, hostColor, visibility })` → returns matchId + shareToken
+- `listOpenChallenges()` → public lobby feed
+- `acceptChallenge({ matchId | shareToken })` → assigns guest, sets status=active, starts clock
+- `cancelChallenge({ matchId })`
+- `submitMove({ matchId, ply, move })` → validates turn + clock + ply ordering, updates clock, inserts move, flags timeout if needed, broadcasts via Realtime
+- `respondToEvent({ matchId, eventId, accept })` → draw / takeback handling
+- `resign({ matchId })`
+- `listMyMatches({ status })`
+- `getMatch({ matchId })` → match + moves + events (used by loader)
 
-Per the PWA skill — installable scope only, no service worker.
+Chess legality is checked **client-side** using the existing `allLegalMoves` so custom pieces just work; server validates ordering, clock, and that the submitted move appears in the legal set computed from replaying stored moves (defense in depth, but doesn't duplicate piece logic).
 
-- Add `public/manifest.webmanifest` with name "Kingdom Chess", short name "Kingdom", emerald `theme_color`/`background_color`, `display: "standalone"`, `start_url: "/"`, icon entries (192, 512, maskable 512).
-- Generate icons from the logo via `imagegen` into `public/icons/`.
-- Add `<link rel="manifest">`, `theme-color`, `apple-touch-icon`, and updated favicons to `__root.tsx` head.
-- Do NOT add `vite-plugin-pwa`, service workers, or registration code.
+**Realtime**: one channel per match (`match:{id}`) broadcasting new moves and events. Both clients subscribe in `useEffect` and tear down on unmount.
 
-## 5. SEO + share metadata
+**Clocks**: stored as `white_time_ms`, `black_time_ms`, `last_clock_update_at`, `turn`. Effective remaining time = stored − (now − last_clock_update_at) for the side to move. On `submitMove` the server decrements the mover's clock and updates the timestamp. A scheduled check (or lazy check on next read) flags timeouts. For 3-day correspondence the same fields work with a larger budget.
 
-- Per-route `head()` already on `index`, `play`, `sandbox`. Update all three plus add `og:image` (banner asset) only on `index` (root keeps it off per leaf-only rule).
-- Title pattern: `"{Page} — Kingdom Chess"`.
+**Routes**
+- `src/routes/_authenticated/multiplayer.tsx` — layout with `<Outlet />`
+- `src/routes/_authenticated/multiplayer.index.tsx` — lobby + "create challenge"
+- `src/routes/_authenticated/multiplayer.$matchId.tsx` — live game (reuses `Board`, `MoveHistory`, `Captured`, but feeds moves through `submitMove` instead of `useGame`'s local AI loop)
+- `src/routes/_authenticated/multiplayer.join.$token.tsx` — landing for shareable links
+- Main menu (`src/routes/index.tsx`) gets a "Multiplayer" button.
 
-## Out of scope (v1)
+**Hook**: new `useMultiplayerGame(matchId)` mirrors `useGame`'s API (state, tryMove, legalFor, status) but its move-application path goes server → realtime → state, with optimistic local apply on the mover's side.
 
-- Offline play (would require service worker — user picked installable-only).
-- Forum moderation UI (admin role exists in schema, no UI yet).
-- Avatars/file uploads.
-- Password reset page (can add in a follow-up if needed; not requested).
-
-## Files touched (approximate)
-
-Created: `src/assets/logo.png`, `src/assets/og-banner.jpg`, `public/manifest.webmanifest`, `public/icons/*`, `src/routes/auth.tsx`, `src/routes/_authenticated/route.tsx` (integration-managed), `src/routes/_authenticated/profile.tsx`, `src/routes/_authenticated/forum.tsx`, `src/routes/_authenticated/forum.$topicId.tsx`, `src/routes/_authenticated/forum.new.tsx`, `src/lib/forum.functions.ts`, `src/lib/profile.functions.ts`, `src/components/UserMenu.tsx`, migrations for profiles/roles/forum.
-
-Edited: `src/routes/__root.tsx` (head + manifest + auth listener + user menu), `src/routes/index.tsx` (rebrand + community tile), `src/routes/play.tsx`, `src/routes/sandbox.tsx` (titles), `src/styles.css` (refine token palette toward emerald/gold).
+**Out of scope for this phase**: Elo math, matchmaking queue, chat UI, spectating, push notifications, anti-cheat heuristics. Tables/columns to support them exist from day one.
