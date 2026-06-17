@@ -503,7 +503,80 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
   }
 
+  // Castling: king moves two squares laterally toward an un-moved rook.
+  if (def.royal && piece.id === "K") {
+    const castles = generateCastles(state, from, piece);
+    for (const m of castles) moves.push(m);
+  }
+
   return moves;
+}
+
+/** Generate castling moves for the given king. Checks: king/rook un-moved,
+ *  empty path, king not in check, king does not pass through or land on
+ *  an attacked square. */
+function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
+  const out: Move[] = [];
+  const board = state.board;
+  const wide = boardIsWide(board);
+  const { rows, cols } = rowsCols(board);
+  const opp: Color = king.color === "w" ? "b" : "w";
+
+  // Has the king ever moved?
+  const kingMoved = state.history.some(
+    (m) => m.piece.color === king.color && m.piece.id === "K",
+  );
+  if (kingMoved) return out;
+  if (inCheck(state, king.color)) return out;
+
+  // Castling direction is lateral to pawn movement.
+  // Wide boards: pawns push along columns → castle along rows (dr=±1, dc=0).
+  // Tall boards: pawns push along rows → castle along columns (dr=0, dc=±1).
+  const lateralOffsets: Offset[] = wide
+    ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }]
+    : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+
+  for (const o of lateralOffsets) {
+    // Scan outward from the king for a friendly, un-moved rook on the same rank/file.
+    let r = from.r + o.dr;
+    let c = from.c + o.dc;
+    let rookSq: Square | null = null;
+    while (r >= 0 && r < rows && c >= 0 && c < cols) {
+      const t = board[r][c];
+      if (t) {
+        if (t.color === king.color && t.id === "R") rookSq = { r, c };
+        break;
+      }
+      r += o.dr;
+      c += o.dc;
+    }
+    if (!rookSq) continue;
+
+    const rookMoved = state.history.some(
+      (m) => m.piece.color === king.color && m.piece.id === "R" &&
+        m.from && m.from.r === rookSq!.r && m.from.c === rookSq!.c,
+    );
+    if (rookMoved) continue;
+
+    // Path between king and rook is already empty (loop above). King moves 2
+    // toward the rook; rook lands on the square the king passed through.
+    const kingTo: Square = { r: from.r + 2 * o.dr, c: from.c + 2 * o.dc };
+    const rookTo: Square = { r: from.r + o.dr, c: from.c + o.dc };
+    // King must not pass through or land on an attacked square.
+    if (isSquareAttacked(state, rookTo, opp)) continue;
+    if (isSquareAttacked(state, kingTo, opp)) continue;
+
+    out.push({
+      from,
+      to: kingTo,
+      piece: king,
+      captured: null,
+      kind: "castle",
+      rookFrom: rookSq,
+      rookTo,
+    });
+  }
+  return out;
 }
 
 /** All drops a side can play right now. */
