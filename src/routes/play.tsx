@@ -195,7 +195,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         if (!auth.user) return;
         await recordSoloFn({
           data: {
-            designName: design.name ?? "Custom game",
+            designName: `${design.rows}×${design.cols} Custom`,
             design: design as unknown as Record<string, unknown>,
             difficulty,
             humanColor,
