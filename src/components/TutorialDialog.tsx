@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { PieceById } from "@/components/chess/PieceGlyph";
+import { MoveDiagram } from "@/components/chess/MoveDiagram";
 import { PIECE_LIBRARY } from "@/game/pieces";
 import type { GameTutorial } from "@/game/tutorials";
 import { markTutorialSeen } from "@/lib/tutorial-state";
