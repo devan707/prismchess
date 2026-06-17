@@ -1,6 +1,7 @@
 import type { Difficulty, GameState, Move, Square } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 import { evaluate, valueFor } from "./evaluate";
+import { loadPlaybook } from "./playbook";
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -43,7 +44,8 @@ function recaptureLoss(state: GameState, m: Move): number {
 
 function moveScore(state: GameState, m: Move): number {
   let s = 0;
-  if (m.captured) s += valueFor(m.captured.id, state.registry[m.captured.id]);
+  const pb = loadPlaybook();
+  if (m.captured) s += valueFor(m.captured.id, state.registry[m.captured.id]) + pb.aggressionBonus;
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) - 100;
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
   if ((m.kind === "resurrect" || m.kind === "necroRaise") && m.resurrectPieceId) {
