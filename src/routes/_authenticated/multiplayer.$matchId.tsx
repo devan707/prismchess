@@ -146,6 +146,13 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
   const topIsTurn = match.turn === (myColor === "w" ? "b" : "w") && match.status === "active";
   const bottomIsTurn = match.turn === myColor && match.status === "active";
 
+  const opponentId = match.host_id === meId ? match.guest_id : match.host_id;
+  const handleAddFriend = async () => {
+    if (!opponentId) return;
+    try { await addFriendFn({ data: { targetId: opponentId } }); toast.success("Friend request sent"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't send request"); }
+  };
+
   const check = status.kind === "playing" ? status.check : false;
 
   let banner: string;
