@@ -220,7 +220,7 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
   // No pawns on their own promotion line
   for (const p of d.placements) {
     const def = registry[p.pieceId];
-    if (def?.special === "pawn") {
+    if (def?.special === "pawn" || def?.special === "shapeshifter") {
       const wide = d.cols > d.rows;
       const promoLine = p.color === "w" ? (wide ? d.cols - 1 : d.rows - 1) : 0;
       const coord = wide ? p.c : p.r;
