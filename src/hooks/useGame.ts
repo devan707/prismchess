@@ -54,12 +54,18 @@ export function useGame(opts: UseGameOptions) {
   const takeback = useCallback(() => {
     setState((s) => {
       if (s.history.length === 0) return s;
-      const truncated = s.history.slice(0, s.history.length - 1);
-      return replayMoves(truncated, initialStateFromDesign(opts.design));
+      // Pop plies until it's the human's turn again so the human can re-decide.
+      let truncatedLen = s.history.length;
+      while (truncatedLen > 0) {
+        truncatedLen -= 1;
+        const replayed = replayMoves(s.history.slice(0, truncatedLen), initialStateFromDesign(opts.design));
+        if (replayed.turn === opts.humanColor) return replayed;
+      }
+      return initialStateFromDesign(opts.design);
     });
     setPendingPromotion(null);
     setSelectedDrop(null);
-  }, [opts.design]);
+  }, [opts.design, opts.humanColor]);
 
   const playMove = useCallback((move: Move) => {
     setState((s) => {
