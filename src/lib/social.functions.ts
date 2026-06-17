@@ -265,6 +265,31 @@ export const sendDm = createServerFn({ method: "POST" })
       .insert({ thread_id: data.threadId, sender_id: context.userId, body: data.body })
       .select("id, sender_id, body, created_at, read_at").single();
     if (error) throw new Error(error.message);
+
+    // Notify the other thread participant.
+    const { data: thread } = await context.supabase
+      .from("dm_threads")
+      .select("user_a, user_b")
+      .eq("id", data.threadId)
+      .maybeSingle();
+    if (thread) {
+      const recipient = thread.user_a === context.userId ? thread.user_b : thread.user_a;
+      const { data: me } = await context.supabase
+        .from("profiles")
+        .select("username, display_name")
+        .eq("id", context.userId)
+        .maybeSingle();
+      const senderName = me?.display_name || me?.username || "Someone";
+      const preview = data.body.length > 80 ? data.body.slice(0, 77) + "…" : data.body;
+      const { sendPushBackground } = await import("./push.server");
+      sendPushBackground(recipient, {
+        title: `Message from ${senderName}`,
+        body: preview,
+        url: `/messages/${data.threadId}`,
+        tag: `dm:${data.threadId}`,
+      });
+    }
+
     return inserted;
   });
 
