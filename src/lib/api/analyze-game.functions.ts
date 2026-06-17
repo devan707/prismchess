@@ -8,6 +8,7 @@ const PlaybookSchema = z.object({
   pieceValueMultipliers: z.record(z.string(), z.number()).default({}),
   cautionMultiplier: z.number(),
   aggressionBonus: z.number(),
+  squareDefenseBonuses: z.record(z.string(), z.number()).default({}),
   gamesReviewed: z.number().int().nonnegative(),
 });
 
@@ -43,6 +44,9 @@ const OutputSchema = z.object({
       .describe("Map of piece id (e.g. 'W','D','M') to a multiplier on its base value. Only include pieces you want to adjust."),
     cautionMultiplier: z.number().min(0.3).max(2.5).describe("Multiplier on the hanging-piece penalty. >1 makes the AI more cautious, <1 more reckless."),
     aggressionBonus: z.number().min(-150).max(150).describe("Centipawn bonus added to every capturing move. Positive = bias toward trades."),
+    squareDefenseBonuses: z
+      .record(z.string(), z.number().min(-300).max(300))
+      .describe("Map of algebraic square (e.g. 'g12') → centipawn weight the minimax engine uses to bias toward defending/occupying that square. Use this to teach the AI specific tactical squares it failed to defend (e.g. a mating square the user repeatedly attacked). Positive = the AI should fight to control it. Keep the map small (≤ 8 entries) and tactical, not strategic."),
   }),
 });
 
@@ -64,21 +68,32 @@ interface MoveLike {
   juggTrampled?: { id: string }[];
 }
 
-/** Serialize one Move into a compact human-readable string. */
-export function fmtMove(m: MoveLike, cols: number, ply: number): string {
-  const color = m.piece?.color === "w" ? "W" : "B";
+/** Serialize one Move into a compact, unambiguous human-readable string.
+ *  Format: `12. (W) Wizard e2→e4 xPawn[...flags]`. We spell out the piece's
+ *  full name (looked up from `registry`) so the LLM can't confuse the side
+ *  prefix (W/B) with a piece id that happens to share that letter (e.g. the
+ *  Wizard's id is "W", the Bishop's is "B"). */
+export function fmtMove(
+  m: MoveLike,
+  cols: number,
+  ply: number,
+  registry: Record<string, { name?: string }> = {},
+): string {
+  const side = m.piece?.color === "w" ? "(W)" : "(B)";
   const pid = m.piece?.id ?? "?";
+  const nameOf = (id?: string) => (id && registry[id]?.name) || id || "?";
   const from = fmtSq(m.from ?? null, cols);
   const to = fmtSq(m.to ?? null, cols);
-  const cap = m.captured ? `x${m.captured.id}` : "";
+  const cap = m.captured ? ` x${nameOf(m.captured.id)}` : "";
   let extra = "";
-  if (m.promotion) extra += `=${m.promotion}`;
-  if (m.kind === "drop" && m.dropPieceId) extra += `[drop ${m.dropPieceId}]`;
-  if (m.kind === "resurrect" && m.resurrectPieceId) extra += `[res ${m.resurrectPieceId}]`;
+  if (m.promotion) extra += `[promote=${nameOf(m.promotion)}]`;
+  if (m.kind === "drop" && m.dropPieceId) extra += `[drop ${nameOf(m.dropPieceId)}]`;
+  if (m.kind === "resurrect" && m.resurrectPieceId) extra += `[resurrect ${nameOf(m.resurrectPieceId)}]`;
+  if (m.kind === "necroRaise" && m.resurrectPieceId) extra += `[necro-raise ${nameOf(m.resurrectPieceId)}]`;
   if (m.kind === "juggCharge") extra += "[charge]";
   if (m.kind === "juggShift") extra += "[shift]";
-  if (m.juggTrampled?.length) extra += `[trample ${m.juggTrampled.map((t) => t.id).join(",")}]`;
-  return `${ply}. ${color}${pid} ${from}→${to}${cap}${extra}`;
+  if (m.juggTrampled?.length) extra += `[trample ${m.juggTrampled.map((t) => nameOf(t.id)).join(",")}]`;
+  return `${ply}. ${side} ${nameOf(pid)} ${from}→${to}${cap}${extra}`;
 }
 
 const SYSTEM_PROMPT = `You are the strategic brain that coaches the AI opponent in a custom chess variant called The Grand Menagerie.
@@ -91,11 +106,14 @@ You will receive:
 
 Your job:
 1. Briefly analyze the game in the "analysis" field (markdown, friendly tone). Cite move numbers when discussing mistakes/highlights. If there's a human message in priorTurns, treat this as a continuing conversation and respond accordingly.
+
+   IMPORTANT — reading the move list: each entry is formatted as "PLY. (SIDE) PieceName from→to xCapturedName[flags]" where SIDE is W (White) or B (Black). The parenthesised side prefix is NOT a piece — for example "(W) Pawn e2→e4" is a WHITE PAWN, not a Wizard. The Wizard, Bishop, Barricade, etc. all appear by their full names. Never invent piece moves that aren't literally in the move list, and never confuse the side prefix with a piece name.
 2. Produce an UPDATED full playbook. Improve it incrementally — keep what still applies, add new lessons learned from this game/feedback, drop redundancies. Never wipe lessons unless they directly conflict with new evidence.
 3. Adjust numeric weights conservatively:
    - pieceValueMultipliers: only override pieces whose true value the engine seems to be mis-estimating. e.g. if the AI keeps trading its Wizard for pawns, the Wizard multiplier should rise.
    - cautionMultiplier: raise if the AI hung valuable pieces; lower if it played too passively.
    - aggressionBonus: positive if the AI missed clearly good trades; negative if it traded too greedily.
+   - squareDefenseBonuses: this is the most direct lever — when the user describes a specific tactical square they used to win (e.g. "Archer mate on g12"), add that square with a strong positive weight (80–200) so the minimax engine actively fights to defend/occupy it next game. Prune squares from past games that are no longer relevant. Keep ≤ 8 entries.
 4. Keep lessons short, imperative, piece-specific where possible. Example: "Never move the Wizard adjacent to an Assassin's launch diagonal."
 5. If the user explicitly asks you to forget or change something, honor it.`;
 
@@ -233,6 +251,13 @@ function extractAndValidate(
       pieceValueMultipliers[k] = Math.max(0.3, Math.min(2.5, v));
     }
   }
+  const sqBonusRaw = (upRaw.squareDefenseBonuses ?? {}) as Record<string, unknown>;
+  const squareDefenseBonuses: Record<string, number> = {};
+  for (const [k, v] of Object.entries(sqBonusRaw)) {
+    if (typeof v === "number" && Number.isFinite(v) && /^[a-l]\d{1,2}$/i.test(k)) {
+      squareDefenseBonuses[k.toLowerCase()] = Math.max(-300, Math.min(300, v));
+    }
+  }
   const updatedPlaybook = {
     lessons,
     pieceValueMultipliers: Object.keys(pieceValueMultipliers).length
@@ -240,6 +265,9 @@ function extractAndValidate(
       : current.pieceValueMultipliers,
     cautionMultiplier: clampNum(upRaw.cautionMultiplier, 0.3, 2.5, current.cautionMultiplier),
     aggressionBonus: clampNum(upRaw.aggressionBonus, -150, 150, current.aggressionBonus),
+    squareDefenseBonuses: Object.keys(squareDefenseBonuses).length
+      ? squareDefenseBonuses
+      : current.squareDefenseBonuses,
   };
   return { ok: true, analysis, updatedPlaybook };
 }

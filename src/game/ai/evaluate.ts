@@ -306,7 +306,42 @@ export function evaluate(state: GameState, toMove: Color): number {
   const pb = loadPlaybook();
   score += hangingTerm(state, toMove) * pb.cautionMultiplier;
   score -= hangingTerm(state, toMove === "w" ? "b" : "w") * pb.cautionMultiplier;
+  // Learned tactical squares — defend the ones the AI lost to last game.
+  score += squareControlTerm(state, toMove, pb.squareDefenseBonuses);
   return score;
+}
+
+/** Convert "g12" → {r:11, c:6}. Returns null on parse failure / out of bounds. */
+function parseAlg(sq: string, rows: number, cols: number): { r: number; c: number } | null {
+  const m = /^([a-l])(\d{1,2})$/i.exec(sq);
+  if (!m) return null;
+  const c = m[1].toLowerCase().charCodeAt(0) - 97;
+  const r = parseInt(m[2], 10) - 1;
+  if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
+  return { r, c };
+}
+
+/** Reward `color` for defending each square in `bonuses`, penalise when the
+ *  opponent attacks it undefended. Symmetric on the eval side so both branches
+ *  of search use it consistently. */
+function squareControlTerm(state: GameState, color: Color, bonuses: Record<string, number>): number {
+  const keys = Object.keys(bonuses);
+  if (keys.length === 0) return 0;
+  const rows = state.board.length;
+  const cols = state.board[0]?.length ?? 0;
+  const opp: Color = color === "w" ? "b" : "w";
+  let total = 0;
+  for (const k of keys) {
+    const w = bonuses[k];
+    if (!w) continue;
+    const sq = parseAlg(k, rows, cols);
+    if (!sq) continue;
+    const usDefends = isSquareAttacked(state, sq, color);
+    const oppAttacks = isSquareAttacked(state, sq, opp);
+    if (usDefends) total += w;
+    if (oppAttacks && !usDefends) total -= w * 2;
+  }
+  return total;
 }
 
 
