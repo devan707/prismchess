@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { GameState, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
+import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
 import { inCheck } from "@/game/moves";
 
