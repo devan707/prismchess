@@ -36,8 +36,10 @@
   --color-board-dark: var(--board-dark);
   --color-board-highlight: var(--board-highlight);
   --color-board-legal: var(--board-legal);
+  --color-board-capture: var(--board-capture);
   --color-board-check: var(--board-check);
   --color-board-last: var(--board-last);
+  --color-board-inspect: var(--board-inspect);
   --font-display: "Fraunces", ui-serif, Georgia, serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
