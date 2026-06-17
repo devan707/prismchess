@@ -101,7 +101,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     immobile: true,
     defaultReserve: 2,
     builtinCustom: true,
-    description: "Off-board reserve. Drop it on any empty square — it stays there forever, blocks all movement, and cannot be captured.",
+    description: "Off-board reserve. Drop it on any empty square — it never moves on its own, but blocks movement and can be captured like any other piece.",
   },
   T: {
     id: "T",
@@ -157,7 +157,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "wizard",
     builtinCustom: true,
-    description: "Arcane rook. Moves orthogonally any distance, but only between squares of its own color — opposite-colored squares (and pieces on them) are ignored and jumped over. Permanently bound to the color of the square it's placed on.",
+    description: "Arcane mage. Slides any distance diagonally like a bishop, AND slides orthogonally any distance — but the orthogonal step only lands on squares of its own color, jumping over opposite-colored squares (and any pieces on them). Permanently bound to the color of the square it's placed on.",
   },
 };
 
