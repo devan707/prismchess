@@ -231,6 +231,23 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
       </header>
 
       <main className="flex-1 flex flex-col items-center gap-3 p-3">
+        {incomingDrawOffer && amPlayer && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card px-3 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Handshake className="h-4 w-4 text-primary" />
+              <span>Opponent offers a draw</span>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => respondToDraw(false)}>Decline</Button>
+              <Button size="sm" onClick={() => respondToDraw(true)}>Accept</Button>
+            </div>
+          </div>
+        )}
+        {myPendingDrawOffer && amPlayer && !incomingDrawOffer && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card/50 px-3 py-1.5 text-xs text-muted-foreground text-center">
+            Draw offer sent — waiting for opponent
+          </div>
+        )}
         <PlayerStrip name={topName} time={topTime} isTurn={topIsTurn} tc={match.time_control} />
 
         {hasReserves && (
