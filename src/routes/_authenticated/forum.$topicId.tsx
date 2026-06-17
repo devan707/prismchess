@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getTopic, createReply, toggleLike } from "@/lib/forum.functions";
@@ -18,6 +18,7 @@ type TopicData = Awaited<ReturnType<typeof getTopic>>;
 
 function TopicPage() {
   const { topicId } = Route.useParams();
+  const navigate = useNavigate();
   const fetchTopic = useServerFn(getTopic);
   const reply = useServerFn(createReply);
   const like = useServerFn(toggleLike);
