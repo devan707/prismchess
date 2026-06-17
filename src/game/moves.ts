@@ -12,8 +12,12 @@ function isFriendly(p: Piece | null, color: Color): boolean {
   return !!p && p.color === color;
 }
 
-function isBarricade(p: Piece | null, registry: Record<PieceId, PieceDef>): boolean {
-  return !!p && !!registry[p.id]?.immobile;
+function isBarricade(_p: Piece | null, _registry: Record<PieceId, PieceDef>): boolean {
+  // Barricades behave like ordinary pieces for blocking and capture — they
+  // simply can't move themselves (enforced by def.immobile in pseudoMovesFrom).
+  // Returning false here lets sliders stop on them, leapers capture them,
+  // pawns take them diagonally, and juggernauts trample them like anything else.
+  return false;
 }
 
 function emitFromSpec(
