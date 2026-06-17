@@ -70,6 +70,7 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
     design_name: bootstrap.match.design_name,
   };
   const initialMoves = (bootstrap.moves ?? []).map((m) => m.move as unknown as Move);
+  const initialEvents = (bootstrap.events ?? []) as unknown as MatchEvent[];
 
   return (
     <ActiveGameView
@@ -77,6 +78,7 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
       meId={bootstrap.meId}
       initialMatch={initialMatch}
       initialMoves={initialMoves}
+      initialEvents={initialEvents}
       hostName={bootstrap.match.host?.display_name ?? bootstrap.match.host?.username ?? "Host"}
       guestName={bootstrap.match.guest?.display_name ?? bootstrap.match.guest?.username ?? null}
     />
@@ -88,6 +90,7 @@ interface AGV {
   meId: string;
   initialMatch: MatchSnapshot;
   initialMoves: Move[];
+  initialEvents: MatchEvent[];
   hostName: string;
   guestName: string | null;
 }
