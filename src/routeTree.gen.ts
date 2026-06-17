@@ -11,7 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SandboxRouteImport } from './routes/sandbox'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/forum'
+import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
+import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
 
 const SandboxRoute = SandboxRouteImport.update({
   id: '/sandbox',
@@ -23,38 +29,112 @@ const PlayRoute = PlayRouteImport.update({
   path: '/play',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedForumRoute = AuthenticatedForumRouteImport.update({
+  id: '/forum',
+  path: '/forum',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedForumNewRoute = AuthenticatedForumNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedForumRoute,
+} as any)
+const AuthenticatedForumTopicIdRoute =
+  AuthenticatedForumTopicIdRouteImport.update({
+    id: '/$topicId',
+    path: '/$topicId',
+    getParentRoute: () => AuthenticatedForumRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
+  '/forum': typeof AuthenticatedForumRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
+  '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
+  '/forum/new': typeof AuthenticatedForumNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
+  '/forum': typeof AuthenticatedForumRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
+  '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
+  '/forum/new': typeof AuthenticatedForumNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
+  '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
+  '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/play' | '/sandbox'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/play'
+    | '/sandbox'
+    | '/forum'
+    | '/profile'
+    | '/forum/$topicId'
+    | '/forum/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/play' | '/sandbox'
-  id: '__root__' | '/' | '/play' | '/sandbox'
+  to:
+    | '/'
+    | '/auth'
+    | '/play'
+    | '/sandbox'
+    | '/forum'
+    | '/profile'
+    | '/forum/$topicId'
+    | '/forum/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/play'
+    | '/sandbox'
+    | '/_authenticated/forum'
+    | '/_authenticated/profile'
+    | '/_authenticated/forum/$topicId'
+    | '/_authenticated/forum/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
 }
@@ -75,6 +155,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,11 +176,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/forum': {
+      id: '/_authenticated/forum'
+      path: '/forum'
+      fullPath: '/forum'
+      preLoaderRoute: typeof AuthenticatedForumRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/forum/new': {
+      id: '/_authenticated/forum/new'
+      path: '/new'
+      fullPath: '/forum/new'
+      preLoaderRoute: typeof AuthenticatedForumNewRouteImport
+      parentRoute: typeof AuthenticatedForumRoute
+    }
+    '/_authenticated/forum/$topicId': {
+      id: '/_authenticated/forum/$topicId'
+      path: '/$topicId'
+      fullPath: '/forum/$topicId'
+      preLoaderRoute: typeof AuthenticatedForumTopicIdRouteImport
+      parentRoute: typeof AuthenticatedForumRoute
+    }
   }
 }
 
+interface AuthenticatedForumRouteChildren {
+  AuthenticatedForumTopicIdRoute: typeof AuthenticatedForumTopicIdRoute
+  AuthenticatedForumNewRoute: typeof AuthenticatedForumNewRoute
+}
+
+const AuthenticatedForumRouteChildren: AuthenticatedForumRouteChildren = {
+  AuthenticatedForumTopicIdRoute: AuthenticatedForumTopicIdRoute,
+  AuthenticatedForumNewRoute: AuthenticatedForumNewRoute,
+}
+
+const AuthenticatedForumRouteWithChildren =
+  AuthenticatedForumRoute._addFileChildren(AuthenticatedForumRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedForumRoute: typeof AuthenticatedForumRouteWithChildren
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedForumRoute: AuthenticatedForumRouteWithChildren,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
 }
