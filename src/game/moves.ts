@@ -657,7 +657,7 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           // portal swaps land on friendly squares (never an enemy king square anyway).
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
-          if (m.kind === "resurrect") continue;
+          if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
           // juggernaut shift/charge are repositioning; trampling captures the cell directly.
           // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
           // but here `to` IS the destination — so it's a real capture path.
