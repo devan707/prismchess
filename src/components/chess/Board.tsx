@@ -210,6 +210,26 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const displayCols = (humanColor === "w" ? colIndices : colIndices.slice().reverse());
   if (flipped) { displayRows.reverse(); displayCols.reverse(); }
 
+  // Prism aura: all king-distance-1 neighbors of every Prism on the board.
+  // Pieces that enter or remain in these squares get color-flipped.
+  const prismAura = new Set<string>();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = state.board[r][c];
+      if (!p || state.registry[p.id]?.special !== "prism") continue;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+          const o = state.board[nr][nc];
+          if (o && state.registry[o.id]?.special === "prism") continue;
+          prismAura.add(`${nr},${nc}`);
+        }
+      }
+    }
+  }
+
   const handleSquareClick = (sq: Square) => {
     if (disabled) return;
     if (dropPiece && dropTargets?.some((t) => t.r === sq.r && t.c === sq.c)) {
