@@ -66,6 +66,31 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     return out;
   })();
   const last = state.history[state.history.length - 1];
+  const moveCount = state.history.length;
+
+  // Compute slide animation offsets for the piece that just moved.
+  // Translates the destination piece from its previous (from) square visually.
+  const slideAnim = (() => {
+    if (!last || !last.from) return null;
+    // Display delta: how far the piece moved in visual grid cells.
+    // displayRows is reversed for white, so visual row index = displayRows.indexOf(r).
+    const fromDispR = displayRowsIndex(last.from.r);
+    const toDispR = displayRowsIndex(last.to.r);
+    const fromDispC = displayColsIndex(last.from.c);
+    const toDispC = displayColsIndex(last.to.c);
+    return {
+      to: last.to,
+      dx: (fromDispC - toDispC) * 100,
+      dy: (fromDispR - toDispR) * 100,
+      key: moveCount,
+    };
+    function displayRowsIndex(r: number) {
+      return (humanColor === "w") !== flipped ? (rows - 1 - r) : r;
+    }
+    function displayColsIndex(c: number) {
+      return (humanColor === "w") !== flipped ? c : (cols - 1 - c);
+    }
+  })();
 
   // If a juggernaut is selected, also highlight its partner square as "selected".
   const selectedPartner: Square | null = (() => {
@@ -263,12 +288,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                     const facing: "up" | "down" | "left" | "right" = wide
                       ? (piece.color === "w" ? "right" : "left")
                       : (piece.color === "w" ? "up" : "down");
+                    const animate = slideAnim && slideAnim.to.r === r && slideAnim.to.c === c;
                     return (
                       <div
+                        key={animate ? `anim-${slideAnim.key}` : undefined}
                         draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
                         onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
                         onDragEnd={() => setDragFrom(null)}
                         className="relative z-10 w-full h-full"
+                        style={animate ? {
+                          ["--slide-x" as string]: `${slideAnim.dx}%`,
+                          ["--slide-y" as string]: `${slideAnim.dy}%`,
+                          animation: "piece-slide 160ms ease-out",
+                        } : undefined}
                       >
                         <JuggernautGlyph color={piece.color} orientation={orientation} facing={facing} />
                       </div>
@@ -276,12 +308,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   }
                   // Orphan juggernaut (no partner) — fall through to normal glyph.
                 }
+                const animate = slideAnim && slideAnim.to.r === r && slideAnim.to.c === c;
                 return (
                   <div
+                    key={animate ? `anim-${slideAnim.key}` : undefined}
                     draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
                     onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
                     onDragEnd={() => setDragFrom(null)}
                     className="relative z-10 flex items-center justify-center w-full h-full"
+                    style={animate ? {
+                      ["--slide-x" as string]: `${slideAnim.dx}%`,
+                      ["--slide-y" as string]: `${slideAnim.dy}%`,
+                      animation: "piece-slide 160ms ease-out",
+                    } : undefined}
                   >
                     <PieceGlyph piece={piece} def={def} />
                   </div>
