@@ -655,9 +655,19 @@ export function dropMoves(state: GameState, color: Color): Move[] {
     if (!count) continue;
     const def = state.registry[id];
     if (!def) continue;
+    // Barricades may only be dropped directly in front of a friendly piece
+    // (one square forward from that piece's perspective).
+    const barricadeOnly = id === "X";
+    const dir = pawnDir(color);
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         if (state.board[r][c]) continue;
+        if (barricadeOnly) {
+          const br = r - dir;
+          if (br < 0 || br >= rows) continue;
+          const behind = state.board[br][c];
+          if (!behind || behind.color !== color) continue;
+        }
         out.push({
           from: null,
           to: { r, c },
