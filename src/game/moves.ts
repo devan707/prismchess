@@ -462,6 +462,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
           if (occ) continue;
         } else {
           if (isBarricade(occ, state.registry)) continue;
+          if (isFixture(occ, state.registry)) continue;
           if (occ && occ.color === piece.color) continue;
           if (dirIdxHistory.length === 2 &&
               dirIdxHistory[0] === i && dirIdxHistory[1] === i) continue;
