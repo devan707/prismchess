@@ -88,8 +88,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Prism Chess — Design your own variant" },
       { name: "twitter:description", content: "Prism Chess: design custom chess variants, play against AI, and share strategy with the community." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/54960cab-eb26-4dc2-a8c4-129d9c00f004" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/54960cab-eb26-4dc2-a8c4-129d9c00f004" },
+      { property: "og:image", content: "https://kingdom-chess.lovable.app/og-banner.jpg" },
+      { name: "twitter:image", content: "https://kingdom-chess.lovable.app/og-banner.jpg" },
     ],
     links: [
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
