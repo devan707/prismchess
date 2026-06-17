@@ -50,6 +50,12 @@ export function UserMenu() {
         <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
           <UserIcon className="h-4 w-4 mr-2" /> Profile
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/friends" })}>
+          <Users className="h-4 w-4 mr-2" /> Friends
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/messages" })}>
+          <Mail className="h-4 w-4 mr-2" /> Messages
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/forum" })}>
           <MessagesSquare className="h-4 w-4 mr-2" /> Community
         </DropdownMenuItem>
