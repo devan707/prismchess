@@ -460,13 +460,29 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
       const stepCount = Math.abs(dr) + Math.abs(dc);
       const sDr = dr === 0 ? 0 : Math.sign(dr);
       const sDc = dc === 0 ? 0 : Math.sign(dc);
+      const trampledJuggs: { sq: Square; color: Color }[] = [];
       for (let s = 1; s <= stepCount; s++) {
         const fr = move.from.r + s * sDr;
         const fc = move.from.c + s * sDc;
         const pr = partner.r + s * sDr;
         const pc = partner.c + s * sDc;
+        for (const cell of [{ r: fr, c: fc }, { r: pr, c: pc }]) {
+          const t = b[cell.r][cell.c];
+          if (t && t.id === "J" && t.color !== color) trampledJuggs.push({ sq: cell, color: t.color });
+        }
         b[fr][fc] = null;
         b[pr][pc] = null;
+      }
+      // Destroy partners of any trampled juggernauts (they lie on perpendicular cells).
+      const wideB = boardIsWide(b);
+      for (const tj of trampledJuggs) {
+        for (const o of juggPerpOffsets(wideB)) {
+          const r = tj.sq.r + o.dr;
+          const c = tj.sq.c + o.dc;
+          if (r < 0 || r >= b.length || c < 0 || c >= b[0].length) continue;
+          const t = b[r][c];
+          if (t && t.id === "J" && t.color === tj.color) { b[r][c] = null; break; }
+        }
       }
     }
     b[move.to.r][move.to.c] = { id: "J", color };
