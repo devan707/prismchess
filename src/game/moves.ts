@@ -629,8 +629,9 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
       const moves = pseudoMovesFrom(state, { r, c });
       for (const m of moves) {
         if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
-          // dragon teleport attacks empty squares; doesn't capture there. Filter:
-          if (m.kind === "normal" && state.registry[p.id]?.special === "dragon") continue;
+          // dragon flights land on empty squares (no capture) — not an attack.
+          // Dragon strikes carry a captured piece and ARE attacks.
+          if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
           // portal swaps land on friendly squares (never an enemy king square anyway).
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
