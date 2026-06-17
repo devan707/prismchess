@@ -15,14 +15,20 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMultiplayerRouteImport } from './routes/_authenticated/multiplayer'
+import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedFriendsRouteImport } from './routes/_authenticated/friends'
 import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/forum'
 import { Route as AuthenticatedMultiplayerIndexRouteImport } from './routes/_authenticated/multiplayer.index'
+import { Route as AuthenticatedMessagesIndexRouteImport } from './routes/_authenticated/messages.index'
 import { Route as AuthenticatedForumIndexRouteImport } from './routes/_authenticated/forum.index'
+import { Route as AuthenticatedUUsernameRouteImport } from './routes/_authenticated/u.$username'
 import { Route as AuthenticatedMultiplayerMatchIdRouteImport } from './routes/_authenticated/multiplayer.$matchId'
+import { Route as AuthenticatedMessagesThreadIdRouteImport } from './routes/_authenticated/messages.$threadId'
 import { Route as AuthenticatedForumSuggestRouteImport } from './routes/_authenticated/forum.suggest'
 import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
 import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
@@ -57,6 +63,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GSlugRoute = GSlugRouteImport.update({
+  id: '/g/$slug',
+  path: '/g/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -73,9 +84,19 @@ const AuthenticatedMultiplayerRoute =
     path: '/multiplayer',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMessagesRoute = AuthenticatedMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFriendsRoute = AuthenticatedFriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedForumRoute = AuthenticatedForumRouteImport.update({
@@ -89,16 +110,33 @@ const AuthenticatedMultiplayerIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedMultiplayerRoute,
   } as any)
+const AuthenticatedMessagesIndexRoute =
+  AuthenticatedMessagesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedMessagesRoute,
+  } as any)
 const AuthenticatedForumIndexRoute = AuthenticatedForumIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedForumRoute,
+} as any)
+const AuthenticatedUUsernameRoute = AuthenticatedUUsernameRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMultiplayerMatchIdRoute =
   AuthenticatedMultiplayerMatchIdRouteImport.update({
     id: '/$matchId',
     path: '/$matchId',
     getParentRoute: () => AuthenticatedMultiplayerRoute,
+  } as any)
+const AuthenticatedMessagesThreadIdRoute =
+  AuthenticatedMessagesThreadIdRouteImport.update({
+    id: '/$threadId',
+    path: '/$threadId',
+    getParentRoute: () => AuthenticatedMessagesRoute,
   } as any)
 const AuthenticatedForumSuggestRoute =
   AuthenticatedForumSuggestRouteImport.update({
@@ -131,15 +169,21 @@ export interface FileRoutesByFullPath {
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
+  '/friends': typeof AuthenticatedFriendsRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/messages': typeof AuthenticatedMessagesRouteWithChildren
   '/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/g/$slug': typeof GSlugRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
+  '/u/$username': typeof AuthenticatedUUsernameRoute
   '/forum/': typeof AuthenticatedForumIndexRoute
+  '/messages/': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
 }
@@ -149,14 +193,19 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
+  '/friends': typeof AuthenticatedFriendsRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/g/$slug': typeof GSlugRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
+  '/u/$username': typeof AuthenticatedUUsernameRoute
   '/forum': typeof AuthenticatedForumIndexRoute
+  '/messages': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
 }
@@ -169,15 +218,21 @@ export interface FileRoutesById {
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
+  '/_authenticated/friends': typeof AuthenticatedFriendsRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/messages': typeof AuthenticatedMessagesRouteWithChildren
   '/_authenticated/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/g/$slug': typeof GSlugRoute
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
   '/_authenticated/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/_authenticated/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/_authenticated/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
+  '/_authenticated/u/$username': typeof AuthenticatedUUsernameRoute
   '/_authenticated/forum/': typeof AuthenticatedForumIndexRoute
+  '/_authenticated/messages/': typeof AuthenticatedMessagesIndexRoute
   '/_authenticated/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/_authenticated/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
 }
@@ -190,15 +245,21 @@ export interface FileRouteTypes {
     | '/play'
     | '/sandbox'
     | '/forum'
+    | '/friends'
     | '/history'
+    | '/messages'
     | '/multiplayer'
     | '/onboarding'
     | '/profile'
+    | '/g/$slug'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
+    | '/messages/$threadId'
     | '/multiplayer/$matchId'
+    | '/u/$username'
     | '/forum/'
+    | '/messages/'
     | '/multiplayer/'
     | '/multiplayer/join/$token'
   fileRoutesByTo: FileRoutesByTo
@@ -208,14 +269,19 @@ export interface FileRouteTypes {
     | '/help'
     | '/play'
     | '/sandbox'
+    | '/friends'
     | '/history'
     | '/onboarding'
     | '/profile'
+    | '/g/$slug'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
+    | '/messages/$threadId'
     | '/multiplayer/$matchId'
+    | '/u/$username'
     | '/forum'
+    | '/messages'
     | '/multiplayer'
     | '/multiplayer/join/$token'
   id:
@@ -227,15 +293,21 @@ export interface FileRouteTypes {
     | '/play'
     | '/sandbox'
     | '/_authenticated/forum'
+    | '/_authenticated/friends'
     | '/_authenticated/history'
+    | '/_authenticated/messages'
     | '/_authenticated/multiplayer'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
+    | '/g/$slug'
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
     | '/_authenticated/forum/suggest'
+    | '/_authenticated/messages/$threadId'
     | '/_authenticated/multiplayer/$matchId'
+    | '/_authenticated/u/$username'
     | '/_authenticated/forum/'
+    | '/_authenticated/messages/'
     | '/_authenticated/multiplayer/'
     | '/_authenticated/multiplayer/join/$token'
   fileRoutesById: FileRoutesById
@@ -247,6 +319,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
+  GSlugRoute: typeof GSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -293,6 +366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/g/$slug': {
+      id: '/g/$slug'
+      path: '/g/$slug'
+      fullPath: '/g/$slug'
+      preLoaderRoute: typeof GSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -314,11 +394,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMultiplayerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/messages': {
+      id: '/_authenticated/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AuthenticatedMessagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/history': {
       id: '/_authenticated/history'
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/friends': {
+      id: '/_authenticated/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof AuthenticatedFriendsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/forum': {
@@ -335,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMultiplayerIndexRouteImport
       parentRoute: typeof AuthenticatedMultiplayerRoute
     }
+    '/_authenticated/messages/': {
+      id: '/_authenticated/messages/'
+      path: '/'
+      fullPath: '/messages/'
+      preLoaderRoute: typeof AuthenticatedMessagesIndexRouteImport
+      parentRoute: typeof AuthenticatedMessagesRoute
+    }
     '/_authenticated/forum/': {
       id: '/_authenticated/forum/'
       path: '/'
@@ -342,12 +443,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedForumIndexRouteImport
       parentRoute: typeof AuthenticatedForumRoute
     }
+    '/_authenticated/u/$username': {
+      id: '/_authenticated/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof AuthenticatedUUsernameRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/multiplayer/$matchId': {
       id: '/_authenticated/multiplayer/$matchId'
       path: '/$matchId'
       fullPath: '/multiplayer/$matchId'
       preLoaderRoute: typeof AuthenticatedMultiplayerMatchIdRouteImport
       parentRoute: typeof AuthenticatedMultiplayerRoute
+    }
+    '/_authenticated/messages/$threadId': {
+      id: '/_authenticated/messages/$threadId'
+      path: '/$threadId'
+      fullPath: '/messages/$threadId'
+      preLoaderRoute: typeof AuthenticatedMessagesThreadIdRouteImport
+      parentRoute: typeof AuthenticatedMessagesRoute
     }
     '/_authenticated/forum/suggest': {
       id: '/_authenticated/forum/suggest'
@@ -397,6 +512,21 @@ const AuthenticatedForumRouteChildren: AuthenticatedForumRouteChildren = {
 const AuthenticatedForumRouteWithChildren =
   AuthenticatedForumRoute._addFileChildren(AuthenticatedForumRouteChildren)
 
+interface AuthenticatedMessagesRouteChildren {
+  AuthenticatedMessagesThreadIdRoute: typeof AuthenticatedMessagesThreadIdRoute
+  AuthenticatedMessagesIndexRoute: typeof AuthenticatedMessagesIndexRoute
+}
+
+const AuthenticatedMessagesRouteChildren: AuthenticatedMessagesRouteChildren = {
+  AuthenticatedMessagesThreadIdRoute: AuthenticatedMessagesThreadIdRoute,
+  AuthenticatedMessagesIndexRoute: AuthenticatedMessagesIndexRoute,
+}
+
+const AuthenticatedMessagesRouteWithChildren =
+  AuthenticatedMessagesRoute._addFileChildren(
+    AuthenticatedMessagesRouteChildren,
+  )
+
 interface AuthenticatedMultiplayerRouteChildren {
   AuthenticatedMultiplayerMatchIdRoute: typeof AuthenticatedMultiplayerMatchIdRoute
   AuthenticatedMultiplayerIndexRoute: typeof AuthenticatedMultiplayerIndexRoute
@@ -418,18 +548,24 @@ const AuthenticatedMultiplayerRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedForumRoute: typeof AuthenticatedForumRouteWithChildren
+  AuthenticatedFriendsRoute: typeof AuthenticatedFriendsRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRouteWithChildren
   AuthenticatedMultiplayerRoute: typeof AuthenticatedMultiplayerRouteWithChildren
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedUUsernameRoute: typeof AuthenticatedUUsernameRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedForumRoute: AuthenticatedForumRouteWithChildren,
+  AuthenticatedFriendsRoute: AuthenticatedFriendsRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedMessagesRoute: AuthenticatedMessagesRouteWithChildren,
   AuthenticatedMultiplayerRoute: AuthenticatedMultiplayerRouteWithChildren,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedUUsernameRoute: AuthenticatedUUsernameRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -442,6 +578,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
+  GSlugRoute: GSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
