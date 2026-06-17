@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogIn, User as UserIcon, LogOut, MessagesSquare } from "lucide-react";
+import { LogIn, User as UserIcon, LogOut, MessagesSquare, Users, Mail } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function UserMenu() {
