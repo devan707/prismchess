@@ -275,6 +275,36 @@ function Sandbox() {
     }
   };
 
+  const handlePublish = async () => {
+    if (validationError) { toast.error(validationError); return; }
+    const name = saveName.trim() || `Custom ${design.rows}×${design.cols}`;
+    const desc = description.trim();
+    if (!desc) {
+      toast.error("Add a description before sharing — players need to know how the game works.");
+      return;
+    }
+    setPublishing(true);
+    try {
+      toast.info("Publishing — generating tutorial…");
+      const tutorial = await buildTutorialBestEffort(name, desc);
+      const { slug } = await publish({
+        data: {
+          name,
+          description: desc,
+          design: design as unknown as Record<string, unknown>,
+          tutorial: (tutorial ?? null) as unknown as Record<string, unknown> | null,
+        },
+      });
+      const url = `${window.location.origin}/g/${slug}`;
+      try { await navigator.clipboard.writeText(url); } catch {}
+      toast.success("Published! Share link copied to clipboard.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't publish");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="max-w-7xl mx-auto px-4 pt-6 pb-4 flex items-center justify-between flex-wrap gap-3">
