@@ -95,9 +95,9 @@ interface AGV {
   guestName: string | null;
 }
 
-function ActiveGameView({ matchId, meId, initialMatch, initialMoves, hostName, guestName }: AGV) {
+function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEvents, hostName, guestName }: AGV) {
   const navigate = useNavigate();
-  const game = useMultiplayerGame({ matchId, meId, initialMatch, initialMoves });
+  const game = useMultiplayerGame({ matchId, meId, initialMatch, initialMoves, initialEvents });
   const resignFn = useServerFn(resign);
   const claimFn = useServerFn(claimTimeout);
 
@@ -108,7 +108,12 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, hostName, g
     return () => clearInterval(t);
   }, []);
 
-  const { match, state, status, terminal, myColor, amPlayer, tryMove, tryDrop, legalFor, legalDropSquares, selectedDrop, setSelectedDrop, pendingPromotion, promotionOptions, confirmPromotion, cancelPromotion } = game;
+  const {
+    match, state, status, terminal, myColor, amPlayer,
+    tryMove, tryDrop, legalFor, legalDropSquares, selectedDrop, setSelectedDrop,
+    pendingPromotion, promotionOptions, confirmPromotion, cancelPromotion,
+    incomingDrawOffer, myPendingDrawOffer, sendDrawOffer, respondToDraw,
+  } = game;
 
   const whiteRemaining = liveTimeRemaining(match, "w", now);
   const blackRemaining = liveTimeRemaining(match, "b", now);
