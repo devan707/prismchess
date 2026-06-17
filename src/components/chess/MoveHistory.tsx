@@ -3,12 +3,17 @@ import { FILES } from "@/game/board";
 import { PieceGlyph } from "./PieceGlyph";
 
 function notation(m: Move): string {
+  if (m.kind === "castle" && m.rookFrom) {
+    // O-O if king moved toward higher file, O-O-O if toward lower file
+    return m.to.c > m.from.c ? "O-O" : "O-O-O";
+  }
   const piece = m.piece.type === "P" ? "" : m.piece.type;
   const from = `${FILES[m.from.c]}${m.from.r + 1}`;
   const to = `${FILES[m.to.c]}${m.to.r + 1}`;
   const sep = m.captured ? "x" : "-";
   const promo = m.promotion ? `=${m.promotion}` : "";
-  return `${piece}${from}${sep}${to}${promo}`;
+  const ep = m.kind === "ep" ? " e.p." : "";
+  return `${piece}${from}${sep}${to}${promo}${ep}`;
 }
 
 export function MoveHistory({ state }: { state: GameState }) {

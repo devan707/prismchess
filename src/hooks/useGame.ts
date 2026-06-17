@@ -58,7 +58,7 @@ export function useGame(opts: UseGameOptions) {
   const tryMove = useCallback(
     (from: Square, to: Square, promotion?: PromotionPiece) => {
       if (state.turn !== opts.humanColor || gameOver) return false;
-      const legal = legalMovesFrom(state.board, from, state.turn);
+      const legal = legalMovesFrom(state.board, from, state.turn, ctxFromState(state));
       const candidates = legal.filter((m) => m.to.r === to.r && m.to.c === to.c);
       if (candidates.length === 0) return false;
       const promos = candidates.filter((m) => m.promotion);
@@ -96,12 +96,12 @@ export function useGame(opts: UseGameOptions) {
   const legalFor = useCallback(
     (from: Square | null): Square[] => {
       if (!from) return [];
-      return legalMovesFrom(state.board, from, state.turn).map((m) => m.to);
+      return legalMovesFrom(state.board, from, state.turn, ctxFromState(state)).map((m) => m.to);
     },
     [state],
   );
 
-  const allLegal = useCallback(() => allLegalMoves(state.board, state.turn), [state]);
+  const allLegal = useCallback(() => allLegalMoves(state.board, state.turn, ctxFromState(state)), [state]);
 
   return {
     state,
