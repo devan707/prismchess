@@ -172,7 +172,7 @@ function buildDiagram(id: PieceId): Diagram | null {
           { r: 0, c: 1 }, // step 3: N — captures the Rook
         ],
         caption:
-          "Friendly Pawn blocks the direct lane. Assassin curves NW then N → N — every consecutive turn stays within 45°, and the capture lands on step 3.",
+          "Two move modes per turn. Mode 1: a plain king-step to any of the 8 adjacent squares (may capture). Mode 2 (shown): a 3-step infiltration — Assassin curves NW → N → N around the friendly Pawn; every consecutive turn stays within 45°, and the capture lands on step 3.",
       };
       return { rows, cols, center, markers, scenario };
     }
