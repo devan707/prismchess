@@ -116,26 +116,33 @@ function buildDiagram(id: PieceId): Diagram | null {
       }
       return { rows, cols, center, markers };
     case "J": {
-      // Juggernaut: 2-square titan. Center occupies two cells stacked vertically
-      // (front cell on top). Charge 1–5 forward, shift 1 sideways.
-      const rowsJ = 9;
+      // Juggernaut: 2-square titan. The pair sits SIDE-BY-SIDE (perpendicular
+      // to its charge axis) and rolls forward, clearing BOTH columns in front
+      // of it. Shift = slide the whole pair one square left/right (captures
+      // any enemy on the destination cell). Charge = roll 1-5 forward,
+      // trampling every enemy in either lane, stopping before friendlies.
+      const rowsJ = 8;
       const colsJ = 5;
-      const crJ = 6; // rear cell
-      const ccJ = 2;
+      const crJ = 6;          // back rank of the pair
+      const ccLeft = 1;       // left half (anchor for the horizontal glyph)
+      const ccRight = 2;      // right half
       const centerJ = [
-        { r: crJ, c: ccJ },     // rear
-        { r: crJ - 1, c: ccJ }, // front
+        { r: crJ, c: ccLeft },  // [0] = anchor for the horizontal glyph
+        { r: crJ, c: ccRight }, // [1] = paired half
       ];
       const m: Array<{ r: number; c: number; type: Marker }> = [];
-      // Forward charge from front cell, up to 5 squares — trample = both.
-      for (let k = 1; k <= 5; k++) m.push({ r: crJ - 1 - k, c: ccJ, type: "b" });
-      // Sideways shift 1 from each occupied cell (move only).
-      m.push({ r: crJ, c: ccJ - 1, type: "m" });
-      m.push({ r: crJ, c: ccJ + 1, type: "m" });
-      m.push({ r: crJ - 1, c: ccJ - 1, type: "m" });
-      m.push({ r: crJ - 1, c: ccJ + 1, type: "m" });
+      // Forward charge — both columns cleared each step, up to 5 squares.
+      for (let k = 1; k <= 5; k++) {
+        m.push({ r: crJ - k, c: ccLeft, type: "b" });
+        m.push({ r: crJ - k, c: ccRight, type: "b" });
+      }
+      // Sideways slide — whole pair shifts one column. Destination cell can
+      // be empty (shift) or hold an enemy (lateral capture) → "both".
+      m.push({ r: crJ, c: ccLeft - 1, type: "b" });
+      m.push({ r: crJ, c: ccRight + 1, type: "b" });
       return { rows: rowsJ, cols: colsJ, center: centerJ, markers: m };
     }
+
     case "D":
       return {
         rows,
@@ -263,9 +270,10 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
           let centerNode: React.ReactNode = null;
           if (kind === "center") {
             if (id === "J") {
-              const isFront = diag.center[1] && r === diag.center[1].r && c === diag.center[1].c;
-              centerNode = isFront ? (
-                <JuggernautGlyph color={color} orientation="vertical" facing="up" />
+              // Horizontal pair — render the 2-wide glyph anchored on the LEFT half (center[0]).
+              const isAnchor = diag.center[0] && r === diag.center[0].r && c === diag.center[0].c;
+              centerNode = isAnchor ? (
+                <JuggernautGlyph color={color} orientation="horizontal" facing="up" />
               ) : null;
             } else {
               centerNode = (
@@ -273,6 +281,7 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
               );
             }
           }
+
 
           return (
             <div
