@@ -144,31 +144,43 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-5 pt-5 pb-3 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" /> Post-game review
-          </DialogTitle>
-          <DialogDescription>
-            Step through the game move by move. Leave a note on any move and the AI will use it to play smarter next time.
-          </DialogDescription>
-          <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-            <Badge variant="secondary"><Sparkles className="h-3 w-3 mr-1" />{playbook.lessons.length} lessons</Badge>
-            <Badge variant="secondary">caution ×{playbook.cautionMultiplier.toFixed(2)}</Badge>
-            <Badge variant="secondary">aggression {playbook.aggressionBonus >= 0 ? "+" : ""}{Math.round(playbook.aggressionBonus)}</Badge>
-            {Object.entries(playbook.pieceValueMultipliers).map(([id, m]) => (
-              <Badge key={`pv-${id}`} variant="secondary" title="Piece value multiplier the engine applies next game">
-                {state.registry[id]?.name ?? id} ×{m.toFixed(2)}
-              </Badge>
-            ))}
-            {Object.entries(playbook.squareDefenseBonuses).map(([sq, w]) => (
-              <Badge key={`sq-${sq}`} variant={w >= 0 ? "default" : "destructive"} title="Square the engine actively fights to control next game">
-                {sq} {w >= 0 ? "+" : ""}{Math.round(w)}
-              </Badge>
-            ))}
-            <Badge variant="secondary">{playbook.gamesReviewed} games reviewed</Badge>
-            <Button size="sm" variant="ghost" className="ml-auto h-7 px-2" onClick={onReset} title="Wipe all learned lessons">
-              <RotateCcw className="h-3 w-3 mr-1" /> Reset playbook
-            </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DialogTitle className="flex items-center gap-2 mr-auto">
+              <Brain className="h-5 w-5" /> Post-game review
+            </DialogTitle>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Playbook · {playbook.lessons.length} lessons
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 max-h-[60vh] overflow-y-auto">
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  <Badge variant="secondary">caution ×{playbook.cautionMultiplier.toFixed(2)}</Badge>
+                  <Badge variant="secondary">aggression {playbook.aggressionBonus >= 0 ? "+" : ""}{Math.round(playbook.aggressionBonus)}</Badge>
+                  <Badge variant="secondary">{playbook.gamesReviewed} games reviewed</Badge>
+                  {Object.entries(playbook.pieceValueMultipliers).map(([id, m]) => (
+                    <Badge key={`pv-${id}`} variant="secondary" title="Piece value multiplier the engine applies next game">
+                      {state.registry[id]?.name ?? id} ×{m.toFixed(2)}
+                    </Badge>
+                  ))}
+                  {Object.entries(playbook.squareDefenseBonuses).map(([sq, w]) => (
+                    <Badge key={`sq-${sq}`} variant={w >= 0 ? "default" : "destructive"} title="Square the engine actively fights to control next game">
+                      {sq} {w >= 0 ? "+" : ""}{Math.round(w)}
+                    </Badge>
+                  ))}
+                </div>
+                <Button size="sm" variant="ghost" className="mt-3 w-full h-7 px-2 text-xs" onClick={onReset} title="Wipe all learned lessons">
+                  <RotateCcw className="h-3 w-3 mr-1" /> Reset playbook
+                </Button>
+              </PopoverContent>
+            </Popover>
           </div>
+          <DialogDescription className="mt-1">
+            Step through the game move by move. Notes you send are tagged with the move shown — the AI reviews both sides and learns from your feedback.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 grid md:grid-cols-[minmax(260px,360px)_1fr] gap-0 overflow-hidden">
