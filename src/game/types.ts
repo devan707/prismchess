@@ -1,8 +1,13 @@
 export type Color = "w" | "b";
-export type PieceType = "K" | "Q" | "R" | "B" | "N" | "P";
+
+// Piece identifiers. Built-in:
+//   K=King, Q=Queen, R=Rook, B=Bishop, N=Knight, P=Pawn,
+//   H=King's Hand, A=Archer, D=Dragon, X=Barricade
+// User-defined pieces use "u:<slug>".
+export type PieceId = string;
 
 export interface Piece {
-  type: PieceType;
+  id: PieceId;
   color: Color;
 }
 
@@ -13,75 +18,98 @@ export interface Square {
   c: number;
 }
 
-export type PromotionPiece = "Q" | "R" | "N" | "B";
+export interface Offset {
+  dr: number;
+  dc: number;
+}
 
-export type MoveKind = "castle" | "ep" | "double";
+export interface SlideDir extends Offset {
+  /** Max steps. Undefined / 0 = unlimited. */
+  max?: number;
+}
+
+export interface MovementSpec {
+  slides?: SlideDir[];
+  leaps?: Offset[];
+  /** Sliders that jump pieces in their path (very unusual). */
+  slidersJump?: boolean;
+}
+
+export interface PieceDef {
+  id: PieceId;
+  name: string;
+  /** Glyph rendered for the piece. */
+  glyph: string;
+  /** If true, glyph is colored emoji — render with neutral coloring + side ring. */
+  emoji?: boolean;
+  /** Movement (and capture if `capture` not given). */
+  movement?: MovementSpec;
+  /** Optional separate capture pattern. */
+  capture?: MovementSpec;
+  /** Special hand-coded behavior. */
+  special?: "pawn" | "dragon";
+  /** Royal: loss of all royal pieces of a color = game over. */
+  royal?: boolean;
+  /** Cannot move; blocks travel; cannot be captured. */
+  immobile?: boolean;
+  /** Can be a pawn promotion target. */
+  canBePromoted?: boolean;
+  /** Default reserves (drops) per side when placed in the designer's drop tray. */
+  defaultReserve?: number;
+  /** Tooltip / explanation. */
+  description?: string;
+  /** Marks built-in custom pieces (King's Hand, Archer, Dragon, Barricade). */
+  builtinCustom?: boolean;
+}
+
+export type MoveKind = "normal" | "double" | "ep" | "drop" | "dragonAttack";
 
 export interface Move {
-  from: Square;
+  /** Null only for drops. */
+  from: Square | null;
   to: Square;
   piece: Piece;
   captured?: Piece | null;
-  promotion?: PromotionPiece;
   kind?: MoveKind;
-  // Castling: rook movement
-  rookFrom?: Square;
-  rookTo?: Square;
-  // En passant: square of the captured pawn (differs from `to`)
+  /** Pawn promotion target id (must be canBePromoted). */
+  promotion?: PieceId;
+  /** En-passant captured pawn square. */
   epCapture?: Square;
+  /** Drop piece id (drops only). */
+  dropPieceId?: PieceId;
 }
 
-export interface CastlingSide {
-  king: boolean;
-  rooks: Record<number, boolean>; // by original column
-}
-
-export interface CastlingRights {
-  w: CastlingSide;
-  b: CastlingSide;
-}
+export type Reserves = Record<PieceId, number>;
 
 export interface GameState {
   board: Board;
   turn: Color;
   history: Move[];
   captured: { w: Piece[]; b: Piece[] };
-  castling: CastlingRights;
-  enPassant: Square | null; // the square a pawn just skipped over, capturable next ply
+  reserves: { w: Reserves; b: Reserves };
+  enPassant: Square | null;
+  /** Snapshot of the registry used to play this game. */
+  registry: Record<PieceId, PieceDef>;
+  rows: number;
+  cols: number;
 }
 
 export type Difficulty = "easy" | "medium" | "hard";
 
-export interface Variant {
-  id: string;
-  name: string;
-  size: number;
-  backRank: PieceType[];
-  description: string;
+/** Designer-level configuration. */
+export interface Placement {
+  r: number;
+  c: number;
+  pieceId: PieceId;
+  color: Color;
 }
 
-export const VARIANTS: Record<string, Variant> = {
-  "5x5-classic": {
-    id: "5x5-classic",
-    name: "Classic (5×5)",
-    size: 5,
-    backRank: ["R", "K", "B", "N", "R"],
-    description: "Rook, king, bishop, knight, rook — the original compact 5×5 setup.",
-  },
-  "5x5-knights": {
-    id: "5x5-knights",
-    name: "Battle of the Knights (5×5)",
-    size: 5,
-    backRank: ["N", "N", "K", "N", "N"],
-    description: "Four knights per side guarding the king. No rooks, no castling — pure tactics.",
-  },
-  "6x6-royal": {
-    id: "6x6-royal",
-    name: "Royal (6×6)",
-    size: 6,
-    backRank: ["R", "B", "K", "Q", "B", "R"],
-    description: "Rook, bishop, king, queen, bishop, rook — a full 6×6 court.",
-  },
-};
-
-export const DEFAULT_VARIANT_ID = "5x5-classic";
+export interface Design {
+  rows: number;
+  cols: number;
+  placements: Placement[];
+  /** Starting reserves per side, by piece id. */
+  reserves: { w: Reserves; b: Reserves };
+  /** Pieces defined (or overridden) by the user, keyed by id. */
+  customPieces: PieceDef[];
+}
