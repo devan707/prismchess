@@ -326,6 +326,17 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           onSelectionChange={handleSelectionChange}
         />
 
+        {takebackOn && state.history.length > 0 && !terminal && !viewingPast && (
+          <Button
+            onClick={takeback}
+            size="sm"
+            variant="secondary"
+            className="h-7 px-2 text-xs"
+          >
+            <Undo className="h-3.5 w-3.5 mr-1" /> Take back
+          </Button>
+        )}
+
         {/* History scrubber */}
         {state.history.length > 0 && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
