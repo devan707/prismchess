@@ -618,6 +618,13 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.to.r][move.to.c] = null;
     return b;
   }
+  if (move.kind === "castle" && move.from && move.rookFrom && move.rookTo) {
+    b[move.from.r][move.from.c] = null;
+    b[move.rookFrom.r][move.rookFrom.c] = null;
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    b[move.rookTo.r][move.rookTo.c] = { id: "R", color: move.piece.color };
+    return b;
+  }
   if (move.kind === "portalSwap" && move.from) {
     const friendly = b[move.to.r][move.to.c];
     b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
