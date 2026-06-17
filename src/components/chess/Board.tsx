@@ -104,10 +104,9 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   if (necromancerSelected && selected) {
     // Only the MOST RECENT corpse on each square is shown. If that latest
     // corpse is an "object" piece (portal, juggernaut, barricade/immobile)
-    // the square is not raisable — do not fall back to an older corpse.
-    // Additionally, only render ghosts on squares the necromancer could
-    // ACTUALLY raise from right now: adjacent, empty, and with a matching
-    // piece still present in the captor's graveyard.
+    // the square is not raisable — skip. Show ghosts for ALL remaining
+    // corpses across the board; the raise highlight only lights up when
+    // the necromancer is adjacent and a matching piece is in the graveyard.
     const latest = new Map<string, (typeof state.corpses)[number]>();
     for (const corp of state.corpses ?? []) {
       latest.set(`${corp.square.r},${corp.square.c}`, corp);
@@ -117,22 +116,12 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
       if (!cdef) continue;
       if (cdef.special === "juggernaut" || cdef.special === "portal") continue;
       if (cdef.immobile) continue;
-      const dr = corp.square.r - selected.r;
-      const dc = corp.square.c - selected.c;
-      if (dr === 0 && dc === 0) continue;
-      if (Math.abs(dr) > 1 || Math.abs(dc) > 1) continue;
-      if (state.board[corp.square.r][corp.square.c]) continue;
-      const captorColor: "w" | "b" = corp.originalOwner === "w" ? "b" : "w";
-      const pool = state.captured[captorColor] ?? [];
-      const inGraveyard = pool.some(
-        (p) => p.id === corp.pieceId && p.color === corp.originalOwner,
-      );
-      if (!inGraveyard) continue;
+      const occupied = !!state.board[corp.square.r][corp.square.c];
       ghostMap.set(key, {
         id: corp.pieceId,
         color: humanColor,
         originalOwner: corp.originalOwner,
-        occupied: false,
+        occupied,
       });
     }
   }
