@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { initialState } from "@/game/board";
 import { applyMove, gameStatus, replayMoves } from "@/game/rules";
-import { allLegalMoves, legalMovesFrom } from "@/game/moves";
+import { allLegalMoves, ctxFromState, legalMovesFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
 import { VARIANTS, type Color, type Difficulty, type GameState, type Move, type PromotionPiece, type Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
