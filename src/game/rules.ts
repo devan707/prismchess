@@ -20,17 +20,8 @@ export function applyMove(state: GameState, move: Move): GameState {
   };
 }
 
-export function undoMove(state: GameState): GameState | null {
-  if (state.history.length === 0) return null;
-  // Replay from initial; simple and safe given short games.
-  // Caller passes the existing initial via state? Instead we re-derive:
-  // Recompute by replaying all but last move from initial.
-  // To avoid circular import, do replay externally — but cheaper here:
-  const moves = state.history.slice(0, -1);
-  // Lazy import to dodge cycles
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { initialState } = require("./board") as typeof import("./board");
-  let s: GameState = initialState();
+export function replayMoves(moves: Move[], start: GameState): GameState {
+  let s = start;
   for (const m of moves) s = applyMove(s, m);
   return s;
 }
