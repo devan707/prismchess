@@ -150,10 +150,19 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     builtinCustom: true,
     description: "Infiltrator. Slides up to 3 unobstructed squares diagonally, then takes exactly 1 more step in any of the 8 directions. Captures on the final square only.",
   },
+  W: {
+    id: "W",
+    name: "Wizard",
+    glyph: "🧙",
+    emoji: true,
+    special: "wizard",
+    builtinCustom: true,
+    description: "Arcane rook. Moves orthogonally any distance, but only between squares of its own color — opposite-colored squares (and pieces on them) are ignored and jumped over. Permanently bound to the color of the square it's placed on.",
+  },
 };
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
-export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S", "J", "Z"];
+export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S", "J", "Z", "W"];
 export const ALL_BUILTIN_IDS: PieceId[] = [...STANDARD_PIECE_IDS, ...BUILTIN_CUSTOM_IDS];
 
 /** Build a registry from the built-ins + user-defined pieces. */
