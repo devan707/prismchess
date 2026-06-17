@@ -112,41 +112,65 @@ function buildDiagram(id: PieceId): Diagram | null {
       for (const [dr, dc] of DIAG) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
       return { rows, cols, center, markers };
     case "Z": {
-      // Assassin: exactly 3 king-steps per turn; first 2 must be empty,
-      // 3rd can capture; no revisits; never 3 steps in the same direction.
-      // Reachable final squares = every cell at Chebyshev distance 1–3,
-      // EXCEPT the 8 straight-line endpoints at distance 3 (those would
-      // require 3 identical steps).
-      for (let dr = -3; dr <= 3; dr++) {
-        for (let dc = -3; dc <= 3; dc++) {
-          if (dr === 0 && dc === 0) continue;
-          const cheb = Math.max(Math.abs(dr), Math.abs(dc));
-          if (cheb > 3) continue;
-          if (cheb === 3) {
-            // Straight-line endpoints: pure ortho or pure diag at range 3.
-            if (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)) continue;
+      // Assassin: exactly 3 king-steps per turn. Constraints:
+      //   • first 2 landings must be empty (no jumping)
+      //   • no revisits
+      //   • 3 steps cannot all share the same direction
+      //   • each consecutive turn ≤ 45° (next step is same/adjacent compass dir)
+      //   • capture only on step 3
+      // Compute the reachable end-square set on an empty board.
+      const DIRS_8: Array<[number, number]> = [
+        [-1, 0], [-1, 1], [0, 1], [1, 1],
+        [1, 0], [1, -1], [0, -1], [-1, -1],
+      ];
+      const turnOK = (a: number, b: number) => {
+        const d = Math.abs(a - b);
+        return d <= 1 || d === 7;
+      };
+      const reachable = new Set<string>();
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          if (!turnOK(i, j)) continue;
+          for (let k = 0; k < 8; k++) {
+            if (!turnOK(j, k)) continue;
+            if (i === j && j === k) continue; // 3 identical = forbidden
+            const [dr1, dc1] = DIRS_8[i];
+            const [dr2, dc2] = DIRS_8[j];
+            const [dr3, dc3] = DIRS_8[k];
+            const p1 = `${dr1},${dc1}`;
+            const p2 = `${dr1 + dr2},${dc1 + dc2}`;
+            const p3 = `${dr1 + dr2 + dr3},${dc1 + dc2 + dc3}`;
+            // No revisits (start = "0,0" implicit).
+            const path = new Set(["0,0", p1, p2, p3]);
+            if (path.size !== 4) continue;
+            reachable.add(p3);
           }
-          markers.push({ r: cr + dr, c: cc + dc, type: "b" });
         }
       }
-      // Worked example: friendly Pawn blocks the direct northern lane, so the
-      // Assassin must curve NW → N → E to slip around and capture the enemy.
+      for (const k of reachable) {
+        const [dr, dc] = k.split(",").map(Number);
+        markers.push({ r: cr + dr, c: cc + dc, type: "b" });
+      }
+      // Worked example: friendly Pawn directly N blocks the natural N-N-?
+      // routes. Assassin steps NW → N → N (idx 7,0,0 — turns 45°, 0°) to
+      // slip around the Pawn and capture the Rook on the third step.
       const scenario: Scenario = {
         rows: 5,
         cols: 5,
         self: { r: 3, c: 2 },
         friends: [{ r: 2, c: 2, id: "P" }],
-        enemies: [{ r: 1, c: 2, id: "R" }],
+        enemies: [{ r: 0, c: 1, id: "R" }],
         path: [
-          { r: 2, c: 1 }, // step 1: NW (around the friendly)
+          { r: 2, c: 1 }, // step 1: NW
           { r: 1, c: 1 }, // step 2: N
-          { r: 1, c: 2 }, // step 3: E — captures the Rook
+          { r: 0, c: 1 }, // step 3: N — captures the Rook
         ],
         caption:
-          "Friendly Pawn blocks the direct lane. Assassin curves NW → N → E to step around it and capture on the third move.",
+          "Friendly Pawn blocks the direct lane. Assassin curves NW then N → N — every consecutive turn stays within 45°, and the capture lands on step 3.",
       };
       return { rows, cols, center, markers, scenario };
     }
+
 
 
 
