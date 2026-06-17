@@ -899,6 +899,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
         nextCorpses.push({ square: cell, pieceId: pre.id, originalOwner: pre.color });
       }
     }
+  }
   // necroRaise: the target square is no longer a corpse square — clear ALL
   // corpses there so it cannot be raised from again.
   if (move.kind === "necroRaise") {
