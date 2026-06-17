@@ -84,6 +84,8 @@ export interface Move {
   resurrectPieceId?: PieceId;
   /** Shapeshifter capture: piece id to transform into (= captured.id). */
   shapeshiftTo?: PieceId;
+  /** Juggernaut: enemy pieces trampled during a charge. */
+  juggTrampled?: Piece[];
 }
 
 export type Reserves = Record<PieceId, number>;
