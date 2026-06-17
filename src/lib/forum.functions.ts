@@ -122,7 +122,7 @@ export const createTopic = createServerFn({ method: "POST" })
         body: data.body,
         author_id: context.userId,
         is_featured: data.isFeatured ?? false,
-        shared_design: data.sharedDesign?.design ?? null,
+        shared_design: (data.sharedDesign?.design ?? null) as Json,
         shared_design_name: data.sharedDesign?.name ?? null,
       })
       .select("id")
@@ -147,7 +147,7 @@ export const createSuggestion = createServerFn({ method: "POST" })
       title: data.title,
       body: data.body,
       suggester_id: context.userId,
-      shared_design: data.sharedDesign?.design ?? null,
+      shared_design: (data.sharedDesign?.design ?? null) as Json,
       shared_design_name: data.sharedDesign?.name ?? null,
     });
     if (error) throw new Error(error.message);
