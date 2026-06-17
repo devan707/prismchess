@@ -3,7 +3,7 @@ import type { GameState, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
-import { inCheck } from "@/game/moves";
+import { inCheck, pseudoMovesFrom } from "@/game/moves";
 
 interface BoardProps {
   state: GameState;
@@ -30,6 +30,9 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
   const legalTargets = legalFor(selected ?? dragFrom);
+  const inspectPiece = selected ? state.board[selected.r][selected.c] : null;
+  const inspectSelected = !!inspectPiece && inspectPiece.color !== humanColor;
+  const inspectTargets = inspectSelected && selected ? pseudoMovesFrom(state, selected).map((m) => m.to) : [];
   const last = state.history[state.history.length - 1];
 
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
@@ -111,6 +114,8 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const isLegal = legalTargets.some((t) => t.r === r && t.c === c);
           const isCapture = isLegal && !!piece;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
+          const isInspect = inspectTargets.some((t) => t.r === r && t.c === c);
+          const isInspectCapture = isInspect && !!piece;
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
           const isCheck = checkSquares.some((k) => k.r === r && k.c === c);
 
@@ -163,6 +168,14 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               {isDropTarget && (
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"
                   style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 2px var(--color-board-legal)" }} />
+              )}
+              {isInspect && !isInspectCapture && (
+                <div className="absolute rounded-full pointer-events-none"
+                  style={{ width: "24%", height: "24%", background: "var(--color-board-inspect)" }} />
+              )}
+              {isInspect && isInspectCapture && (
+                <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
+                  style={{ borderColor: "var(--color-board-inspect)", boxShadow: "inset 0 0 0 4px var(--color-board-inspect)" }} />
               )}
               {piece && (() => {
                 const isJugg = state.registry[piece.id]?.special === "juggernaut";
