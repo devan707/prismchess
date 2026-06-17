@@ -38,16 +38,20 @@ export interface UseMultiplayerGameOpts {
   meId: string;
   initialMatch: MatchSnapshot;
   initialMoves: Move[];
+  initialEvents?: MatchEvent[];
 }
 
 export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
   const { matchId, meId } = opts;
   const [match, setMatch] = useState<MatchSnapshot>(opts.initialMatch);
   const [moves, setMoves] = useState<Move[]>(opts.initialMoves);
+  const [events, setEvents] = useState<MatchEvent[]>(opts.initialEvents ?? []);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [selectedDrop, setSelectedDrop] = useState<PieceId | null>(null);
   const submitFn = useServerFn(submitMove);
   const markFinishedFn = useServerFn(markFinished);
+  const offerDrawFn = useServerFn(offerDraw);
+  const respondDrawFn = useServerFn(respondDraw);
   const lastTerminalReportedRef = useRef<string | null>(null);
 
   const myColor: Color =
