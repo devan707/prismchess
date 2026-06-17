@@ -242,6 +242,19 @@ function buildDiagram(id: PieceId): Diagram | null {
         markers: [],
         note: "Cannot move or capture. Swap places with any one friendly piece anywhere on the board.",
       };
+    case "Y": {
+      // 3x3 with the Prism in the center; all 8 neighbors are the rainbow aura.
+      const cr2 = 1, cc2 = 1;
+      const m: Array<{ r: number; c: number; type: Marker }> = [];
+      for (const [dr, dc] of ALL8) m.push({ r: cr2 + dr, c: cc2 + dc, type: "m" });
+      return {
+        rows: 3,
+        cols: 3,
+        center: [{ r: cr2, c: cc2 }],
+        markers: m,
+        note: "Indestructible fixture. Any non-royal piece that ENTERS or PASSES through one of the 8 highlighted aura squares flips color. At end of every turn, non-royal pieces still in the aura flip again — walk converted pieces out next turn to keep them. Kings are immune.",
+      };
+    }
     default:
       return null;
   }
