@@ -5,8 +5,16 @@ import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/ga
 import { allLegalMoves, legalMovesFrom } from "@/game/moves";
 import type { Color, Design, GameState, Move, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { submitMove, markFinished } from "@/lib/multiplayer.functions";
+import { submitMove, markFinished, offerDraw, respondDraw } from "@/lib/multiplayer.functions";
 import { toast } from "sonner";
+
+export interface MatchEvent {
+  id: string;
+  kind: string;
+  actor_id: string | null;
+  payload: unknown;
+  created_at: string;
+}
 
 export interface MatchSnapshot {
   id: string;
