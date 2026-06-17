@@ -301,8 +301,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
             style={{
               width: 9,
               height: 9,
-              border: "2px solid hsl(0 84% 60% / 0.85)",
-              background: "hsl(0 84% 60% / 0.2)",
+              border: `2px solid ${CAPTURE_BORDER}`,
+              background: CAPTURE_FILL,
             }}
           />
           Capture
