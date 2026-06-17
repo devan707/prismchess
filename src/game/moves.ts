@@ -397,10 +397,25 @@ function applyMoveToState(state: GameState, move: Move): GameState {
   if (move.kind === "drop" && move.dropPieceId) {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
+  let captured = state.captured;
+  if (move.captured || move.kind === "resurrect") {
+    const w = [...state.captured.w];
+    const b = [...state.captured.b];
+    if (move.captured) {
+      (state.turn === "w" ? w : b).push(move.captured as Piece);
+    }
+    if (move.kind === "resurrect" && move.resurrectPieceId) {
+      const friendly = state.turn === "w" ? b : w;
+      const idx = friendly.findIndex((p) => p.id === move.resurrectPieceId);
+      if (idx >= 0) friendly.splice(idx, 1);
+    }
+    captured = { w, b };
+  }
   return {
     ...state,
     board,
     reserves,
+    captured,
     enPassant: move.kind === "double" && move.from
       ? (move.from.r !== move.to.r
           ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
