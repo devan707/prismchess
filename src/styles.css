@@ -100,7 +100,8 @@
   --board-light: oklch(0.78 0.04 80);
   --board-dark: oklch(0.32 0.06 150);
   --board-highlight: oklch(0.78 0.16 90 / 0.55);
-  --board-legal: oklch(0.7 0.16 150 / 0.45);
+  --board-legal: oklch(0.72 0.18 150 / 0.55);
+  --board-capture: oklch(0.68 0.22 28 / 0.65);
   --board-check: oklch(0.62 0.22 25 / 0.7);
   --board-last: oklch(0.78 0.16 90 / 0.4);
   --board-inspect: oklch(0.7 0.16 45 / 0.55);
