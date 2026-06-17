@@ -850,10 +850,12 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
           if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
-          // juggernaut shift/charge are repositioning; trampling captures the cell directly.
-          // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
-          // but here `to` IS the destination — so it's a real capture path.
-          if (m.kind === "juggShift" || m.kind === "juggExit") continue;
+          // juggExit walks off the board — not an attack on any on-board square.
+          if (m.kind === "juggExit") continue;
+          // juggShift / juggCharge that land on (or trample onto) `sq` DO attack it:
+          // the lateral shift can capture a piece on the destination cell, and a
+          // charge tramples enemies along its lane. Fall through so the king
+          // recognises these squares as covered (prevents walking into them).
           // castling is not an attack on the king's destination square.
           if (m.kind === "castle") continue;
           return true;
