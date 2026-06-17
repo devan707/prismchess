@@ -351,19 +351,34 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     const isSelfCell = (r: number, c: number) =>
       (r === from.r && c === from.c) || (r === partner.r && c === partner.c);
 
-    // SHIFT ±1 along the perpendicular axis (sideways).
+    // SHIFT ±1 along the perpendicular axis (sideways). May trample enemies
+    // on the destination cells (one or both), like a charge but sideways.
     for (const sign of [1, -1]) {
       const dRow = wide ? sign : 0;
       const dCol = wide ? 0 : sign;
       const nF = { r: from.r + dRow, c: from.c + dCol };
       const nP = { r: partner.r + dRow, c: partner.c + dCol };
       if (!inB(nF.r, nF.c) || !inB(nP.r, nP.c)) continue;
-      const okCell = (r: number, c: number) => {
-        if (isSelfCell(r, c)) return true;
-        return board[r][c] === null;
+      const cellState = (r: number, c: number): "self" | "empty" | "enemy" | "block" => {
+        if (isSelfCell(r, c)) return "self";
+        const t = board[r][c];
+        if (!t) return "empty";
+        if (t.color === piece.color) return "block";
+        if (state.registry[t.id]?.immobile) return "block";
+        return "enemy";
       };
-      if (!okCell(nF.r, nF.c) || !okCell(nP.r, nP.c)) continue;
-      moves.push({ from, to: nF, piece, captured: null, kind: "juggShift" });
+      const sF = cellState(nF.r, nF.c);
+      const sP = cellState(nP.r, nP.c);
+      if (sF === "block" || sP === "block") continue;
+      const trampled: Piece[] = [];
+      if (sF === "enemy") trampled.push(board[nF.r][nF.c]!);
+      if (sP === "enemy") trampled.push(board[nP.r][nP.c]!);
+      moves.push({
+        from, to: nF, piece,
+        captured: trampled[0] ?? null,
+        kind: "juggShift",
+        juggTrampled: trampled.length ? trampled : undefined,
+      });
     }
 
     // CHARGE forward — player picks how many squares to advance. Each reachable
