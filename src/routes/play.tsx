@@ -14,10 +14,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
+import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain } from "lucide-react";
+import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 
 export const Route = createFileRoute("/play")({
@@ -98,6 +99,21 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   });
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [resurrectChoice, setResurrectChoice] = useState<PieceId | null>(null);
+
+  // History navigation: viewIndex = number of moves to show (0..history.length).
+  // When equal to history.length the live state is shown.
+  const [viewIndex, setViewIndex] = useState<number>(state.history.length);
+  useEffect(() => {
+    // Snap to latest whenever a new move is played.
+    setViewIndex(state.history.length);
+  }, [state.history.length]);
+
+  const displayedState = useMemo(() => {
+    if (viewIndex >= state.history.length) return state;
+    return replayMoves(state.history.slice(0, viewIndex), initialStateFromDesign(design));
+  }, [viewIndex, state, design]);
+  const viewingPast = viewIndex < state.history.length;
+
   const handleSelectionChange = useCallback((sq: Square | null) => {
     setSelectedSquare(sq);
     setResurrectChoice(null);
@@ -106,8 +122,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
   }, [tipsOn]);
 
-  const selectedPiece = selectedSquare ? state.board[selectedSquare.r][selectedSquare.c] : null;
-  const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+  const selectedPiece = selectedSquare ? displayedState.board[selectedSquare.r][selectedSquare.c] : null;
+  const selectedDef = selectedPiece ? displayedState.registry[selectedPiece.id] : null;
   const isHumanNecromancer = !!(
     selectedPiece &&
     selectedPiece.color === humanColor &&
@@ -115,7 +131,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   );
   // Friendly fallen = pieces of humanColor that the opponent captured.
   const humansFallen = state.captured[humanColor === "w" ? "b" : "w"];
-  const resurrectMode = isHumanNecromancer && humansFallen.length > 0;
+  const resurrectMode = !viewingPast && isHumanNecromancer && humansFallen.length > 0;
 
 
 
@@ -278,22 +294,20 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
       <main className="flex-1 flex flex-col items-center justify-center gap-3 p-3 relative">
         {hasReserves && (
           <ReservesPanel
-            state={state}
+            state={displayedState}
             color={state.turn === humanColor ? humanColor : (humanColor === "w" ? "b" : "w")}
             selectedDrop={selectedDrop}
             onSelectDrop={setSelectedDrop}
-            disabled={state.turn !== humanColor || terminal}
+            disabled={viewingPast || state.turn !== humanColor || terminal}
           />
         )}
         <Board
-          state={state}
+          state={displayedState}
           humanColor={humanColor}
           flipped={flipped}
           legalFor={legalFor}
           onMove={(f, t) => {
-            // If a human necromancer is selected and a fallen piece has been
-            // picked, route the move through the resurrect path so the right
-            // piece comes back. Falls back to a normal move otherwise.
+            if (viewingPast) return false;
             if (resurrectMode && resurrectChoice) {
               if (tryResurrect(f, t, resurrectChoice)) {
                 setResurrectChoice(null);
@@ -304,18 +318,46 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           }}
           dropPiece={selectedDrop}
           dropTargets={dropTargets}
-          onDrop={(id, to) => tryDrop(id, to)}
-          disabled={terminal}
+          onDrop={(id, to) => viewingPast ? false : tryDrop(id, to)}
+          disabled={viewingPast || terminal}
           onSelectionChange={handleSelectionChange}
         />
 
+        {/* History scrubber */}
+        {state.history.length > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Button variant="ghost" size="icon" aria-label="Jump to start"
+              onClick={() => setViewIndex(0)} disabled={viewIndex === 0}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Step back"
+              onClick={() => setViewIndex((i) => Math.max(0, i - 1))} disabled={viewIndex === 0}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="tabular-nums min-w-[5rem] text-center">
+              {viewingPast ? `Move ${viewIndex} / ${state.history.length}` : `Move ${state.history.length}`}
+            </span>
+            <Button variant="ghost" size="icon" aria-label="Step forward"
+              onClick={() => setViewIndex((i) => Math.min(state.history.length, i + 1))}
+              disabled={!viewingPast}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Jump to latest"
+              onClick={() => setViewIndex(state.history.length)} disabled={!viewingPast}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
         <Graveyard
-          state={state}
+          state={displayedState}
           humanColor={humanColor}
           resurrectMode={resurrectMode}
           resurrectChoice={resurrectChoice}
           onPickResurrect={setResurrectChoice}
         />
+
+
 
 
         {tipsOn && (
