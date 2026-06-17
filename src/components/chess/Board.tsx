@@ -114,6 +114,8 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const isLegal = legalTargets.some((t) => t.r === r && t.c === c);
           const isCapture = isLegal && !!piece;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
+          const isInspect = inspectTargets.some((t) => t.r === r && t.c === c);
+          const isInspectCapture = isInspect && !!piece;
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
           const isCheck = checkSquares.some((k) => k.r === r && k.c === c);
 
