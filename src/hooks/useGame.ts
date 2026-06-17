@@ -49,7 +49,7 @@ export function useGame(opts: UseGameOptions) {
   );
 
   const tryMove = useCallback(
-    (from: Square, to: Square, promotion?: "N" | "B") => {
+    (from: Square, to: Square, promotion?: "Q" | "R" | "N" | "B") => {
       if (state.turn !== opts.humanColor || gameOver) return false;
       const legal = legalMovesFrom(state.board, from, state.turn);
       // If promotion target, require explicit choice
@@ -109,7 +109,7 @@ export function useGame(opts: UseGameOptions) {
     allLegal,
     pendingPromotion,
     cancelPromotion: () => setPendingPromotion(null),
-    confirmPromotion: (piece: "N" | "B") => {
+    confirmPromotion: (piece: "Q" | "R" | "N" | "B") => {
       if (!pendingPromotion) return;
       tryMove(pendingPromotion.from, pendingPromotion.to, piece);
     },

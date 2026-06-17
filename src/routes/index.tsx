@@ -90,7 +90,7 @@ function GameView({ humanColor, difficulty, flipped, muted, setHumanColor, setDi
       <header className="max-w-6xl mx-auto px-4 pt-8 pb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">Mini Chess <span className="text-primary">5×5</span></h1>
-          <p className="text-sm text-muted-foreground mt-1">Bishops, knights, pawns, and one decisive king. No queens. No rooks. No mercy.</p>
+          <p className="text-sm text-muted-foreground mt-1">Queen, king, bishop, knight, rook, and pawns. A compact 5×5 chess variant.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => setMuted(!muted)} aria-label="Toggle sound">
