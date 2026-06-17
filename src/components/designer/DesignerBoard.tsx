@@ -22,20 +22,42 @@ export function DesignerBoard({ design, registry, onChange, mirror, selectedSqua
   const writeAt = (r: number, c: number, pieceId: PieceId | null, color: "w" | "b") => {
     const { rows, cols } = design;
     const wide = cols > rows;
-    const filtered = design.placements.filter((p) => !(p.r === r && p.c === c));
-    const mirrored = mirror
-      ? wide
-        ? filtered.filter((p) => !(p.r === r && p.c === cols - 1 - c))
-        : filtered.filter((p) => !(p.r === rows - 1 - r && p.c === c))
-      : filtered;
-    const next: Placement[] = mirrored;
-    if (pieceId) next.push({ r, c, pieceId, color });
-    if (mirror && pieceId) {
-      const mColor: "w" | "b" = color === "w" ? "b" : "w";
-      if (wide) {
-        next.push({ r, c: cols - 1 - c, pieceId, color: mColor });
-      } else {
-        next.push({ r: rows - 1 - r, c, pieceId, color: mColor });
+    const mirrorOf = (sq: { r: number; c: number }) =>
+      wide ? { r: sq.r, c: cols - 1 - sq.c } : { r: rows - 1 - sq.r, c: sq.c };
+
+    let next: Placement[] = design.placements.filter((p) => !(p.r === r && p.c === c));
+    if (mirror) {
+      const m = mirrorOf({ r, c });
+      next = next.filter((p) => !(p.r === m.r && p.c === m.c));
+    }
+
+    if (pieceId === "J") {
+      for (const o of juggPartnerCandidates(rows, cols)) {
+        const pr = r + o.dr, pc = c + o.dc;
+        if (pr < 0 || pr >= rows || pc < 0 || pc >= cols) continue;
+        if (next.some((p) => p.r === pr && p.c === pc)) continue;
+        next.push({ r, c, pieceId: "J", color });
+        next.push({ r: pr, c: pc, pieceId: "J", color });
+        if (mirror) {
+          const mPrim = mirrorOf({ r, c });
+          const mPart = mirrorOf({ r: pr, c: pc });
+          const mColor = color === "w" ? "b" : "w";
+          next = next.filter((p) =>
+            !(p.r === mPrim.r && p.c === mPrim.c) && !(p.r === mPart.r && p.c === mPart.c));
+          next.push({ r: mPrim.r, c: mPrim.c, pieceId: "J", color: mColor });
+          next.push({ r: mPart.r, c: mPart.c, pieceId: "J", color: mColor });
+        }
+        onChange(next);
+        return;
+      }
+      return; // no partner slot available
+    }
+
+    if (pieceId) {
+      next.push({ r, c, pieceId, color });
+      if (mirror) {
+        const m = mirrorOf({ r, c });
+        next.push({ r: m.r, c: m.c, pieceId, color: color === "w" ? "b" : "w" });
       }
     }
     onChange(next);
