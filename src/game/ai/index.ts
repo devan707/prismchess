@@ -10,6 +10,8 @@ function moveScore(state: GameState, m: Move): number {
   let s = 0;
   if (m.captured) s += valueFor(m.captured.id, state.registry[m.captured.id]);
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) - 100;
+  if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
+  if (m.kind === "resurrect" && m.resurrectPieceId) s += valueFor(m.resurrectPieceId, state.registry[m.resurrectPieceId]) * 0.6;
   return s;
 }
 
