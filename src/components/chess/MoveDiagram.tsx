@@ -114,13 +114,14 @@ function buildDiagram(id: PieceId): Diagram | null {
       for (const [dr, dc] of DIAG) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
       return { rows, cols, center, markers };
     case "Z": {
-      // Assassin: exactly 3 king-steps per turn. Constraints:
-      //   • first 2 landings must be empty (no jumping)
-      //   • no revisits
-      //   • 3 steps cannot all share the same direction
-      //   • each consecutive turn ≤ 45° (next step is same/adjacent compass dir)
-      //   • capture only on step 3
-      // Compute the reachable end-square set on an empty board.
+      // Assassin: each turn picks ONE of two move modes:
+      //   (a) Single king-step (1 square, any direction) — may capture.
+      //   (b) Exactly 3 king-steps with constraints:
+      //         • first 2 landings must be empty (no jumping)
+      //         • no revisits
+      //         • 3 steps cannot all share the same direction
+      //         • each consecutive turn ≤ 45°
+      //         • capture only on step 3
       const DIRS_8: Array<[number, number]> = [
         [-1, 0], [-1, 1], [0, 1], [1, 1],
         [1, 0], [1, -1], [0, -1], [-1, -1],
@@ -130,6 +131,9 @@ function buildDiagram(id: PieceId): Diagram | null {
         return d <= 1 || d === 7;
       };
       const reachable = new Set<string>();
+      // (a) Single king-step destinations.
+      for (const [dr, dc] of DIRS_8) reachable.add(`${dr},${dc}`);
+      // (b) 3-step infiltration destinations.
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
           if (!turnOK(i, j)) continue;
