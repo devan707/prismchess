@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { loadDesign, loadCurrentMeta, type CurrentGameMeta } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
-import type { Color, Design, Difficulty, Square } from "@/game/types";
+import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
+import { PieceById } from "@/components/chess/PieceGlyph";
+import { MoveDiagram } from "@/components/chess/MoveDiagram";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { recordSoloGame } from "@/lib/history.functions";
