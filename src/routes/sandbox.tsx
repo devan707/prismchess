@@ -241,10 +241,11 @@ function Sandbox() {
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
             <p className="text-[11px] text-muted-foreground">
-              Eight custom pieces are built-in: King's Hand, Archer, Dragon, Barricade,
+              Nine custom pieces are built-in: King's Hand, Archer, Dragon, Barricade,
               Portal (swap with a friendly piece), Necromancer (resurrect a captured ally),
-              Shapeshifter Pawn (transforms into whatever it captures), and Juggernaut
-              (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front).
+              Shapeshifter Pawn (transforms into whatever it captures), Juggernaut
+              (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front),
+              and Assassin (slides up to 3 diagonal squares then 1 step in any direction).
             </p>
           </div>
         </aside>
