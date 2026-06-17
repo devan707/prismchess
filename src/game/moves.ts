@@ -434,6 +434,45 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
     return b;
   }
+  if (move.kind === "juggShift" || move.kind === "juggCharge" || move.kind === "juggExit") {
+    if (!move.from) return b;
+    const color = move.piece.color;
+    const wide = boardIsWide(b);
+    const { rows, cols } = rowsCols(b);
+    // Find partner adjacent on perp axis
+    let partner: Square | null = null;
+    for (const o of juggPerpOffsets(wide)) {
+      const r = move.from.r + o.dr;
+      const c = move.from.c + o.dc;
+      if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+      const t = b[r][c];
+      if (t && t.color === color && t.id === "J") { partner = { r, c }; break; }
+    }
+    if (!partner) return b;
+    // Clear current pair cells.
+    b[move.from.r][move.from.c] = null;
+    b[partner.r][partner.c] = null;
+    if (move.kind === "juggExit") return b;
+    const dr = move.to.r - move.from.r;
+    const dc = move.to.c - move.from.c;
+    // For charges, clear any trampled cells along the path on the partner lane too.
+    if (move.kind === "juggCharge") {
+      const stepCount = Math.abs(dr) + Math.abs(dc);
+      const sDr = dr === 0 ? 0 : Math.sign(dr);
+      const sDc = dc === 0 ? 0 : Math.sign(dc);
+      for (let s = 1; s <= stepCount; s++) {
+        const fr = move.from.r + s * sDr;
+        const fc = move.from.c + s * sDc;
+        const pr = partner.r + s * sDr;
+        const pc = partner.c + s * sDc;
+        b[fr][fc] = null;
+        b[pr][pc] = null;
+      }
+    }
+    b[move.to.r][move.to.c] = { id: "J", color };
+    b[partner.r + dr][partner.c + dc] = { id: "J", color };
+    return b;
+  }
   if (move.from) {
     b[move.from.r][move.from.c] = null;
   }
@@ -446,6 +485,21 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   b[move.to.r][move.to.c] = piece;
   if (move.kind === "ep" && move.epCapture) {
     b[move.epCapture.r][move.epCapture.c] = null;
+  }
+  // Side/rear capture of a juggernaut destroys its partner too.
+  if (move.captured && move.captured.id === "J") {
+    const wide = boardIsWide(b);
+    const { rows, cols } = rowsCols(b);
+    for (const o of juggPerpOffsets(wide)) {
+      const r = move.to.r + o.dr;
+      const c = move.to.c + o.dc;
+      if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+      const t = b[r][c];
+      if (t && t.id === "J" && t.color === move.captured.color) {
+        b[r][c] = null;
+        break;
+      }
+    }
   }
   return b;
 }
