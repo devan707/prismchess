@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
 import { saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
@@ -54,6 +54,11 @@ function Home() {
           Design your own variant. Rule the board. Pick a game to play, build your own, or join the community.
         </p>
         <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
+          <Link to="/multiplayer">
+            <Button size="lg">
+              <Swords className="h-4 w-4 mr-2" /> Multiplayer
+            </Button>
+          </Link>
           <Link to="/sandbox">
             <Button size="lg" variant="outline">
               <Hammer className="h-4 w-4 mr-2" /> Sandbox mode
