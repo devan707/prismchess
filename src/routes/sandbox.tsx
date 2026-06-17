@@ -42,6 +42,8 @@ function Sandbox() {
   const [selectedPiece, setSelectedPiece] = useState<PieceId | "erase" | null>(null);
   const suggestDesc = useServerFn(suggestGameDescription);
   const genTutorial = useServerFn(generateGameTutorial);
+  const publish = useServerFn(publishGame);
+  const [publishing, setPublishing] = useState(false);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
