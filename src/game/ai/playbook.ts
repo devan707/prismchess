@@ -12,6 +12,12 @@ export interface Playbook {
   cautionMultiplier: number;
   /** Bonus added to every capture (in centipawns). Higher = more aggressive. */
   aggressionBonus: number;
+  /** Map of algebraic square (e.g. "g12") → centipawn weight. Positive = the
+   *  AI should bias toward defending/occupying that square (e.g. a discovered
+   *  checkmate landing square). Negative = avoid letting our king sit there.
+   *  Applied symmetrically: the side whose turn it is gains when it defends
+   *  one of these squares and loses when the opponent attacks it undefended. */
+  squareDefenseBonuses: Record<string, number>;
   /** Number of games the AI has reviewed (purely informational). */
   gamesReviewed: number;
 }
@@ -23,6 +29,7 @@ export const DEFAULT_PLAYBOOK: Playbook = {
   pieceValueMultipliers: {},
   cautionMultiplier: 1,
   aggressionBonus: 0,
+  squareDefenseBonuses: {},
   gamesReviewed: 0,
 };
 
