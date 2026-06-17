@@ -1,6 +1,6 @@
 import { BOARD_SIZE, type Board, type Color } from "../types";
 
-const VALUES: Record<string, number> = { P: 100, N: 320, B: 330, K: 20000 };
+const VALUES: Record<string, number> = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 };
 
 export function evaluate(board: Board, toMove: Color): number {
   let score = 0;

@@ -1,5 +1,5 @@
 export type Color = "w" | "b";
-export type PieceType = "K" | "B" | "N" | "P";
+export type PieceType = "K" | "Q" | "R" | "B" | "N" | "P";
 
 export interface Piece {
   type: PieceType;
@@ -19,7 +19,7 @@ export interface Move {
   to: Square;
   piece: Piece;
   captured?: Piece | null;
-  promotion?: "N" | "B";
+  promotion?: "Q" | "R" | "N" | "B";
 }
 
 export interface GameState {

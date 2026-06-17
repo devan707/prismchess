@@ -1,6 +1,9 @@
 import { BOARD_SIZE, type Board, type Color, type Move, type Piece, type Square } from "./types";
 import { cloneBoard, findKing, inBounds } from "./board";
 
+const ROOK_DIRS = [
+  [1, 0], [-1, 0], [0, 1], [0, -1],
+];
 const BISHOP_DIRS = [
   [1, 1], [1, -1], [-1, 1], [-1, -1],
 ];
@@ -30,9 +33,10 @@ export function pseudoLegalMovesFrom(board: Board, from: Square): Move[] {
     const target = board[to.r][to.c];
     if (target && target.color === p.color) return;
     if (p.type === "P" && to.r === promotionRank(p.color)) {
-      // generate both promotion options
-      moves.push({ from, to, piece: p, captured: target ?? null, promotion: "N" });
-      moves.push({ from, to, piece: p, captured: target ?? null, promotion: "B" });
+      // generate all promotion options
+      for (const promo of ["Q", "R", "N", "B"] as const) {
+        moves.push({ from, to, piece: p, captured: target ?? null, promotion: promo });
+      }
     } else {
       moves.push({ from, to, piece: p, captured: target ?? null, ...opts });
     }
@@ -50,8 +54,40 @@ export function pseudoLegalMovesFrom(board: Board, from: Square): Move[] {
       if (!inBounds(to)) continue;
       push(to);
     }
+  } else if (p.type === "R") {
+    for (const [dr, dc] of ROOK_DIRS) {
+      let r = from.r + dr;
+      let c = from.c + dc;
+      while (inBounds({ r, c })) {
+        const t = board[r][c];
+        if (!t) {
+          push({ r, c });
+        } else {
+          if (t.color !== p.color) push({ r, c });
+          break;
+        }
+        r += dr;
+        c += dc;
+      }
+    }
   } else if (p.type === "B") {
     for (const [dr, dc] of BISHOP_DIRS) {
+      let r = from.r + dr;
+      let c = from.c + dc;
+      while (inBounds({ r, c })) {
+        const t = board[r][c];
+        if (!t) {
+          push({ r, c });
+        } else {
+          if (t.color !== p.color) push({ r, c });
+          break;
+        }
+        r += dr;
+        c += dc;
+      }
+    }
+  } else if (p.type === "Q") {
+    for (const [dr, dc] of [...ROOK_DIRS, ...BISHOP_DIRS]) {
       let r = from.r + dr;
       let c = from.c + dc;
       while (inBounds({ r, c })) {
