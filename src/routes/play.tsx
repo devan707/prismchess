@@ -395,25 +395,29 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         )}
 
 
-        {terminal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-            <div className="bg-card border rounded-xl shadow-2xl p-6 text-center max-w-xs space-y-3">
-              <div className="font-display text-xl font-bold">{statusLabel}</div>
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => setReviewOpen(true)} variant="secondary">
-                  <Brain className="h-4 w-4 mr-1" /> Review with AI
-                </Button>
-                <Button onClick={handleNewGame}>
-                  <RefreshCw className="h-4 w-4 mr-1" /> New game
-                </Button>
-                <Button variant="outline" onClick={handleQuit}>
-                  <Home className="h-4 w-4 mr-1" /> Back to menu
-                </Button>
-              </div>
+      </main>
+
+      {terminal && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-auto touch-action-none"
+          onTouchMove={(e) => e.preventDefault()}
+        >
+          <div className="bg-card border rounded-xl shadow-2xl p-6 text-center max-w-xs space-y-3">
+            <div className="font-display text-xl font-bold">{statusLabel}</div>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => setReviewOpen(true)} variant="secondary">
+                <Brain className="h-4 w-4 mr-1" /> Review with AI
+              </Button>
+              <Button onClick={handleNewGame}>
+                <RefreshCw className="h-4 w-4 mr-1" /> New game
+              </Button>
+              <Button variant="outline" onClick={handleQuit}>
+                <Home className="h-4 w-4 mr-1" /> Back to menu
+              </Button>
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
 
       <PostGameAnalysis
         open={reviewOpen}
