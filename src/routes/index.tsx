@@ -15,9 +15,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Mini Chess 5×5 — Compact chess variant with AI" },
-      { name: "description", content: "A polished 5×5 chess variant with King, Bishop, Knight, and Pawns. Play against an AI on Easy, Medium, or Hard, and run AI-vs-AI matches to test balance." },
+      { name: "description", content: "A polished 5×5 chess variant with King, Rook, Bishop, Knight, and Pawns. Play against an AI on Easy, Medium, or Hard, and run AI-vs-AI matches to test balance." },
       { property: "og:title", content: "Mini Chess 5×5" },
-      { property: "og:description", content: "Compact 5×5 chess: King, Bishop, Knight, Pawns. Three AI difficulties and a built-in balance tester." },
+      { property: "og:description", content: "Compact 5×5 chess: King, Rook, Bishop, Knight, Pawns. Three AI difficulties and a built-in balance tester." },
     ],
   }),
   component: Index,
