@@ -31,6 +31,8 @@ export function JuggernautGlyph({ color, orientation, facing }: Props) {
   } else {
     rotation = facing === "left" ? 90 : -90;
   }
+  // User requested both colors rotated 180° from current orientation.
+  rotation += 180;
 
   // White piece = inverted silhouette (cream body with dark trim).
   const invertFilter = color === "w" ? "invert(1) hue-rotate(180deg)" : "none";
@@ -47,7 +49,7 @@ export function JuggernautGlyph({ color, orientation, facing }: Props) {
           objectFit: "contain",
           transform: `rotate(${rotation}deg)`,
           transformOrigin: "center",
-          filter: `${invertFilter} drop-shadow(0 2px 3px rgba(0,0,0,0.5))`,
+          filter: `${invertFilter} drop-shadow(0 0 1px rgba(0,0,0,0.9)) drop-shadow(0 0 2px rgba(0,0,0,0.7)) drop-shadow(0 0 4px rgba(0,0,0,0.5)) drop-shadow(0 2px 3px rgba(0,0,0,0.5))`,
         }}
       />
     </div>
