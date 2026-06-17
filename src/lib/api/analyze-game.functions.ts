@@ -8,6 +8,7 @@ const PlaybookSchema = z.object({
   pieceValueMultipliers: z.record(z.string(), z.number()).default({}),
   cautionMultiplier: z.number(),
   aggressionBonus: z.number(),
+  squareDefenseBonuses: z.record(z.string(), z.number()).default({}),
   gamesReviewed: z.number().int().nonnegative(),
 });
 
