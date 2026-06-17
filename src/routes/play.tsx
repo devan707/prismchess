@@ -99,6 +99,21 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   });
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [resurrectChoice, setResurrectChoice] = useState<PieceId | null>(null);
+
+  // History navigation: viewIndex = number of moves to show (0..history.length).
+  // When equal to history.length the live state is shown.
+  const [viewIndex, setViewIndex] = useState<number>(state.history.length);
+  useEffect(() => {
+    // Snap to latest whenever a new move is played.
+    setViewIndex(state.history.length);
+  }, [state.history.length]);
+
+  const displayedState = useMemo(() => {
+    if (viewIndex >= state.history.length) return state;
+    return replayMoves(state.history.slice(0, viewIndex), initialStateFromDesign(design));
+  }, [viewIndex, state, design]);
+  const viewingPast = viewIndex < state.history.length;
+
   const handleSelectionChange = useCallback((sq: Square | null) => {
     setSelectedSquare(sq);
     setResurrectChoice(null);
@@ -107,8 +122,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
   }, [tipsOn]);
 
-  const selectedPiece = selectedSquare ? state.board[selectedSquare.r][selectedSquare.c] : null;
-  const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+  const selectedPiece = selectedSquare ? displayedState.board[selectedSquare.r][selectedSquare.c] : null;
+  const selectedDef = selectedPiece ? displayedState.registry[selectedPiece.id] : null;
   const isHumanNecromancer = !!(
     selectedPiece &&
     selectedPiece.color === humanColor &&
@@ -116,7 +131,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   );
   // Friendly fallen = pieces of humanColor that the opponent captured.
   const humansFallen = state.captured[humanColor === "w" ? "b" : "w"];
-  const resurrectMode = isHumanNecromancer && humansFallen.length > 0;
+  const resurrectMode = !viewingPast && isHumanNecromancer && humansFallen.length > 0;
 
 
 
