@@ -99,14 +99,16 @@ function buildDiagram(id: PieceId): Diagram | null {
       markers.push({ r: cr - 1, c: cc + 1, type: "a" });
       return { rows, cols, center, markers };
     case "A":
-      // Move 1 orthogonal (no capture); diagonal 1/2/3 = jump OR attack (both).
+      // Archer: move 1 orthogonal (no capture); diagonal range 1 = move-only
+      // jump; diagonal range 2 & 3 = either move OR attack.
       for (const [dr, dc] of ORTHO) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
       for (const [dr, dc] of DIAG) {
-        markers.push({ r: cr + dr, c: cc + dc, type: "b" });
+        markers.push({ r: cr + dr, c: cc + dc, type: "m" });
         markers.push({ r: cr + dr * 2, c: cc + dc * 2, type: "b" });
         markers.push({ r: cr + dr * 3, c: cc + dc * 3, type: "b" });
       }
       return { rows, cols, center, markers };
+
     case "M":
       // Necromancer: 1 diagonal, move only.
       for (const [dr, dc] of DIAG) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
