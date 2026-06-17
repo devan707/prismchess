@@ -44,6 +44,9 @@ const OutputSchema = z.object({
       .describe("Map of piece id (e.g. 'W','D','M') to a multiplier on its base value. Only include pieces you want to adjust."),
     cautionMultiplier: z.number().min(0.3).max(2.5).describe("Multiplier on the hanging-piece penalty. >1 makes the AI more cautious, <1 more reckless."),
     aggressionBonus: z.number().min(-150).max(150).describe("Centipawn bonus added to every capturing move. Positive = bias toward trades."),
+    squareDefenseBonuses: z
+      .record(z.string(), z.number().min(-300).max(300))
+      .describe("Map of algebraic square (e.g. 'g12') → centipawn weight the minimax engine uses to bias toward defending/occupying that square. Use this to teach the AI specific tactical squares it failed to defend (e.g. a mating square the user repeatedly attacked). Positive = the AI should fight to control it. Keep the map small (≤ 8 entries) and tactical, not strategic."),
   }),
 });
 
