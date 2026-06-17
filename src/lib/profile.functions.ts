@@ -65,6 +65,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
       .object({
         username: UsernameSchema,
         display_name: z.string().min(1).max(60),
+        avatar: z.string().max(40).nullable().optional(),
       })
       .parse(input),
   )
@@ -74,6 +75,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
       .update({
         username: data.username,
         display_name: data.display_name,
+        avatar: data.avatar ?? null,
         onboarded: true,
       })
       .eq("id", context.userId);
