@@ -137,6 +137,16 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         </Link>
         <div className="text-sm font-display truncate">{statusLabel}</div>
         <div className="flex items-center gap-1">
+          <Button
+            variant={tipsOn ? "secondary" : "ghost"}
+            size="icon"
+            aria-label={tipsOn ? "Hide piece tips" : "Show piece tips"}
+            aria-pressed={tipsOn}
+            onClick={() => setTipsOn((v) => !v)}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Move history">
