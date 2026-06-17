@@ -3,7 +3,7 @@ import type { GameState, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
-import { inCheck, pseudoMovesFrom } from "@/game/moves";
+import { inCheck, pseudoMovesFrom, legalMovesFrom } from "@/game/moves";
 
 interface BoardProps {
   state: GameState;
@@ -108,6 +108,59 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     return null;
   })();
 
+  // ── Juggernaut multi-cell move preview ─────────────────────────────────
+  // When a juggernaut is selected we need to highlight the FULL 2-square
+  // footprint at every legal destination, plus any trampled / path cells
+  // for forward charges. Clicking on either cell of a destination footprint
+  // must commit the move (translated to the lead cell stored in `to`).
+  type SquareKey = string;
+  const k = (r: number, c: number) => `${r},${c}`;
+  const juggInfo: {
+    footprint: Set<SquareKey>;         // every cell that becomes part of the titan after a legal move
+    tramplePath: Set<SquareKey>;       // path cells a forward charge sweeps through (lead + partner lanes)
+    trampleEnemies: Set<SquareKey>;    // cells where an enemy would be destroyed
+    leadOf: Map<SquareKey, Square>;    // map any footprint cell → the move.to (lead) cell to send to onMove
+  } | null = (() => {
+    if (!selected) return null;
+    const sp = state.board[selected.r][selected.c];
+    if (!sp || state.registry[sp.id]?.special !== "juggernaut") return null;
+    if (sp.color !== state.turn || sp.color !== humanColor) return null;
+    if (!selectedPartner) return null;
+    const offDr = selectedPartner.r - selected.r;
+    const offDc = selectedPartner.c - selected.c;
+    const footprint = new Set<SquareKey>();
+    const tramplePath = new Set<SquareKey>();
+    const trampleEnemies = new Set<SquareKey>();
+    const leadOf = new Map<SquareKey, Square>();
+    const moves = legalMovesFrom(state, selected);
+    for (const m of moves) {
+      const leadTo = m.to;
+      const partnerTo = { r: leadTo.r + offDr, c: leadTo.c + offDc };
+      footprint.add(k(leadTo.r, leadTo.c));
+      footprint.add(k(partnerTo.r, partnerTo.c));
+      leadOf.set(k(leadTo.r, leadTo.c), leadTo);
+      leadOf.set(k(partnerTo.r, partnerTo.c), leadTo);
+      if (m.kind === "juggCharge") {
+        const dr = leadTo.r - selected.r;
+        const dc = leadTo.c - selected.c;
+        const steps = Math.max(Math.abs(dr), Math.abs(dc));
+        const sDr = steps ? Math.sign(dr) : 0;
+        const sDc = steps ? Math.sign(dc) : 0;
+        for (let s = 1; s <= steps; s++) {
+          const a = { r: selected.r + s * sDr, c: selected.c + s * sDc };
+          const b = { r: selectedPartner.r + s * sDr, c: selectedPartner.c + s * sDc };
+          tramplePath.add(k(a.r, a.c));
+          tramplePath.add(k(b.r, b.c));
+          const ta = state.board[a.r]?.[a.c];
+          const tb = state.board[b.r]?.[b.c];
+          if (ta && ta.color !== sp.color) trampleEnemies.add(k(a.r, a.c));
+          if (tb && tb.color !== sp.color) trampleEnemies.add(k(b.r, b.c));
+        }
+      }
+    }
+    return { footprint, tramplePath, trampleEnemies, leadOf };
+  })();
+
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
   const checkSquares = checkColor ? findRoyals(state, checkColor) : [];
 
@@ -165,7 +218,20 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     }
     const p = state.board[sq.r][sq.c];
     if (selected) {
+      // Juggernaut: clicking either half of a legal-destination footprint
+      // commits the move (routed through the move's lead-cell `to`).
+      if (juggInfo) {
+        const lead = juggInfo.leadOf.get(`${sq.r},${sq.c}`);
+        if (lead) {
+          const ok = onMove(selected, lead);
+          if (ok) { setSelected(null); return; }
+        }
+      }
       if (selected.r === sq.r && selected.c === sq.c) { setSelected(null); return; }
+      // Clicking the partner half of the selected juggernaut keeps it selected.
+      if (selectedPartner && selectedPartner.r === sq.r && selectedPartner.c === sq.c) {
+        setSelected(sq); return;
+      }
       const ok = onMove(selected, sq);
       if (ok) { setSelected(null); return; }
       if (p) { setSelected(sq); return; }
@@ -193,8 +259,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const def = piece ? state.registry[piece.id] : undefined;
           const light = (r + c) % 2 === 1;
           const isSelected = (selected && selected.r === r && selected.c === c) || (selectedPartner && selectedPartner.r === r && selectedPartner.c === c);
-          const isLegal = legalTargets.some((t) => t.r === r && t.c === c);
-          const isCapture = isLegal && !!piece;
+          const juggFoot = juggInfo?.footprint.has(`${r},${c}`) ?? false;
+          const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
+          const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
+          const isLegal = legalTargets.some((t) => t.r === r && t.c === c) || juggFoot;
+          const isCapture = (isLegal && !!piece) || juggTrample;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
           const isInspect = inspectTargets.some((t) => t.r === r && t.c === c);
           const isInspectCapture = isInspect && !!piece;
@@ -224,6 +293,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               {isLast && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-last)" }} />
               )}
+              {/* Juggernaut charge path — faint sweep so players see the lane. */}
+              {juggPath && !juggFoot && (
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{ background: "color-mix(in oklab, var(--color-board-capture) 22%, transparent)" }} />
+              )}
+              {/* Juggernaut destination footprint — both cells shaded together. */}
+              {juggFoot && (
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: "color-mix(in oklab, var(--color-board-legal) 30%, transparent)",
+                    boxShadow: "inset 0 0 0 2px var(--color-board-legal)",
+                  }} />
+              )}
               {isSelected && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-highlight)" }} />
               )}
@@ -239,13 +321,17 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <span className="absolute top-0.5 left-1 text-[10px] font-semibold opacity-60"
                   style={{ color: light ? "oklch(0.3 0.04 145)" : "oklch(0.92 0.02 85)" }}>{rankLabel}</span>
               )}
-              {isLegal && !isCapture && (
+              {isLegal && !isCapture && !juggFoot && (
                 <div className="absolute rounded-full pointer-events-none"
                   style={{ width: "30%", height: "30%", background: "var(--color-board-legal)" }} />
               )}
-              {isLegal && isCapture && (
+              {isLegal && isCapture && !juggFoot && (
                 <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
                   style={{ borderColor: "var(--color-board-capture)", boxShadow: "inset 0 0 0 4px var(--color-board-capture)" }} />
+              )}
+              {juggTrample && (
+                <div className="absolute inset-1 rounded-full pointer-events-none"
+                  style={{ boxShadow: "inset 0 0 0 3px var(--color-board-capture)" }} />
               )}
               {isDropTarget && (
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"

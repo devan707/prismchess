@@ -190,7 +190,7 @@ function dynamicBonus(state: GameState, color: Color): number {
           let laneOpen = 0;
           let enemyInPath = 0;
           let blockedByFriendly = false;
-          for (let s = 1; s <= 6; s++) {
+          for (let s = 1; s <= 5; s++) {
             const nr = r + s * stepDr, nc = c + s * stepDc;
             if (!inB(board, nr, nc)) break;
             const t = board[nr][nc];

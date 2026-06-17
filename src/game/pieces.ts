@@ -145,7 +145,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "juggernaut",
     builtinCustom: true,
-    description: "A 2-square siege engine. Each turn it may SHIFT one square sideways OR CHARGE straight forward (tramples enemies, stops before friendly pieces, exits off the enemy edge). Immune to capture from its front arc; captured normally from the sides or rear — losing either square destroys the whole Juggernaut.",
+    description: "A massive 2-square armored titan. Each turn it may SHIFT exactly one square sideways (no capture) OR CHARGE 1–5 squares straight forward, trampling every enemy in its path and stopping before friendly pieces. Immune to capture from its front arc; captured normally from the sides or rear — losing either square destroys the whole Juggernaut.",
   },
   Z: {
     id: "Z",
