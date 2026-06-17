@@ -326,6 +326,61 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
           {diag.note}
         </p>
       )}
+
+      {/* Necromancer-only: miniature ghost + undead preview */}
+      {id === "M" && (
+        <div className="flex items-center justify-center gap-4 mt-1">
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">Ghost</span>
+            <div
+              className="relative flex items-center justify-center rounded-md"
+              style={{ width: cellSize * 1.2, height: cellSize * 1.2 }}
+            >
+              {/* Spirit-glow background matching Board.tsx Spirit View */}
+              <div
+                className="absolute inset-0 rounded-md pointer-events-none"
+                aria-hidden
+                style={{
+                  background:
+                    "radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(168,85,247,0.18) 55%, transparent 75%)",
+                }}
+              />
+              <span className="opacity-50 text-[1.1rem]" aria-hidden>
+                <PieceById id="P" color={color} def={PIECE_LIBRARY["P"]} className="h-[70%] w-[70%]" />
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">Undead</span>
+            <div
+              className="relative flex items-center justify-center rounded-md"
+              style={{ width: cellSize * 1.2, height: cellSize * 1.2 }}
+            >
+              {/* Green glow matching PieceGlyph undead filter */}
+              <div
+                className="absolute inset-0 pointer-events-none rounded-full"
+                aria-hidden
+                style={{
+                  background:
+                    "radial-gradient(circle, rgba(74,222,128,0.55) 0%, rgba(74,222,128,0.18) 45%, transparent 70%)",
+                  filter: "blur(2px)",
+                }}
+              />
+              <span
+                className="text-[1.1rem]"
+                aria-hidden
+                style={{
+                  filter: color === "w"
+                    ? "brightness(0) saturate(100%) invert(1) drop-shadow(0 0 1.5px rgba(0,0,0,0.9)) drop-shadow(0 0 4px rgba(74,222,128,0.95)) drop-shadow(0 0 8px rgba(34,197,94,0.7))"
+                    : "brightness(0) drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 0 4px rgba(74,222,128,0.95)) drop-shadow(0 0 8px rgba(34,197,94,0.7))",
+                }}
+              >
+                {PIECE_LIBRARY["N"].glyph}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
