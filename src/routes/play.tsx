@@ -144,13 +144,26 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
   const terminal = resignedBy !== null || status.kind === "checkmate" || status.kind === "royal-loss" || status.kind === "stalemate";
 
+  const winnerName = winner === "w" ? "White" : winner === "b" ? "Black" : null;
+  const endTitle =
+    status.kind === "stalemate" ? "Draw — Stalemate"
+    : resignedBy ? `${winnerName} wins by resignation`
+    : status.kind === "checkmate" ? `${winnerName} wins by checkmate`
+    : status.kind === "royal-loss" ? `${winnerName} wins — Royal captured`
+    : null;
+
   const statusLabel =
-    resignedBy ? `${resignedBy === humanColor ? "You" : "Opponent"} resigned — ${winner === "w" ? "White" : "Black"} wins`
-    : status.kind === "checkmate" ? `Checkmate — ${winner === "w" ? "White" : "Black"} wins`
-    : status.kind === "royal-loss" ? `Royal captured — ${winner === "w" ? "White" : "Black"} wins`
-    : status.kind === "stalemate" ? "Stalemate"
-    : check ? `${state.turn === "w" ? "White" : "Black"} in check`
-    : `${state.turn === "w" ? "White" : "Black"} to move`;
+    endTitle
+    ?? (check ? `${state.turn === "w" ? "White" : "Black"} in check`
+    : `${state.turn === "w" ? "White" : "Black"} to move`);
+
+  // Delay the end-of-game modal so the player can see the final board.
+  const [showEndModal, setShowEndModal] = useState(false);
+  useEffect(() => {
+    if (!terminal) { setShowEndModal(false); return; }
+    const t = setTimeout(() => setShowEndModal(true), 2200);
+    return () => clearTimeout(t);
+  }, [terminal]);
 
   const dropTargets = selectedDrop ? legalDropSquares(selectedDrop) : [];
   const hasReserves = Object.values(state.reserves.w).some((n) => n > 0) ||
