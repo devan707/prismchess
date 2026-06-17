@@ -62,7 +62,7 @@ export interface PieceDef {
   builtinCustom?: boolean;
 }
 
-export type MoveKind = "normal" | "double" | "ep" | "drop" | "dragonAttack";
+export type MoveKind = "normal" | "double" | "ep" | "drop" | "dragonAttack" | "portalSwap" | "resurrect";
 
 export interface Move {
   /** Null only for drops. */
@@ -77,6 +77,10 @@ export interface Move {
   epCapture?: Square;
   /** Drop piece id (drops only). */
   dropPieceId?: PieceId;
+  /** Resurrect target piece id (necromancer). */
+  resurrectPieceId?: PieceId;
+  /** Shapeshifter capture: piece id to transform into (= captured.id). */
+  shapeshiftTo?: PieceId;
 }
 
 export type Reserves = Record<PieceId, number>;
