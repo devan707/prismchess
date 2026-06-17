@@ -657,8 +657,8 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     const isEnemyCorpse =
       !!move.resurrectOriginalOwner && move.resurrectOriginalOwner !== move.piece.color;
     b[move.to.r][move.to.c] = isEnemyCorpse
-      ? { id: move.resurrectPieceId, color: move.piece.color, undead: true }
-      : { id: move.resurrectPieceId, color: move.piece.color };
+      ? { id: move.resurrectPieceId, color: move.piece.color, undead: true, raisedOnce: true }
+      : { id: move.resurrectPieceId, color: move.piece.color, raisedOnce: true };
     return b;
   }
   if (move.kind === "juggShift" || move.kind === "juggCharge" || move.kind === "juggExit") {
