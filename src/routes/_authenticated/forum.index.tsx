@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/forum")({
+export const Route = createFileRoute("/_authenticated/forum/")({
   head: () => ({
     meta: [
       { title: "Community — Prism Chess" },
