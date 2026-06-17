@@ -381,27 +381,19 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       });
     }
 
-    // CHARGE forward — player picks how many squares to advance. Each reachable
-    // step emits its own move; tramples accumulate, stops before friendly/barricade,
-    // exits off the enemy edge as a juggExit.
+    // CHARGE forward — player picks how many squares to advance (1..5).
+    // Each reachable step emits its own move; tramples accumulate, stops
+    // before friendly/barricade. Cannot exit the board.
+    const MAX_CHARGE = 5;
     const stepDr = wide ? 0 : dir;
     const stepDc = wide ? dir : 0;
     const trampled: Piece[] = [];
     let curF = { ...from };
     let curP = { ...partner };
-    while (true) {
+    for (let step = 1; step <= MAX_CHARGE; step++) {
       const nF = { r: curF.r + stepDr, c: curF.c + stepDc };
       const nP = { r: curP.r + stepDr, c: curP.c + stepDc };
-      const outF = !inB(nF.r, nF.c);
-      const outP = !inB(nP.r, nP.c);
-      if (outF && outP) {
-        moves.push({
-          from, to: { ...from }, piece, captured: null, kind: "juggExit",
-          juggTrampled: trampled.length ? [...trampled] : undefined,
-        });
-        break;
-      }
-      if (outF || outP) break;
+      if (!inB(nF.r, nF.c) || !inB(nP.r, nP.c)) break;
       const t1 = board[nF.r][nF.c];
       const t2 = board[nP.r][nP.c];
       const blocks = (t: Piece | null) =>
