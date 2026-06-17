@@ -254,7 +254,6 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
     }
   }
   // Juggernauts must come in adjacent perpendicular pairs.
-  const wide = d.cols > d.rows;
   const offsets = juggPartnerCandidates(d.rows, d.cols);
   for (const p of d.placements) {
     if (p.pieceId !== "J") continue;
