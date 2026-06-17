@@ -13,10 +13,11 @@ import { saveSavedGame } from "@/game/library";
 import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
 import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
-import { ArrowLeft, Play, Save, Sparkles, Wand2 } from "lucide-react";
+import { ArrowLeft, Play, Save, Sparkles, Wand2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
+import { publishGame } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/sandbox")({
   head: () => ({
