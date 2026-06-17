@@ -43,20 +43,25 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     !!selectedPiece &&
     selectedPiece.color === humanColor &&
     selectedDef?.special === "necromancer";
-  const ghostMap = new Map<string, { id: string; color: "w" | "b"; originalOwner: "w" | "b" }>();
+  type GhostInfo = {
+    id: string;
+    color: "w" | "b";
+    originalOwner: "w" | "b";
+    occupied: boolean; // square has a piece on it (corpse buried under another piece)
+  };
+  const ghostMap = new Map<string, GhostInfo>();
   if (necromancerSelected) {
     for (const corp of state.corpses ?? []) {
       const key = `${corp.square.r},${corp.square.c}`;
-      // Skip corpses on squares that are currently occupied (no place to raise).
-      if (state.board[corp.square.r][corp.square.c]) continue;
       const cdef = state.registry[corp.pieceId];
       if (!cdef) continue;
       if (cdef.special === "juggernaut" || cdef.immobile) continue;
-      // Latest corpse wins for a given square.
+      // Latest corpse for a given square wins.
       ghostMap.set(key, {
         id: corp.pieceId,
-        color: humanColor, // raised piece will belong to us (undead if enemy)
+        color: humanColor, // a raised piece becomes ours (undead if enemy)
         originalOwner: corp.originalOwner,
+        occupied: !!state.board[corp.square.r][corp.square.c],
       });
     }
   }
@@ -212,16 +217,39 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   </div>
                 );
               })()}
-              {/* Spirit View ghost — only when no piece occupies the square. */}
-              {!piece && necromancerSelected && ghostMap.has(`${r},${c}`) && (() => {
+              {/* Spirit View overlay — render for EVERY corpse, whether the
+                  square is empty (full ghost, raisable if adjacent) or buried
+                  under another piece (small skull badge). */}
+              {necromancerSelected && ghostMap.has(`${r},${c}`) && (() => {
                 const g = ghostMap.get(`${r},${c}`)!;
                 const gdef = state.registry[g.id];
                 const isEnemy = g.originalOwner !== humanColor;
                 const adjacent = selected
                   ? Math.max(Math.abs(selected.r - r), Math.abs(selected.c - c)) === 1
                   : false;
-                // Subtle violet haze for every corpse; adjacent ones (raisable
-                // right now) get a brighter ring so the player knows to tap.
+                if (g.occupied) {
+                  // Corpse is buried — show a small violet skull marker so
+                  // the player knows it's there but can't raise yet.
+                  return (
+                    <div
+                      className="absolute top-0.5 right-0.5 z-20 pointer-events-none flex items-center justify-center rounded-full"
+                      style={{
+                        width: "1rem",
+                        height: "1rem",
+                        background: "rgba(168,85,247,0.85)",
+                        boxShadow: "0 0 6px rgba(168,85,247,0.7)",
+                        fontSize: "0.7rem",
+                        lineHeight: 1,
+                      }}
+                      aria-hidden
+                      title={`${gdef?.name ?? g.id} corpse — buried, clear this square to raise${isEnemy ? " (as Undead)" : ""}`}
+                    >
+                      💀
+                    </div>
+                  );
+                }
+                // Empty square — show full translucent ghost. Adjacent corpses
+                // (raisable right now) get a brighter ring.
                 return (
                   <>
                     <div
@@ -229,15 +257,15 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                       aria-hidden
                       style={{
                         background:
-                          "radial-gradient(circle, rgba(168,85,247,0.35) 0%, rgba(168,85,247,0.12) 55%, transparent 75%)",
+                          "radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(168,85,247,0.15) 55%, transparent 75%)",
                         boxShadow: adjacent
-                          ? "inset 0 0 0 2px rgba(168,85,247,0.85), 0 0 12px rgba(168,85,247,0.55)"
+                          ? "inset 0 0 0 2px rgba(168,85,247,0.9), 0 0 14px rgba(168,85,247,0.6)"
                           : undefined,
                       }}
                     />
                     <div
                       className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none"
-                      style={{ opacity: adjacent ? 0.85 : 0.6 }}
+                      style={{ opacity: adjacent ? 0.9 : 0.65 }}
                       aria-hidden
                       title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " — will rise as Undead" : ""}`}
                     >
