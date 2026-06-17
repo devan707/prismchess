@@ -657,8 +657,8 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     const isEnemyCorpse =
       !!move.resurrectOriginalOwner && move.resurrectOriginalOwner !== move.piece.color;
     b[move.to.r][move.to.c] = isEnemyCorpse
-      ? { id: move.resurrectPieceId, color: move.piece.color, undead: true }
-      : { id: move.resurrectPieceId, color: move.piece.color };
+      ? { id: move.resurrectPieceId, color: move.piece.color, undead: true, raisedOnce: true }
+      : { id: move.resurrectPieceId, color: move.piece.color, raisedOnce: true };
     return b;
   }
   if (move.kind === "juggShift" || move.kind === "juggCharge" || move.kind === "juggExit") {
@@ -836,7 +836,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
   // pieces that merely moved away from a square.)
   const prevCorpses = state.corpses ?? [];
   let nextCorpses = [...prevCorpses];
-  if (move.captured && move.kind !== "necroRaise") {
+  if (move.captured && move.kind !== "necroRaise" && !move.captured.raisedOnce) {
     const sq = move.epCapture ?? move.to;
     nextCorpses.push({ square: sq, pieceId: move.captured.id, originalOwner: move.captured.color });
     // Juggernaut partner also dies on a side/rear capture (see line ~724).
@@ -860,7 +860,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       let cur = { r: start.r + stepDr, c: start.c + stepDc };
       while (cur.r >= 0 && cur.r < rows && cur.c >= 0 && cur.c < cols) {
         const pre = state.board[cur.r][cur.c];
-        if (pre && pre.color !== move.piece.color) {
+        if (pre && pre.color !== move.piece.color && !pre.raisedOnce) {
           nextCorpses.push({ square: { r: cur.r, c: cur.c }, pieceId: pre.id, originalOwner: pre.color });
         }
         // Stop the lane at the lead's destination row/col (juggExit walks off).

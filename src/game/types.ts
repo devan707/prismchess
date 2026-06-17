@@ -11,6 +11,9 @@ export interface Piece {
   color: Color;
   /** Resurrected enemy under our control. Same movement, ghostly look. */
   undead?: boolean;
+  /** Has already been raised by a Necromancer once — cannot leave a corpse
+   *  when it dies again (each piece instance is raisable only once). */
+  raisedOnce?: boolean;
 }
 
 /** Persistent record of a piece that died on a specific square. Used by
