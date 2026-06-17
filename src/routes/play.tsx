@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TutorialDialog } from "@/components/TutorialDialog";
 import { hasSeenTutorial } from "@/lib/tutorial-state";
 import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
-import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter, BookOpen } from "lucide-react";
+import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
 
