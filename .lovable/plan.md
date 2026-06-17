@@ -1,78 +1,117 @@
-## Multiplayer (PvP) — Phased Plan
+## Goal
 
-Build a dedicated **Multiplayer** area accessible from the main menu, designed so today's basic version cleanly extends to a full chess.com-style experience (lobbies, ratings, history, tournaments) without rework.
+Make the platform feel social without overbuilding. Add friends, direct messages, in-match chat, public game sharing with likes/comments, and basic safety (block/report).
 
-### Phase 1 — Scope (what ships now)
+## Feature scope
 
-- **New top-level route**: `/multiplayer` (lobby) + `/multiplayer/$matchId` (live game).
-- **Two ways to start a match**:
-  - **Shareable challenge link** — pick design + time control, get a URL to send to a friend. First signed-in visitor who isn't the host joins as the opponent.
-  - **Public lobby** — list of open challenges anyone signed in can accept; create / cancel your own.
-- **Variant support**: any design works — built-in presets *and* user-saved custom designs (Menagerie, Grand Menagerie, etc.). Host picks; opponent inherits.
-- **Time controls (3 presets)**:
-  - 10 min (rapid)
-  - 30 min (long rapid)
-  - 3 days/move (correspondence)
-  - Server-authoritative clocks; flagging ends the game.
-- **Live play**: realtime move sync, in-game move list, captured pieces, resign, offer/accept draw, takeback request (opponent must accept).
-- **Result handling**: checkmate / resign / draw / timeout / royal-loss → match marked `finished`, stored permanently with full move history.
-- **Profile tab**: "My games" list — active + finished, links back into each match.
-- **Rating scaffolded, not computed**: every finished rated game records both players, result, and design id. Elo calculation is a later phase.
+1. **Friends**
+   - Send / accept / decline / cancel friend requests
+   - Friends list with online indicator (presence)
+   - Remove friend, block user (block auto-removes friendship + hides them)
 
-### Phase 2+ (scaffolded, not built now)
+2. **Direct messages (inbox)**
+   - 1:1 conversations, reachable from a new "Messages" item in the main menu
+   - Allowed to DM: friends, OR a user you are currently in an active match with (auto-expires from "can DM" list when match ends, but the thread stays in inbox if either is friends)
+   - Unread badge in nav, thread list sorted by last activity
+   - Realtime updates via Lovable Cloud realtime
 
-The schema and code seams are designed so these slot in without migration churn:
-- Elo / Glicko rating calculation + leaderboards
-- Quick-match queue (random pairing by rating band)
-- More time controls (bullet, blitz, custom increments)
-- Spectating, chat, post-game analysis (reuses existing `analyze-game` server fn)
-- Tournaments, arenas, daily puzzles, friends list
+3. **In-game + post-game chat**
+   - Chat panel inside the match screen between the two players
+   - Same thread persists into a "post-game" state so you can keep talking after the result
+   - Quick "Add friend" button on the opponent's name in-match
 
-### How it fits the existing app
+4. **Game sharing (user-created sandbox games)**
+   - "Publish" toggle on saved games → public, shareable URL `/g/:slug`
+   - Public game page: tutorial preview, "Play this game" button, like button, comments
+   - Likes (one per user), comments (threaded one level deep, edit/delete own)
+   - Profile page lists a user's published games + like counts
 
-- The `GameState` engine (`src/game/`) is unchanged — both clients run the same legal-move/rules code locally; the server stores moves and validates turn order + clock, not chess rules. This keeps custom pieces working for free.
-- Reuses Lovable Cloud auth (already wired) and the existing profiles table.
-- Realtime via Lovable Cloud Realtime channels per match.
-- Main menu gets a "Multiplayer" entry next to the existing solo / designer entries.
+5. **Moderation**
+   - Block user: hides their messages, comments, games from your view; prevents new DMs/friend requests
+   - Report user / report message / report game / report comment → goes to a `reports` table for later admin review (no admin UI in v1)
 
----
+## Out of scope (deferred)
 
-### Technical section
+- Group chats, voice, typing indicators, message reactions, attachments
+- Activity feed / notifications center (we'll surface unread badges only)
+- Profanity filter, admin moderation dashboard
+- Sharing built-in (preset) games — only user-created games get share pages
 
-**Database (new tables, all RLS-protected)**
+## UX surfaces
 
-- `designs` — shareable design snapshot (id, owner_id, name, design JSON, is_public). Lets a match reference a stable design even if the host edits theirs later.
-- `matches` — id, host_id, guest_id (nullable until accepted), design_id, time_control (`'10min' | '30min' | '3day'`), status (`'open' | 'active' | 'finished' | 'aborted'`), host_color, result (`'w' | 'b' | 'draw' | null`), result_reason (`'checkmate' | 'resign' | 'timeout' | 'draw_agreed' | 'royal_loss' | 'stalemate' | null`), rated (bool, scaffolding), white_time_ms, black_time_ms, last_clock_update_at, turn (`'w' | 'b'`), created_at, started_at, finished_at, share_token (for link-based join).
-- `match_moves` — id, match_id, ply, move JSON (matches existing `Move` type), played_at, time_left_ms. Append-only; full game replay = ordered rows.
-- `match_events` — id, match_id, kind (`'draw_offer' | 'draw_decline' | 'takeback_request' | 'takeback_decline' | 'resign' | 'chat'`), actor_id, payload, created_at. Single table covers all non-move interactions and future chat.
-- `ratings` — user_id, design_family (`'classic' | 'custom'` to start), rating (default 1200), games_played, updated_at. Populated but not mutated in Phase 1.
+- **Top nav**: add "Friends" and "Messages" entries with unread/request badges
+- **Match screen**: collapsible chat drawer + "Add friend" on opponent name
+- **Post-game screen**: chat stays open, plus "Rematch" / "Back to lobby"
+- **Profile page** (`/u/:username`): bio, published games, Add friend / Message / Block
+- **Published game page** (`/g/:slug`): description, tutorial preview, Play button, like, comments
+- **Sandbox**: "Publish" switch + share link copy
+- **Help center**: short "Social & safety" section
 
-RLS: hosts/guests can read their own matches; open challenges readable by all authenticated users; moves/events insertable only by the player whose turn it is (enforced via server fn).
+## Technical plan
 
-**Server functions** (`createServerFn`, `requireSupabaseAuth`)
-- `createChallenge({ designId, timeControl, hostColor, visibility })` → returns matchId + shareToken
-- `listOpenChallenges()` → public lobby feed
-- `acceptChallenge({ matchId | shareToken })` → assigns guest, sets status=active, starts clock
-- `cancelChallenge({ matchId })`
-- `submitMove({ matchId, ply, move })` → validates turn + clock + ply ordering, updates clock, inserts move, flags timeout if needed, broadcasts via Realtime
-- `respondToEvent({ matchId, eventId, accept })` → draw / takeback handling
-- `resign({ matchId })`
-- `listMyMatches({ status })`
-- `getMatch({ matchId })` → match + moves + events (used by loader)
+### New tables (Lovable Cloud, RLS on, GRANTs included)
 
-Chess legality is checked **client-side** using the existing `allLegalMoves` so custom pieces just work; server validates ordering, clock, and that the submitted move appears in the legal set computed from replaying stored moves (defense in depth, but doesn't duplicate piece logic).
+- `friendships` — `user_a`, `user_b` (canonically ordered), `status` (`pending`/`accepted`), `requested_by`, timestamps. Unique on (user_a, user_b).
+- `blocks` — `blocker_id`, `blocked_id`, timestamps. Unique pair.
+- `dm_threads` — `id`, `user_a`, `user_b` (canonical order), `last_message_at`.
+- `dm_messages` — `id`, `thread_id`, `sender_id`, `body`, `created_at`, `read_at`.
+- `game_likes` — `game_id`, `user_id`, unique pair.
+- `game_comments` — `id`, `game_id`, `parent_id` (nullable), `author_id`, `body`, timestamps.
+- `reports` — `reporter_id`, `target_type` (`user`/`message`/`comment`/`game`), `target_id`, `reason`, `created_at`.
+- `match_chat_messages` — `match_id`, `sender_id`, `body`, `created_at` (lives with match, separate from DMs so it disappears from the inbox surface unless a DM thread is also created).
 
-**Realtime**: one channel per match (`match:{id}`) broadcasting new moves and events. Both clients subscribe in `useEffect` and tear down on unmount.
+Plus columns on existing tables:
+- `saved_games` (or equivalent): `is_public boolean`, `slug text unique`, `like_count int`, `comment_count int`.
 
-**Clocks**: stored as `white_time_ms`, `black_time_ms`, `last_clock_update_at`, `turn`. Effective remaining time = stored − (now − last_clock_update_at) for the side to move. On `submitMove` the server decrements the mover's clock and updates the timestamp. A scheduled check (or lazy check on next read) flags timeouts. For 3-day correspondence the same fields work with a larger budget.
+### Server functions (TanStack `createServerFn`, RLS-as-user)
 
-**Routes**
-- `src/routes/_authenticated/multiplayer.tsx` — layout with `<Outlet />`
-- `src/routes/_authenticated/multiplayer.index.tsx` — lobby + "create challenge"
-- `src/routes/_authenticated/multiplayer.$matchId.tsx` — live game (reuses `Board`, `MoveHistory`, `Captured`, but feeds moves through `submitMove` instead of `useGame`'s local AI loop)
-- `src/routes/_authenticated/multiplayer.join.$token.tsx` — landing for shareable links
-- Main menu (`src/routes/index.tsx`) gets a "Multiplayer" button.
+- `friends.functions.ts`: `sendRequest`, `respondRequest`, `cancelRequest`, `removeFriend`, `listFriends`, `listIncomingRequests`
+- `blocks.functions.ts`: `blockUser`, `unblockUser`, `listBlocks`
+- `dm.functions.ts`: `listThreads`, `getThread`, `sendDm` (server-side check: friends OR active match opponent), `markRead`
+- `matchChat.functions.ts`: `sendMatchMessage`, `listMatchMessages`
+- `gameSocial.functions.ts`: `toggleLike`, `addComment`, `editComment`, `deleteComment`, `listComments`, `publishGame`, `unpublishGame`
+- `reports.functions.ts`: `submitReport`
 
-**Hook**: new `useMultiplayerGame(matchId)` mirrors `useGame`'s API (state, tryMove, legalFor, status) but its move-application path goes server → realtime → state, with optimistic local apply on the mover's side.
+### Authorization rules (in handlers + RLS)
 
-**Out of scope for this phase**: Elo math, matchmaking queue, chat UI, spectating, push notifications, anti-cheat heuristics. Tables/columns to support them exist from day one.
+- DMs: sender must be friend of recipient OR share an active (non-terminal) match; neither party blocked the other.
+- Friend request: blocked users can't send; can't request yourself or an existing friend.
+- Comments/likes: only on `is_public = true` games; blocker can't be seen by blocked.
+- Match chat: only the two match participants.
+
+### Realtime
+
+- Enable realtime on `dm_messages`, `match_chat_messages`, `friendships` (for incoming requests), `game_comments`.
+- Client subscribes per thread / per match / per active game page; clean teardown on unmount.
+
+### Routes (TanStack)
+
+- `_authenticated/friends.tsx`
+- `_authenticated/messages.tsx` (thread list) and `_authenticated/messages.$threadId.tsx`
+- `_authenticated/u.$username.tsx` (own + others' profiles)
+- Public `g.$slug.tsx` for shared game pages (SSR-friendly head/OG tags for shareability)
+- Update match route to embed chat drawer
+
+### Components
+
+- `FriendButton`, `BlockMenu`, `ReportDialog`
+- `ChatThread`, `ChatComposer` (shared by DM + match chat)
+- `MessagesInbox`, `FriendsList`, `IncomingRequests`
+- `LikeButton`, `CommentsSection`, `PublishGameDialog`, `ShareLinkButton`
+- `UnreadBadge` wired into nav
+
+### Safety / validation
+
+- Zod validation on every server fn input; message body max 2000 chars, comment max 1000, report reason max 500.
+- Rate-limit-ish guard: cap DMs/comments per minute per user via simple DB check.
+- No PII leaks: profile lookups expose only `username`, `display_name`, `avatar`, public game list.
+
+## Rollout order (so you can review incrementally)
+
+1. Migrations + grants + RLS for all new tables
+2. Friends + blocks (UI + server fns)
+3. DM inbox + realtime
+4. Match chat drawer + "Add friend" in match
+5. Publish/share games + likes + comments
+6. Reports + report dialogs wired across surfaces
+7. Help center update + nav badges polish
