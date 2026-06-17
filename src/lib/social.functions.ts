@@ -357,7 +357,7 @@ export const listPublishedGames = createServerFn({ method: "GET" })
     const profiles = authorIds.length
       ? (await supa.from("profiles").select("id, username, display_name, avatar").in("id", authorIds)).data ?? []
       : [];
-    const byId = new Map(profiles.map((p: { id: string }) => [p.id, p]));
+    const byId = new Map(profiles.map((p: { id: string; username: string; display_name: string | null; avatar: string | null }) => [p.id, p]));
     return rows.map((r) => ({ ...r, author: byId.get(r.author_id) ?? null }));
   });
 
@@ -436,7 +436,7 @@ export const listComments = createServerFn({ method: "POST" })
     const profiles = authorIds.length
       ? (await supa.from("profiles").select("id, username, display_name, avatar").in("id", authorIds)).data ?? []
       : [];
-    const byId = new Map(profiles.map((p: { id: string }) => [p.id, p]));
+    const byId = new Map(profiles.map((p: { id: string; username: string; display_name: string | null; avatar: string | null }) => [p.id, p]));
     return (rows ?? []).map((r) => ({ ...r, author: byId.get(r.author_id) ?? null }));
   });
 
