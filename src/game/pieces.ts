@@ -96,7 +96,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "dragon",
     builtinCustom: true,
-    description: "Flight: move to any unoccupied square on the board, ignoring all intervening pieces (non-capturing). Strike: capture an enemy within 2 squares and occupy that square (standard capture).",
+    description: "Flight: move to any unoccupied square on the board, ignoring all intervening pieces (non-capturing). Strike: capture an enemy 1 or 2 squares away orthogonally or diagonally — knight-style jumps are NOT allowed. Distance-2 strikes are blocked by an intervening piece.",
   },
   X: {
     id: "X",
