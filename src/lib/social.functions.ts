@@ -64,6 +64,22 @@ export const sendFriendRequest = createServerFn({ method: "POST" })
       if (error.code === "23505") throw new Error("Friend request already exists.");
       throw new Error(error.message);
     }
+
+    // Notify the recipient.
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const senderName = me?.display_name || me?.username || "Someone";
+    const { sendPushBackground } = await import("./push.server");
+    sendPushBackground(data.targetId, {
+      title: "New friend request",
+      body: `${senderName} wants to be friends.`,
+      url: `/friends`,
+      tag: `friend:${userId}`,
+    });
+
     return { ok: true };
   });
 
