@@ -156,7 +156,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "juggernaut",
     builtinCustom: true,
-    description: "A massive 2-square armored titan. Each turn it may SHIFT exactly one square sideways (no capture) OR CHARGE 1–5 squares straight forward, trampling every enemy in its path and stopping before friendly pieces. Immune to capture from its front arc; captured normally from the sides or rear — losing either square destroys the whole Juggernaut.",
+    description: "A massive 2-square armored titan that occupies a pair of side-by-side squares. Each turn it may SHIFT exactly one square sideways (capturing any enemy on the destination cell) OR CHARGE 1–5 squares straight forward along an unobstructed lane, trampling every enemy in either of the two columns in its path and stopping the instant it would hit a friendly piece or barricade. Once it reaches the far edge of the board, it stays there until captured. Immune to capture from its front arc; captured normally from the sides or rear — losing either half destroys the whole Juggernaut.",
   },
   Z: {
     id: "Z",
