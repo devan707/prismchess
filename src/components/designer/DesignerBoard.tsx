@@ -19,14 +19,23 @@ export function DesignerBoard({ design, registry, onChange, mirror, selectedSqua
   }
 
   const writeAt = (r: number, c: number, pieceId: PieceId | null, color: "w" | "b") => {
+    const { rows, cols } = design;
+    const wide = cols > rows;
     const filtered = design.placements.filter((p) => !(p.r === r && p.c === c));
-    const mirrored = mirror ? filtered.filter((p) => !(p.r === rows - 1 - r && p.c === c)) : filtered;
+    const mirrored = mirror
+      ? wide
+        ? filtered.filter((p) => !(p.r === r && p.c === cols - 1 - c))
+        : filtered.filter((p) => !(p.r === rows - 1 - r && p.c === c))
+      : filtered;
     const next: Placement[] = mirrored;
     if (pieceId) next.push({ r, c, pieceId, color });
     if (mirror && pieceId) {
-      const mr = rows - 1 - r;
       const mColor: "w" | "b" = color === "w" ? "b" : "w";
-      next.push({ r: mr, c, pieceId, color: mColor });
+      if (wide) {
+        next.push({ r, c: cols - 1 - c, pieceId, color: mColor });
+      } else {
+        next.push({ r: rows - 1 - r, c, pieceId, color: mColor });
+      }
     }
     onChange(next);
   };
