@@ -410,6 +410,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         state={state}
+        design={design}
+        humanColor={humanColor}
         aiColor={humanColor === "w" ? "b" : "w"}
         difficulty={difficulty}
         outcome={
