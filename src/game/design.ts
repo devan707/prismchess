@@ -77,11 +77,17 @@ export const PRESETS: Preset[] = [
     name: "Classic-ish",
     description: "Standard back rank scaled to your board, with pawns on rank 2.",
     build: (rows, cols) => {
-      if (rows < 3) return [];
+      if (rows < 3 && cols < 3) return [];
+      if (cols > rows) {
+        return mirror([
+          ...fillCol(0, classicBackRank(rows), rows),
+          ...Array.from({ length: rows }, (_, r) => ({ color: "w" as const, pieceId: "P" as PieceId, r, c: 1 })),
+        ], rows, cols);
+      }
       return mirror([
         ...fillRow(0, classicBackRank(cols), cols),
         ...Array.from({ length: cols }, (_, c) => ({ color: "w" as const, pieceId: "P" as PieceId, r: 1, c })),
-      ], rows);
+      ], rows, cols);
     },
   },
   {
@@ -89,12 +95,19 @@ export const PRESETS: Preset[] = [
     name: "Just pawns + King",
     description: "Solo king behind a wall of pawns. Great starting canvas.",
     build: (rows, cols) => {
-      if (rows < 3) return [];
+      if (rows < 3 && cols < 3) return [];
+      if (cols > rows) {
+        const kingRow = Math.floor(rows / 2);
+        return mirror([
+          { color: "w", pieceId: "K", r: kingRow, c: 0 },
+          ...Array.from({ length: rows }, (_, r) => ({ color: "w" as const, pieceId: "P" as PieceId, r, c: 1 })),
+        ], rows, cols);
+      }
       const kingCol = Math.floor(cols / 2);
       return mirror([
         { color: "w", pieceId: "K", r: 0, c: kingCol },
         ...Array.from({ length: cols }, (_, c) => ({ color: "w" as const, pieceId: "P" as PieceId, r: 1, c })),
-      ], rows);
+      ], rows, cols);
     },
   },
   {
@@ -102,13 +115,21 @@ export const PRESETS: Preset[] = [
     name: "Battle of the Knights",
     description: "Knights filling the back rank, King centered. No rooks.",
     build: (rows, cols) => {
-      if (rows < 3) return [];
+      if (rows < 3 && cols < 3) return [];
+      if (cols > rows) {
+        const back: PieceId[] = Array.from({ length: rows }, () => "N");
+        back[Math.floor(rows / 2)] = "K";
+        return mirror([
+          ...fillCol(0, back, rows),
+          ...Array.from({ length: rows }, (_, r) => ({ color: "w" as const, pieceId: "P" as PieceId, r, c: 1 })),
+        ], rows, cols);
+      }
       const back: PieceId[] = Array.from({ length: cols }, () => "N");
       back[Math.floor(cols / 2)] = "K";
       return mirror([
         ...fillRow(0, back, cols),
         ...Array.from({ length: cols }, (_, c) => ({ color: "w" as const, pieceId: "P" as PieceId, r: 1, c })),
-      ], rows);
+      ], rows, cols);
     },
   },
   {
@@ -117,13 +138,17 @@ export const PRESETS: Preset[] = [
     description: "Classic + a Dragon, an Archer, and 2 Barricade drops per side.",
     build: (rows, cols) => {
       const base = PRESETS[0].build(rows, cols);
-      // Replace one back-rank piece per side with Dragon and Archer (where space allows)
-      const mid = Math.floor(cols / 2);
+      const wide = cols > rows;
+      const mid = wide ? Math.floor(rows / 2) : Math.floor(cols / 2);
+      const limit = wide ? rows - 1 : cols - 1;
       const out = base.map((p) => {
-        if (p.r === 0 && p.color === "w" && p.c === Math.max(0, mid - 2)) return { ...p, pieceId: "A" as PieceId };
-        if (p.r === 0 && p.color === "w" && p.c === Math.min(cols - 1, mid + 2)) return { ...p, pieceId: "D" as PieceId };
-        if (p.r === rows - 1 && p.color === "b" && p.c === Math.max(0, mid - 2)) return { ...p, pieceId: "A" as PieceId };
-        if (p.r === rows - 1 && p.color === "b" && p.c === Math.min(cols - 1, mid + 2)) return { ...p, pieceId: "D" as PieceId };
+        const coord = wide ? p.r : p.c;
+        const isWhiteBack = wide ? (p.c === 0 && p.color === "w") : (p.r === 0 && p.color === "w");
+        const isBlackBack = wide ? (p.c === cols - 1 && p.color === "b") : (p.r === rows - 1 && p.color === "b");
+        if (isWhiteBack && coord === Math.max(0, mid - 2)) return { ...p, pieceId: "A" as PieceId };
+        if (isWhiteBack && coord === Math.min(limit, mid + 2)) return { ...p, pieceId: "D" as PieceId };
+        if (isBlackBack && coord === Math.max(0, mid - 2)) return { ...p, pieceId: "A" as PieceId };
+        if (isBlackBack && coord === Math.min(limit, mid + 2)) return { ...p, pieceId: "D" as PieceId };
         return p;
       });
       return out;
