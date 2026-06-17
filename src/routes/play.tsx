@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Board } from "@/components/chess/Board";
 import { useGame } from "@/hooks/useGame";
@@ -104,6 +105,11 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     try { localStorage.setItem("play:takeback", takebackOn ? "1" : "0"); } catch {}
   }, [takebackOn]);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [overlayHost, setOverlayHost] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setOverlayHost(document.body);
+  }, []);
 
   // History navigation: viewIndex = number of moves to show (0..history.length).
   // When equal to history.length the live state is shown.
@@ -397,9 +403,12 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
       </main>
 
-      {terminal && (
+      {terminal && !reviewOpen && overlayHost && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-auto touch-none"
+          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-auto touch-none"
+          role="presentation"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.preventDefault()}
         >
           <div className="bg-card border rounded-xl shadow-2xl p-6 text-center max-w-xs space-y-3">
@@ -416,7 +425,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        overlayHost,
       )}
 
       <PostGameAnalysis
