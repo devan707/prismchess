@@ -109,6 +109,8 @@ export interface GameState {
   turn: Color;
   history: Move[];
   captured: { w: Piece[]; b: Piece[] };
+  /** Corpses left on the board (for Necromancer Spirit View + Resurrection). */
+  corpses: Corpse[];
   reserves: { w: Reserves; b: Reserves };
   enPassant: Square | null;
   /** Snapshot of the registry used to play this game. */

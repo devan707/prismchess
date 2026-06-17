@@ -22,6 +22,7 @@ export function initialStateFromDesign(design: Design): GameState {
     turn: "w",
     history: [],
     captured: { w: [], b: [] },
+    corpses: [],
     reserves: { w: { ...design.reserves.w }, b: { ...design.reserves.b } },
     enPassant: null,
     registry,
