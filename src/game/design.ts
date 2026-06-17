@@ -181,10 +181,10 @@ export const PRESETS: Preset[] = [
       // Central portal on White's side; mirror() reflects it to Black's side.
       white.push({ color: "w", pieceId: "T", r: 5, c: 6 });
       const placements = mirror(white, rows, cols);
-      // Vertical Prism right next to the two central portals — its 8-cell
-      // aura blankets both portal squares, so portal-swaps cost a piece.
-      placements.push({ color: "w", pieceId: "Y", r: 5, c: 7 });
-      placements.push({ color: "w", pieceId: "Y", r: 6, c: 7 });
+      // Two Prisms on the centermost column on each side, opposite the portals,
+      // so their auras blanket the central portal squares.
+      placements.push({ color: "w", pieceId: "Y", r: 5, c: 5 });
+      placements.push({ color: "b", pieceId: "Y", r: 6, c: 5 });
       return placements;
     },
   },
