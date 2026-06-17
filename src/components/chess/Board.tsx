@@ -94,8 +94,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               className="relative flex items-center justify-center select-none cursor-pointer"
               style={{
                 background: light ? "var(--color-board-light)" : "var(--color-board-dark)",
-                containerType: "size",
-                fontSize: "62cqmin",
+                fontSize: `calc(min(92vw, 640px) / ${cols} * 0.6)`,
               }}
               onClick={() => handleSquareClick(sq)}
               onDragOver={(e) => { if (dragFrom) e.preventDefault(); }}

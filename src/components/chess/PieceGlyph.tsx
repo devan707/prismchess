@@ -23,7 +23,7 @@ export function PieceGlyph({ piece, def, className }: Props) {
 
   return (
     <span
-      className={`relative inline-flex items-center justify-center w-full h-full ${className ?? ""}`}
+      className={`relative inline-flex items-center justify-center ${className ?? ""}`}
       style={{ lineHeight: 1, userSelect: "none" }}
     >
       {isNecro ? (
