@@ -1,6 +1,7 @@
 import type { Difficulty, GameState, Move, Square } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 import { evaluate, valueFor } from "./evaluate";
+import { loadPlaybook } from "./playbook";
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
