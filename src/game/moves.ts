@@ -504,7 +504,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   // Castling: king moves two squares laterally toward an un-moved rook.
-  if (def.royal && piece.id === "K") {
+  // Only generated for the side to move — prevents infinite recursion when
+  // isSquareAttacked scans the opposing king's pseudo-moves.
+  if (def.royal && piece.id === "K" && piece.color === state.turn) {
     const castles = generateCastles(state, from, piece);
     for (const m of castles) moves.push(m);
   }
