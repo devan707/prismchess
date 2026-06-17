@@ -1,5 +1,6 @@
 import type { Color, Piece, PieceDef } from "@/game/types";
 import { NecromancerGlyph } from "./NecromancerGlyph";
+import { PrismGlyph } from "./PrismGlyph";
 
 interface Props {
   piece: Piece;
@@ -14,6 +15,9 @@ export function PieceGlyph({ piece, def, className }: Props) {
   // Necromancer needs visible eyes + teeth — render as a custom SVG so the
   // silhouette filter doesn't black out the interior features.
   const isNecro = piece.id === "M" || def?.special === "necromancer";
+  // Prism is a rainbow fixture — render as a custom SVG (no silhouette filter,
+  // color-agnostic) so its refractive look reads on any square.
+  const isPrism = def?.special === "prism";
 
   // Unified approach: every piece is rendered as a silhouette in its side's
   // colour with a strong contrasting outline so it's unmistakable on any square.
