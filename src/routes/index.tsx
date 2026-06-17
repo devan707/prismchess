@@ -154,7 +154,7 @@ function Home() {
                     Saved {new Date(g.createdAt).toLocaleDateString()}
                   </p>
                   <div className="mt-auto flex gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => play(g.design)}>
+                    <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
                       <Play className="h-3 w-3 mr-1" /> Play
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
