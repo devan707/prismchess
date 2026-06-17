@@ -1,4 +1,5 @@
 import type { Color, Piece, PieceDef } from "@/game/types";
+import { NecromancerGlyph } from "./NecromancerGlyph";
 
 interface Props {
   piece: Piece;
@@ -10,6 +11,10 @@ export function PieceGlyph({ piece, def, className }: Props) {
   const glyph = def?.glyph ?? "?";
   const isWhite = piece.color === "w";
 
+  // Necromancer needs visible eyes + teeth — render as a custom SVG so the
+  // silhouette filter doesn't black out the interior features.
+  const isNecro = piece.id === "M" || def?.special === "necromancer";
+
   // Unified approach: every piece is rendered as a silhouette in its side's
   // colour with a strong contrasting outline so it's unmistakable on any square.
   const filter = isWhite
@@ -18,12 +23,16 @@ export function PieceGlyph({ piece, def, className }: Props) {
 
   return (
     <span
-      className={`relative inline-flex items-center justify-center ${className ?? ""}`}
+      className={`relative inline-flex items-center justify-center w-full h-full ${className ?? ""}`}
       style={{ lineHeight: 1, userSelect: "none" }}
     >
-      <span className="relative" style={{ filter }}>
-        {glyph}
-      </span>
+      {isNecro ? (
+        <NecromancerGlyph color={piece.color} />
+      ) : (
+        <span className="relative" style={{ filter }}>
+          {glyph}
+        </span>
+      )}
     </span>
   );
 }

@@ -92,7 +92,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
             <div
               key={`${r}-${c}`}
               className="relative flex items-center justify-center select-none cursor-pointer"
-              style={{ background: light ? "var(--color-board-light)" : "var(--color-board-dark)" }}
+              style={{
+                background: light ? "var(--color-board-light)" : "var(--color-board-dark)",
+                containerType: "size",
+                fontSize: "62cqmin",
+              }}
               onClick={() => handleSquareClick(sq)}
               onDragOver={(e) => { if (dragFrom) e.preventDefault(); }}
               onDrop={(e) => {
@@ -179,7 +183,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                     onDragEnd={() => setDragFrom(null)}
                     className="relative z-10 flex items-center justify-center w-full h-full"
                   >
-                    <PieceGlyph piece={piece} def={def} className="text-[clamp(1.8rem,8vw,4rem)]" />
+                    <PieceGlyph piece={piece} def={def} />
                   </div>
                 );
               })()}
