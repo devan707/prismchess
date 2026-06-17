@@ -860,7 +860,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       let cur = { r: start.r + stepDr, c: start.c + stepDc };
       while (cur.r >= 0 && cur.r < rows && cur.c >= 0 && cur.c < cols) {
         const pre = state.board[cur.r][cur.c];
-        if (pre && pre.color !== move.piece.color) {
+        if (pre && pre.color !== move.piece.color && !pre.raisedOnce) {
           nextCorpses.push({ square: { r: cur.r, c: cur.c }, pieceId: pre.id, originalOwner: pre.color });
         }
         // Stop the lane at the lead's destination row/col (juggExit walks off).
