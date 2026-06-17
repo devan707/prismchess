@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
 import { saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
@@ -67,6 +67,11 @@ function Home() {
           <Link to="/forum">
             <Button size="lg" variant="outline">
               <MessagesSquare className="h-4 w-4 mr-2" /> Community
+            </Button>
+          </Link>
+          <Link to="/history">
+            <Button size="lg" variant="outline">
+              <History className="h-4 w-4 mr-2" /> History
             </Button>
           </Link>
         </div>

@@ -16,6 +16,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedMultiplayerRouteImport } from './routes/_authenticated/multiplayer'
+import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/forum'
 import { Route as AuthenticatedMultiplayerIndexRouteImport } from './routes/_authenticated/multiplayer.index'
 import { Route as AuthenticatedForumIndexRouteImport } from './routes/_authenticated/forum.index'
@@ -60,6 +61,11 @@ const AuthenticatedMultiplayerRoute =
     path: '/multiplayer',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedForumRoute = AuthenticatedForumRouteImport.update({
   id: '/forum',
   path: '/forum',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
+  '/history': typeof AuthenticatedHistoryRoute
   '/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
+  '/history': typeof AuthenticatedHistoryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
+  '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/play'
     | '/sandbox'
     | '/forum'
+    | '/history'
     | '/multiplayer'
     | '/profile'
     | '/forum/$topicId'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/play'
     | '/sandbox'
+    | '/history'
     | '/profile'
     | '/forum/$topicId'
     | '/forum/new'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/play'
     | '/sandbox'
     | '/_authenticated/forum'
+    | '/_authenticated/history'
     | '/_authenticated/multiplayer'
     | '/_authenticated/profile'
     | '/_authenticated/forum/$topicId'
@@ -261,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/multiplayer'
       fullPath: '/multiplayer'
       preLoaderRoute: typeof AuthenticatedMultiplayerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/history': {
+      id: '/_authenticated/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/forum': {
@@ -360,12 +379,14 @@ const AuthenticatedMultiplayerRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedForumRoute: typeof AuthenticatedForumRouteWithChildren
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedMultiplayerRoute: typeof AuthenticatedMultiplayerRouteWithChildren
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedForumRoute: AuthenticatedForumRouteWithChildren,
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedMultiplayerRoute: AuthenticatedMultiplayerRouteWithChildren,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }

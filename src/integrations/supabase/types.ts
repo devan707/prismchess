@@ -320,6 +320,51 @@ export type Database = {
         }
         Relationships: []
       }
+      solo_games: {
+        Row: {
+          created_at: string
+          design: Json
+          design_name: string
+          difficulty: string
+          ended_at: string
+          human_color: string
+          id: string
+          moves: Json
+          ply_count: number
+          result: string
+          result_reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          design: Json
+          design_name: string
+          difficulty: string
+          ended_at?: string
+          human_color: string
+          id?: string
+          moves?: Json
+          ply_count?: number
+          result: string
+          result_reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          design?: Json
+          design_name?: string
+          difficulty?: string
+          ended_at?: string
+          human_color?: string
+          id?: string
+          moves?: Json
+          ply_count?: number
+          result?: string
+          result_reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       topic_suggestions: {
         Row: {
           body: string

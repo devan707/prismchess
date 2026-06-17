@@ -19,6 +19,9 @@ import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
+import { recordSoloGame } from "@/lib/history.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
 import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
@@ -165,6 +168,47 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     const t = setTimeout(() => setShowEndModal(true), 2200);
     return () => clearTimeout(t);
   }, [terminal]);
+
+  // Persist the finished solo game once (if the user is signed in).
+  const recordSoloFn = useServerFn(recordSoloGame);
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!terminal) return;
+    const reason =
+      resignedBy ? "resign"
+      : status.kind === "checkmate" ? "checkmate"
+      : status.kind === "royal-loss" ? "royal_loss"
+      : status.kind === "stalemate" ? "stalemate"
+      : null;
+    if (!reason) return;
+    const result: "w" | "b" | "draw" =
+      reason === "stalemate" ? "draw"
+      : reason === "resign" ? (resignedBy === "w" ? "b" : "w")
+      : (status.kind === "checkmate" || status.kind === "royal-loss") ? status.winner
+      : "draw";
+    const key = `${state.history.length}:${reason}:${result}`;
+    if (savedKey === key) return;
+    setSavedKey(key);
+    (async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) return;
+        await recordSoloFn({
+          data: {
+            designName: `${design.rows}×${design.cols} Custom`,
+            design: design as unknown as Record<string, unknown>,
+            difficulty,
+            humanColor,
+            result,
+            resultReason: reason,
+            moves: state.history as unknown as Record<string, unknown>[],
+          },
+        });
+      } catch {
+        // Non-fatal; the player can still review the game.
+      }
+    })();
+  }, [terminal, status, resignedBy, state.history, design, difficulty, humanColor, recordSoloFn, savedKey]);
 
   const dropTargets = selectedDrop ? legalDropSquares(selectedDrop) : [];
   const hasReserves = Object.values(state.reserves.w).some((n) => n > 0) ||
