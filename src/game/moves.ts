@@ -409,20 +409,20 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "wizard") {
-    // Rook-like, but only same-color squares count; opposite-color squares
-    // (and any pieces on them) are skipped/ignored entirely.
+    // Rook-like along its own color (steps of 2 to skip opposite-color
+    // squares), PLUS bishop-like diagonals (every diagonal square is the
+    // same color, so a normal 1-step slide stays on its color).
     const { rows, cols } = rowsCols(board);
     const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
-    const dirs: Offset[] = [
+    // Orthogonal — step by 2, jumping over opposite-color squares/pieces.
+    const orthoDirs: Offset[] = [
       { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
     ];
-    for (const d of dirs) {
-      // Step by 2 to stay on same-color squares.
+    for (const d of orthoDirs) {
       let r = from.r + 2 * d.dr;
       let c = from.c + 2 * d.dc;
       while (inB(r, c)) {
         const t = board[r][c];
-        if (isBarricade(t, state.registry)) break;
         if (!t) {
           moves.push({ from, to: { r, c }, piece, captured: null });
         } else if (t.color === piece.color) {
@@ -433,6 +433,27 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         }
         r += 2 * d.dr;
         c += 2 * d.dc;
+      }
+    }
+    // Diagonal — normal bishop slide; stops at the first blocker.
+    const diagDirs: Offset[] = [
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ];
+    for (const d of diagDirs) {
+      let r = from.r + d.dr;
+      let c = from.c + d.dc;
+      while (inB(r, c)) {
+        const t = board[r][c];
+        if (!t) {
+          moves.push({ from, to: { r, c }, piece, captured: null });
+        } else if (t.color === piece.color) {
+          break;
+        } else {
+          moves.push({ from, to: { r, c }, piece, captured: t });
+          break;
+        }
+        r += d.dr;
+        c += d.dc;
       }
     }
     return moves;
