@@ -403,45 +403,78 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "assassin") {
+    // New Assassin: ALWAYS takes exactly 3 king-steps (orthogonal or diagonal)
+    // per turn. Path squares (including the start) must all be distinct
+    // (no revisiting any square already on the path). The first two
+    // intermediate landing squares MUST be empty (no jumping, no early
+    // captures, no friendlies). The 3rd/final square may be empty OR hold
+    // an enemy — capture only happens on the final step. The three step
+    // directions cannot ALL be the same (no straight line of three).
     const { rows, cols } = rowsCols(board);
     const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
-    const diagDirs: Offset[] = [
-      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
-    ];
-    const allDirs: Offset[] = [
+    const dirs: Offset[] = [
       { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ];
-    const seen = new Set<string>();
-    // Diagonal "stop" squares = 0..2 unobstructed steps. 0 steps means no diagonal portion (still allowed).
-    type Stop = { r: number; c: number };
-    const stops: Stop[] = [{ r: from.r, c: from.c }];
-    for (const d of diagDirs) {
-      let r = from.r, c = from.c;
-      for (let k = 1; k <= 2; k++) {
-        r += d.dr; c += d.dc;
-        if (!inB(r, c)) break;
-        const occ = board[r][c];
-        if (occ) break; // diagonal path must be unobstructed
-        stops.push({ r, c });
+    const finals = new Map<string, Piece | null>();
+    const visited = new Set<string>();
+    visited.add(`${from.r},${from.c}`);
+    const dirHistory: Offset[] = [];
+
+    const walk = (r: number, c: number, depth: number) => {
+      if (depth === 3) return;
+      for (const d of dirs) {
+        const nr = r + d.dr;
+        const nc = c + d.dc;
+        if (!inB(nr, nc)) continue;
+        const key = `${nr},${nc}`;
+        if (visited.has(key)) continue; // can't revisit any square on the path
+        const occ = board[nr][nc];
+        const isFinal = depth === 2;
+        if (!isFinal) {
+          // Intermediate squares must be EMPTY (no jumping, no early capture).
+          if (occ) continue;
+        } else {
+          // Final square: empty or enemy, but never friendly / barricade.
+          if (isBarricade(occ, state.registry)) continue;
+          if (occ && occ.color === piece.color) continue;
+          // Straight-line rule: all 3 steps cannot share the same direction.
+          if (
+            dirHistory.length === 2 &&
+            dirHistory[0].dr === d.dr && dirHistory[0].dc === d.dc &&
+            dirHistory[1].dr === d.dr && dirHistory[1].dc === d.dc
+          ) continue;
+          // Record the best capture-or-empty landing at this final square.
+          // (If multiple paths reach the same square, prefer a capturing one;
+          // a move with `captured` set is what the engine needs.)
+          const prev = finals.get(key);
+          if (prev === undefined || (prev === null && occ)) {
+            finals.set(key, occ ?? null);
+          }
+          continue;
+        }
+        visited.add(key);
+        dirHistory.push(d);
+        walk(nr, nc, depth + 1);
+        dirHistory.pop();
+        visited.delete(key);
       }
-    }
-    for (const s of stops) {
-      for (const o of allDirs) {
-        const r = s.r + o.dr, c = s.c + o.dc;
-        if (!inB(r, c)) continue;
-        if (r === from.r && c === from.c) continue; // can't end on own starting square
-        const occ = board[r][c];
-        if (isBarricade(occ, state.registry)) continue;
-        if (occ && occ.color === piece.color) continue;
-        const key = `${r},${c}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        moves.push({ from, to: { r, c }, piece, captured: occ ?? null });
-      }
+    };
+    walk(from.r, from.c, 0);
+
+    for (const [key, captured] of finals) {
+      const [rStr, cStr] = key.split(",");
+      moves.push({
+        from,
+        to: { r: Number(rStr), c: Number(cStr) },
+        piece,
+        captured,
+      });
     }
     return moves;
   }
+
+
 
   if (def.special === "wizard") {
     // Rook-like along its own color (steps of 2 to skip opposite-color

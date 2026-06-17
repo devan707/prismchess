@@ -212,28 +212,40 @@ function dynamicBonus(state: GameState, color: Color): number {
           break;
         }
         case "assassin": {
-          // Looks for valuable enemies it could reach (rough: any enemy within
-          // Chebyshev 4 that lies on an unblocked diagonal launch path).
+          // 3-step king-walker: reach is Chebyshev distance ≤ 3 (minus the
+          // 8 straight-line endpoints). Score nearby enemies, weighted by
+          // value and how far inside their own half they're sitting.
           let threatVal = 0;
-          for (let dr = -4; dr <= 4; dr++) {
-            for (let dc = -4; dc <= 4; dc++) {
+          for (let dr = -3; dr <= 3; dr++) {
+            for (let dc = -3; dc <= 3; dc++) {
               if (dr === 0 && dc === 0) continue;
-              if (Math.max(Math.abs(dr), Math.abs(dc)) > 4) continue;
+              const cheb = Math.max(Math.abs(dr), Math.abs(dc));
+              if (cheb > 3) continue;
+              // Skip the 8 straight-line distance-3 endpoints (unreachable).
+              if (cheb === 3) {
+                const straight =
+                  (dr === 0 || dc === 0) || (Math.abs(dr) === Math.abs(dc));
+                const onAxis = dr === 0 || dc === 0;
+                const onDiag = Math.abs(dr) === Math.abs(dc);
+                if (straight && (onAxis || onDiag)) continue;
+              }
               const nr = r + dr, nc = c + dc;
               if (!inB(board, nr, nc)) continue;
               const t = board[nr][nc];
               if (!t || t.color !== opp) continue;
               const v = valueFor(t.id, state.registry[t.id]);
-              // Back-rank / support bonus: enemies in their own half are juicier.
               const backRow = opp === "w" ? 0 : rows - 1;
               const distFromBack = Math.abs(nr - backRow);
               const backWeight = 1 + Math.max(0, (rows / 2 - distFromBack)) * 0.05;
-              threatVal += v * 0.08 * backWeight;
+              // Closer threats are stronger (more flexible path options).
+              const distBoost = cheb === 1 ? 0.14 : cheb === 2 ? 0.11 : 0.07;
+              threatVal += v * distBoost * backWeight;
             }
           }
           bonus += threatVal;
           break;
         }
+
         default:
           break;
       }
