@@ -64,21 +64,32 @@ interface MoveLike {
   juggTrampled?: { id: string }[];
 }
 
-/** Serialize one Move into a compact human-readable string. */
-export function fmtMove(m: MoveLike, cols: number, ply: number): string {
-  const color = m.piece?.color === "w" ? "W" : "B";
+/** Serialize one Move into a compact, unambiguous human-readable string.
+ *  Format: `12. (W) Wizard e2→e4 xPawn[...flags]`. We spell out the piece's
+ *  full name (looked up from `registry`) so the LLM can't confuse the side
+ *  prefix (W/B) with a piece id that happens to share that letter (e.g. the
+ *  Wizard's id is "W", the Bishop's is "B"). */
+export function fmtMove(
+  m: MoveLike,
+  cols: number,
+  ply: number,
+  registry: Record<string, { name?: string }> = {},
+): string {
+  const side = m.piece?.color === "w" ? "(W)" : "(B)";
   const pid = m.piece?.id ?? "?";
+  const nameOf = (id?: string) => (id && registry[id]?.name) || id || "?";
   const from = fmtSq(m.from ?? null, cols);
   const to = fmtSq(m.to ?? null, cols);
-  const cap = m.captured ? `x${m.captured.id}` : "";
+  const cap = m.captured ? ` x${nameOf(m.captured.id)}` : "";
   let extra = "";
-  if (m.promotion) extra += `=${m.promotion}`;
-  if (m.kind === "drop" && m.dropPieceId) extra += `[drop ${m.dropPieceId}]`;
-  if (m.kind === "resurrect" && m.resurrectPieceId) extra += `[res ${m.resurrectPieceId}]`;
+  if (m.promotion) extra += `[promote=${nameOf(m.promotion)}]`;
+  if (m.kind === "drop" && m.dropPieceId) extra += `[drop ${nameOf(m.dropPieceId)}]`;
+  if (m.kind === "resurrect" && m.resurrectPieceId) extra += `[resurrect ${nameOf(m.resurrectPieceId)}]`;
+  if (m.kind === "necroRaise" && m.resurrectPieceId) extra += `[necro-raise ${nameOf(m.resurrectPieceId)}]`;
   if (m.kind === "juggCharge") extra += "[charge]";
   if (m.kind === "juggShift") extra += "[shift]";
-  if (m.juggTrampled?.length) extra += `[trample ${m.juggTrampled.map((t) => t.id).join(",")}]`;
-  return `${ply}. ${color}${pid} ${from}→${to}${cap}${extra}`;
+  if (m.juggTrampled?.length) extra += `[trample ${m.juggTrampled.map((t) => nameOf(t.id)).join(",")}]`;
+  return `${ply}. ${side} ${nameOf(pid)} ${from}→${to}${cap}${extra}`;
 }
 
 const SYSTEM_PROMPT = `You are the strategic brain that coaches the AI opponent in a custom chess variant called The Grand Menagerie.
