@@ -1,38 +1,45 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { initialState } from "@/game/board";
 import { applyMove, gameStatus, replayMoves } from "@/game/rules";
 import { allLegalMoves, legalMovesFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
-import type { Color, Difficulty, GameState, Move, Square } from "@/game/types";
+import { VARIANTS, type Color, type Difficulty, type GameState, type Move, type PromotionPiece, type Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 
 export interface UseGameOptions {
   humanColor: Color;
   difficulty: Difficulty;
+  variantId: string;
 }
 
 export function useGame(opts: UseGameOptions) {
-  const [state, setState] = useState<GameState>(() => initialState());
+  const [state, setState] = useState<GameState>(() => initialState(opts.variantId));
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const aiThinkingRef = useRef(false);
 
   const status = gameStatus(state);
   const gameOver = status.kind === "checkmate" || status.kind === "stalemate";
 
+  const promotionOptions = useMemo<PromotionPiece[]>(() => {
+    const variant = VARIANTS[opts.variantId];
+    const base: PromotionPiece[] = ["R", "N", "B"];
+    if (variant?.backRank.includes("Q")) base.unshift("Q");
+    return base;
+  }, [opts.variantId]);
+
   const reset = useCallback(() => {
-    setState(initialState());
+    setState(initialState(opts.variantId));
     setPendingPromotion(null);
-  }, []);
+  }, [opts.variantId]);
 
   const undo = useCallback(() => {
     setState((s) => {
-      // Undo 2 plies (AI + human) when possible, otherwise 1.
       const targetUndo = s.history.length >= 2 ? 2 : s.history.length;
       const truncated = s.history.slice(0, s.history.length - targetUndo);
-      return replayMoves(truncated, initialState());
+      return replayMoves(truncated, initialState(opts.variantId));
     });
     setPendingPromotion(null);
-  }, []);
+  }, [opts.variantId]);
 
   const playMove = useCallback(
     (move: Move) => {
@@ -49,10 +56,9 @@ export function useGame(opts: UseGameOptions) {
   );
 
   const tryMove = useCallback(
-    (from: Square, to: Square, promotion?: "R" | "N" | "B") => {
+    (from: Square, to: Square, promotion?: PromotionPiece) => {
       if (state.turn !== opts.humanColor || gameOver) return false;
       const legal = legalMovesFrom(state.board, from, state.turn);
-      // If promotion target, require explicit choice
       const candidates = legal.filter((m) => m.to.r === to.r && m.to.c === to.c);
       if (candidates.length === 0) return false;
       const promos = candidates.filter((m) => m.promotion);
@@ -71,7 +77,6 @@ export function useGame(opts: UseGameOptions) {
     [state, opts.humanColor, gameOver, playMove],
   );
 
-  // AI turn
   useEffect(() => {
     if (gameOver) return;
     if (state.turn === opts.humanColor) return;
@@ -108,8 +113,9 @@ export function useGame(opts: UseGameOptions) {
     legalFor,
     allLegal,
     pendingPromotion,
+    promotionOptions,
     cancelPromotion: () => setPendingPromotion(null),
-    confirmPromotion: (piece: "R" | "N" | "B") => {
+    confirmPromotion: (piece: PromotionPiece) => {
       if (!pendingPromotion) return;
       tryMove(pendingPromotion.from, pendingPromotion.to, piece);
     },

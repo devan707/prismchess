@@ -7,17 +7,17 @@ import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
 import { BalanceTester } from "@/components/chess/BalanceTester";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Color, Difficulty } from "@/game/types";
+import { VARIANTS, DEFAULT_VARIANT_ID, type Color, type Difficulty } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mini Chess 5×5 — Compact chess variant with AI" },
-      { name: "description", content: "A polished 5×5 chess variant with King, Rook, Bishop, Knight, and Pawns. Play against an AI on Easy, Medium, or Hard, and run AI-vs-AI matches to test balance." },
-      { property: "og:title", content: "Mini Chess 5×5" },
-      { property: "og:description", content: "Compact 5×5 chess: King, Rook, Bishop, Knight, Pawns. Three AI difficulties and a built-in balance tester." },
+      { title: "Mini Chess — Compact 5×5 and 6×6 chess variants with AI" },
+      { name: "description", content: "Polished mini chess variants on 5×5 and 6×6 boards. Play against an AI on Easy, Medium, or Hard, and run AI-vs-AI matches to test balance." },
+      { property: "og:title", content: "Mini Chess — 5×5 and 6×6" },
+      { property: "og:description", content: "Compact chess variants: 5×5 (R K B N R) and 6×6 (R B K Q B R). Three AI difficulties and a built-in balance tester." },
     ],
   }),
   component: Index,
@@ -35,19 +35,22 @@ function StatusBadge({ kind }: { kind: string }) {
 function Index() {
   const [humanColor, setHumanColor] = useState<Color>("w");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [variantId, setVariantId] = useState<string>(DEFAULT_VARIANT_ID);
   const [flipped, setFlipped] = useState(false);
   const [muted, setMuted] = useState(false);
   const [resetKey, setResetKey] = useState(0);
 
   return (
     <GameView
-      key={resetKey}
+      key={`${resetKey}:${variantId}`}
       humanColor={humanColor}
       difficulty={difficulty}
+      variantId={variantId}
       flipped={flipped}
       muted={muted}
       setHumanColor={setHumanColor}
       setDifficulty={setDifficulty}
+      setVariantId={(v) => { setVariantId(v); setResetKey((k) => k + 1); }}
       setFlipped={setFlipped}
       setMuted={(m) => { sfx.setMuted(m); setMuted(m); }}
       onNewGame={() => setResetKey((k) => k + 1)}
@@ -58,18 +61,21 @@ function Index() {
 interface GVProps {
   humanColor: Color;
   difficulty: Difficulty;
+  variantId: string;
   flipped: boolean;
   muted: boolean;
   setHumanColor: (c: Color) => void;
   setDifficulty: (d: Difficulty) => void;
+  setVariantId: (v: string) => void;
   setFlipped: (f: boolean) => void;
   setMuted: (m: boolean) => void;
   onNewGame: () => void;
 }
 
-function GameView({ humanColor, difficulty, flipped, muted, setHumanColor, setDifficulty, setFlipped, setMuted, onNewGame }: GVProps) {
-  const game = useGame({ humanColor, difficulty });
-  const { state, status, tryMove, legalFor, undo, pendingPromotion, confirmPromotion } = game;
+function GameView({ humanColor, difficulty, variantId, flipped, muted, setHumanColor, setDifficulty, setVariantId, setFlipped, setMuted, onNewGame }: GVProps) {
+  const game = useGame({ humanColor, difficulty, variantId });
+  const { state, status, tryMove, legalFor, undo, pendingPromotion, promotionOptions, confirmPromotion } = game;
+  const variant = VARIANTS[variantId] ?? VARIANTS[DEFAULT_VARIANT_ID];
 
   const statusLabel =
     status.kind === "checkmate"
@@ -89,8 +95,12 @@ function GameView({ humanColor, difficulty, flipped, muted, setHumanColor, setDi
     <div className="min-h-screen bg-background text-foreground">
       <header className="max-w-6xl mx-auto px-4 pt-8 pb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">Mini Chess <span className="text-primary">5×5</span></h1>
-          <p className="text-sm text-muted-foreground mt-1">Rook, king, bishop, knight, rook, and pawns. A compact 5×5 chess variant.</p>
+          <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">Mini Chess <span className="text-primary">{variant.size}×{variant.size}</span></h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {variantId === "6x6"
+              ? "Rook, bishop, king, queen, bishop, rook — a 6×6 chess variant."
+              : "Rook, king, bishop, knight, rook, and pawns — a compact 5×5 chess variant."}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => setMuted(!muted)} aria-label="Toggle sound">
@@ -121,6 +131,17 @@ function GameView({ humanColor, difficulty, flipped, muted, setHumanColor, setDi
         <aside className="space-y-3">
           <div className="rounded-lg border bg-card p-3 space-y-3">
             <h2 className="font-display text-base font-semibold">Game</h2>
+            <div>
+              <label className="text-xs text-muted-foreground">Variant</label>
+              <Select value={variantId} onValueChange={(v) => setVariantId(v)}>
+                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(VARIANTS).map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-muted-foreground">Play as</label>
@@ -156,13 +177,14 @@ function GameView({ humanColor, difficulty, flipped, muted, setHumanColor, setDi
 
           <Captured state={state} />
           <MoveHistory state={state} />
-          <BalanceTester />
+          <BalanceTester variantId={variantId} />
         </aside>
       </main>
 
       <PromotionDialog
         open={!!pendingPromotion}
         color={humanColor}
+        options={promotionOptions}
         onChoose={(p) => confirmPromotion(p)}
       />
     </div>

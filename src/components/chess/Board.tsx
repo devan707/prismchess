@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { BOARD_SIZE, type Square } from "@/game/types";
+import type { GameState, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
-import type { GameState } from "@/game/types";
 import { findKing } from "@/game/board";
 import { inCheck } from "@/game/moves";
 
@@ -18,16 +17,15 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, disabled }
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
 
+  const size = state.board.length;
   const legalTargets = legalFor(selected ?? dragFrom);
   const last = state.history[state.history.length - 1];
 
   const checkColor = inCheck(state.board, state.turn) ? state.turn : null;
   const checkSquare = checkColor ? findKing(state.board, checkColor) : null;
 
-  // Render order: row indexing
-  const rows = Array.from({ length: BOARD_SIZE }, (_, i) => i);
-  const cols = Array.from({ length: BOARD_SIZE }, (_, i) => i);
-  // Flip so that humanColor's back rank is at bottom
+  const rows = Array.from({ length: size }, (_, i) => i);
+  const cols = Array.from({ length: size }, (_, i) => i);
   const displayRows = (humanColor === "w" ? rows.slice().reverse() : rows.slice());
   const displayCols = (humanColor === "w" ? cols : cols.slice().reverse());
   if (flipped) {
@@ -48,7 +46,6 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, disabled }
         setSelected(null);
         return;
       }
-      // If clicked own piece, reselect
       if (p && p.color === state.turn) {
         setSelected(sq);
         return;
@@ -63,8 +60,8 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, disabled }
     <div
       className="grid aspect-square w-full max-w-[min(92vw,560px)] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-border"
       style={{
-        gridTemplateColumns: `repeat(${BOARD_SIZE}, minmax(0, 1fr))`,
-        gridTemplateRows: `repeat(${BOARD_SIZE}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
       }}
     >
       {displayRows.map((r) =>
@@ -78,9 +75,9 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, disabled }
           const isLast = last && ((last.from.r === r && last.from.c === c) || (last.to.r === r && last.to.c === c));
           const isCheck = checkSquare && checkSquare.r === r && checkSquare.c === c;
 
-          const showFile = (humanColor === "w" ? r === 0 : r === BOARD_SIZE - 1);
-          const showRank = (humanColor === "w" ? c === 0 : c === BOARD_SIZE - 1);
-          const fileLabel = "abcde"[c];
+          const showFile = (humanColor === "w" ? r === 0 : r === size - 1);
+          const showRank = (humanColor === "w" ? c === 0 : c === size - 1);
+          const fileLabel = "abcdefgh"[c];
           const rankLabel = String(r + 1);
 
           return (
