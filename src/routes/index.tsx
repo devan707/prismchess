@@ -1,10 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
-import { saveDesign } from "@/game/design";
-import type { Design } from "@/game/types";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History } from "lucide-react";
+import {
+  BUILTIN_GAMES,
+  deleteSavedGame,
+  loadSavedGames,
+  tutorialForBuiltin,
+  tutorialForSaved,
+  type GameType,
+  type SavedGame,
+} from "@/game/library";
+import { saveCurrentMeta, saveDesign } from "@/game/design";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
@@ -30,8 +37,26 @@ function Home() {
 
   useEffect(() => { setSaved(loadSavedGames()); }, []);
 
-  const play = (design: Design) => {
+  const playBuiltin = (g: GameType) => {
+    const design = g.build();
     saveDesign(design);
+    saveCurrentMeta({
+      id: `builtin:${g.id}`,
+      name: g.name,
+      description: g.description,
+      tutorial: tutorialForBuiltin(g),
+    });
+    navigate({ to: "/play" });
+  };
+
+  const playSaved = (g: SavedGame) => {
+    saveDesign(g.design);
+    saveCurrentMeta({
+      id: `saved:${g.id}`,
+      name: g.name,
+      description: g.description,
+      tutorial: tutorialForSaved(g),
+    });
     navigate({ to: "/play" });
   };
 
@@ -74,6 +99,11 @@ function Home() {
               <History className="h-4 w-4 mr-2" /> History
             </Button>
           </Link>
+          <Link to="/help">
+            <Button size="lg" variant="outline">
+              <BookOpen className="h-4 w-4 mr-2" /> Help
+            </Button>
+          </Link>
         </div>
       </header>
 
@@ -84,7 +114,7 @@ function Home() {
             {BUILTIN_GAMES.map((g) => (
               <button
                 key={g.id}
-                onClick={() => play(g.build())}
+                onClick={() => playBuiltin(g)}
                 className="group text-left rounded-xl border bg-card p-4 hover:border-primary hover:shadow-md transition"
               >
                 <div className="flex items-center justify-between mb-1">
@@ -129,7 +159,7 @@ function Home() {
                     Saved {new Date(g.createdAt).toLocaleDateString()}
                   </p>
                   <div className="mt-auto flex gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => play(g.design)}>
+                    <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
                       <Play className="h-3 w-3 mr-1" /> Play
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">

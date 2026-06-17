@@ -226,6 +226,25 @@ export function loadDesign(): Design | null {
   } catch { return null; }
 }
 
+const META_KEY = "designer:currentMeta";
+export interface CurrentGameMeta {
+  id: string;
+  name: string;
+  description?: string;
+  /** Serialized GameTutorial — kept loose here to avoid a circular import. */
+  tutorial?: { slides: Array<{ title: string; body?: string; bullets?: string[]; pieceId?: string }> };
+}
+export function saveCurrentMeta(meta: CurrentGameMeta) {
+  try { sessionStorage.setItem(META_KEY, JSON.stringify(meta)); } catch {}
+}
+export function loadCurrentMeta(): CurrentGameMeta | null {
+  try {
+    const raw = sessionStorage.getItem(META_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CurrentGameMeta;
+  } catch { return null; }
+}
+
 export function loadCustomPieces(): PieceDef[] {
   try {
     const raw = localStorage.getItem(CUSTOM_PIECES_KEY);

@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { loadDesign } from "@/game/design";
+import { loadDesign, loadCurrentMeta, type CurrentGameMeta } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
@@ -22,6 +22,9 @@ import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { recordSoloGame } from "@/lib/history.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { TutorialDialog } from "@/components/TutorialDialog";
+import { hasSeenTutorial } from "@/lib/tutorial-state";
+import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,15 +42,42 @@ export const Route = createFileRoute("/play")({
 function PlayRoute() {
   const navigate = useNavigate();
   const [design, setDesign] = useState<Design | null>(null);
+  const [meta, setMeta] = useState<CurrentGameMeta | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   useEffect(() => {
     const d = loadDesign();
     if (!d) { navigate({ to: "/" }); return; }
     setDesign(d);
+    const m = loadCurrentMeta();
+    setMeta(m);
+    if (m?.tutorial && !hasSeenTutorial(m.id)) {
+      setTutorialOpen(true);
+    }
   }, [navigate]);
 
   if (!design) return null;
-  return <Play design={design} />;
+  const tutorial: GameTutorial | null = meta?.tutorial
+    ? { slides: meta.tutorial.slides as GameTutorial["slides"] }
+    : meta
+      ? buildBaseTutorial({ name: meta.name, description: meta.description ?? "", design })
+      : null;
+
+  return (
+    <>
+      <Play design={design} />
+      {meta && tutorial && (
+        <TutorialDialog
+          gameId={meta.id}
+          gameName={meta.name}
+          tutorial={tutorial}
+          open={tutorialOpen}
+          onOpenChange={setTutorialOpen}
+          isFirstTime={!hasSeenTutorial(meta.id)}
+        />
+      )}
+    </>
+  );
 }
 
 function Play({ design }: { design: Design }) {

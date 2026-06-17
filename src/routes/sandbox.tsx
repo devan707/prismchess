@@ -6,12 +6,17 @@ import { PiecePalette } from "@/components/designer/PiecePalette";
 import { DesignerBoard } from "@/components/designer/DesignerBoard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveDesign, validateDesign } from "@/game/design";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveCurrentMeta, saveDesign, validateDesign } from "@/game/design";
 import { saveSavedGame } from "@/game/library";
+import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
 import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
-import { ArrowLeft, Play, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Save, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
 
 export const Route = createFileRoute("/sandbox")({
   head: () => ({
@@ -29,8 +34,13 @@ function Sandbox() {
   const [paletteColor, setPaletteColor] = useState<Color>("w");
   const [mirror, setMirror] = useState(true);
   const [saveName, setSaveName] = useState("");
+  const [description, setDescription] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<PieceId | "erase" | null>(null);
+  const suggestDesc = useServerFn(suggestGameDescription);
+  const genTutorial = useServerFn(generateGameTutorial);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
@@ -162,18 +172,104 @@ function Sandbox() {
 
   const validationError = validateDesign(design, registry);
 
-  const startGame = () => {
+  /** Build a piece legend string for the AI prompt: "P=Pawn, K=King, ..." */
+  const buildPieceLegend = (): string => {
+    const ids = Array.from(new Set(design.placements.map((p) => p.pieceId)));
+    return ids
+      .map((id) => {
+        const def = registry[id] ?? PIECE_LIBRARY[id];
+        return def ? `${id}=${def.name}` : id;
+      })
+      .join(", ");
+  };
+
+  const customPiecesPresent = useMemo(() => {
+    const present = new Set(design.placements.map((p) => p.pieceId));
+    return Array.from(present)
+      .filter((id) => !STANDARD_PIECE_IDS.includes(id as PieceId))
+      .map((id) => {
+        const def = registry[id] ?? PIECE_LIBRARY[id];
+        return { id, name: def?.name ?? id, description: def?.description };
+      });
+  }, [design.placements, registry]);
+
+  const handleAiDescription = async () => {
     if (validationError) { toast.error(validationError); return; }
+    setAiBusy(true);
+    try {
+      const res = await suggestDesc({
+        data: {
+          name: saveName.trim() || `Custom ${design.rows}×${design.cols}`,
+          pieceLegend: buildPieceLegend(),
+          rows: design.rows,
+          cols: design.cols,
+        },
+      });
+      if (res.ok) {
+        setDescription(res.description);
+        toast.success("Description suggested by AI.");
+      } else {
+        toast.error(res.error);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI request failed.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  /** Try AI tutorial generation; fall back to the programmatic builder on any failure. */
+  const buildTutorialBestEffort = async (name: string, desc: string): Promise<GameTutorial> => {
+    try {
+      const res = await genTutorial({
+        data: {
+          name,
+          description: desc,
+          pieceLegend: buildPieceLegend(),
+          rows: design.rows,
+          cols: design.cols,
+          customPieces: customPiecesPresent,
+        },
+      });
+      if (res.ok) return { slides: res.slides, generatedBy: "ai" };
+    } catch {
+      // fall through to programmatic builder
+    }
+    return { ...buildBaseTutorial({ name, description: desc, design }), generatedBy: "fallback" };
+  };
+
+  const startGame = async () => {
+    if (validationError) { toast.error(validationError); return; }
+    const name = saveName.trim() || `Custom ${design.rows}×${design.cols}`;
     saveDesign(design);
+    saveCurrentMeta({
+      id: `draft:${design.rows}x${design.cols}:${design.placements.length}`,
+      name,
+      description,
+      tutorial: buildBaseTutorial({ name, description, design }),
+    });
     navigate({ to: "/play" });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validationError) { toast.error(validationError); return; }
     const name = saveName.trim() || `Custom ${design.rows}×${design.cols}`;
-    saveSavedGame(name, design);
-    toast.success(`Saved "${name}"`);
-    setSaveName("");
+    const desc = description.trim();
+    if (!desc) {
+      toast.error("Add a description so other players know what makes this game special. You can ask the AI to help.");
+      return;
+    }
+    setSaving(true);
+    try {
+      toast.info("Saving — generating tutorial slides…");
+      const tutorial = await buildTutorialBestEffort(name, desc);
+      saveSavedGame(name, design, { description: desc, tutorial });
+      toast.success(`Saved "${name}"`);
+      setSaveName("");
+      setDescription("");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -187,7 +283,7 @@ function Sandbox() {
           </Link>
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Sandbox</h1>
-            <p className="text-xs text-muted-foreground">Design a board, save it, then play it.</p>
+            <p className="text-xs text-muted-foreground">Design a board, describe it, then save or play.</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -197,14 +293,46 @@ function Sandbox() {
             placeholder="Name this game"
             className="h-9 w-44"
           />
-          <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError}>
-            <Save className="h-4 w-4 mr-1" /> Save
+          <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving}>
+            <Save className="h-4 w-4 mr-1" /> {saving ? "Saving…" : "Save"}
           </Button>
           <Button onClick={startGame} size="sm" disabled={!!validationError}>
             <Play className="h-4 w-4 mr-1" /> Play
           </Button>
         </div>
       </header>
+
+      <section className="max-w-7xl mx-auto px-4 pb-2">
+        <div className="rounded-lg border bg-card p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="game-desc" className="text-sm font-display font-semibold">
+              Game description
+              <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">Required to save</span>
+            </Label>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={handleAiDescription}
+              disabled={aiBusy || !!validationError}
+            >
+              <Wand2 className="h-3.5 w-3.5 mr-1" /> {aiBusy ? "Thinking…" : "AI assist"}
+            </Button>
+          </div>
+          <Textarea
+            id="game-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={2000}
+            placeholder="What makes this variant fun? Mention the board, custom pieces, and any unusual goals."
+            className="min-h-[72px] resize-y text-sm"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            We use this to generate an AI tutorial that appears the first time someone plays your game.
+          </p>
+        </div>
+      </section>
+
 
       <main className="max-w-7xl mx-auto px-4 pb-12 grid gap-4 lg:grid-cols-[260px_1fr_300px]">
         <aside className="space-y-3">
