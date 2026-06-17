@@ -430,6 +430,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       }
     }
     return moves;
+  }
+
+
 
   // Generic data-driven piece
   if (def.movement || def.capture) {
