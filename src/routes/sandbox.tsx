@@ -45,6 +45,7 @@ function Sandbox() {
     setSelectedSquare(null);
   };
 
+
   const applyPreset = (id: string) => {
     const preset = PRESETS.find((p) => p.id === id);
     if (!preset) return;
@@ -52,7 +53,25 @@ function Sandbox() {
     setSelectedSquare(null);
   };
 
+  const swapPawns = (from: PieceId, to: PieceId) => {
+    setDesign((d) => {
+      const count = d.placements.filter((p) => p.pieceId === from).length;
+      if (count === 0) {
+        toast.info(`No ${from === "P" ? "regular pawns" : "shapeshifter pawns"} to swap.`);
+        return d;
+      }
+      toast.success(`Swapped ${count} ${from === "P" ? "pawn" : "shapeshifter"}${count === 1 ? "" : "s"}.`);
+      return {
+        ...d,
+        placements: d.placements.map((p) => (p.pieceId === from ? { ...p, pieceId: to } : p)),
+      };
+    });
+    setSelectedSquare(null);
+  };
+
+
   const setPlacements = (placements: Placement[]) => setDesign((d) => ({ ...d, placements }));
+
 
   const setReserve = (pieceId: PieceId, color: Color, count: number) => {
     setDesign((d) => ({
@@ -191,7 +210,22 @@ function Sandbox() {
         <aside className="space-y-3">
           <BoardSizePicker rows={design.rows} cols={design.cols} onChange={setSize} />
           <PresetPicker onApply={applyPreset} />
+          <div className="rounded-lg border bg-card p-3 space-y-2">
+            <h3 className="font-display text-sm font-semibold">Pawn swap</h3>
+            <p className="text-[11px] text-muted-foreground">
+              Convert every pawn currently on the board to (or from) a Shapeshifter Pawn.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Button size="sm" variant="outline" onClick={() => swapPawns("P", "S")}>
+                Pawns → Shapeshifters
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => swapPawns("S", "P")}>
+                Shapeshifters → Pawns
+              </Button>
+            </div>
+          </div>
         </aside>
+
 
         <section className="flex flex-col items-center gap-3">
           <div className="w-full flex items-center justify-between text-xs">
