@@ -55,14 +55,20 @@ function Sandbox() {
 
   const swapPawns = (from: PieceId, to: PieceId) => {
     setDesign((d) => {
-      const placements = d.placements.map((p) =>
-        p.pieceId === from ? { ...p, pieceId: to } : p,
-      );
-      const count = placements.filter((p) => p.pieceId !== d.placements.find((x) => x === p)?.pieceId).length;
-      return { ...d, placements };
+      const count = d.placements.filter((p) => p.pieceId === from).length;
+      if (count === 0) {
+        toast.info(`No ${from === "P" ? "regular pawns" : "shapeshifter pawns"} to swap.`);
+        return d;
+      }
+      toast.success(`Swapped ${count} ${from === "P" ? "pawn" : "shapeshifter"}${count === 1 ? "" : "s"}.`);
+      return {
+        ...d,
+        placements: d.placements.map((p) => (p.pieceId === from ? { ...p, pieceId: to } : p)),
+      };
     });
     setSelectedSquare(null);
   };
+
 
   const setPlacements = (placements: Placement[]) => setDesign((d) => ({ ...d, placements }));
 
