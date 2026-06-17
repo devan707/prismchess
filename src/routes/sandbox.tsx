@@ -326,8 +326,11 @@ function Sandbox() {
             placeholder="Name this game"
             className="h-9 w-44"
           />
-          <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving}>
+          <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving || publishing}>
             <Save className="h-4 w-4 mr-1" /> {saving ? "Saving…" : "Save"}
+          </Button>
+          <Button onClick={handlePublish} variant="outline" size="sm" disabled={!!validationError || saving || publishing}>
+            <Share2 className="h-4 w-4 mr-1" /> {publishing ? "Publishing…" : "Share"}
           </Button>
           <Button onClick={startGame} size="sm" disabled={!!validationError}>
             <Play className="h-4 w-4 mr-1" /> Play
