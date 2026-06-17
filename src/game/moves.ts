@@ -503,7 +503,82 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
   }
 
+  // Castling: king moves two squares laterally toward an un-moved rook.
+  // Only generated for the side to move — prevents infinite recursion when
+  // isSquareAttacked scans the opposing king's pseudo-moves.
+  if (def.royal && piece.id === "K" && piece.color === state.turn) {
+    const castles = generateCastles(state, from, piece);
+    for (const m of castles) moves.push(m);
+  }
+
   return moves;
+}
+
+/** Generate castling moves for the given king. Checks: king/rook un-moved,
+ *  empty path, king not in check, king does not pass through or land on
+ *  an attacked square. */
+function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
+  const out: Move[] = [];
+  const board = state.board;
+  const wide = boardIsWide(board);
+  const { rows, cols } = rowsCols(board);
+  const opp: Color = king.color === "w" ? "b" : "w";
+
+  // Has the king ever moved?
+  const kingMoved = state.history.some(
+    (m) => m.piece.color === king.color && m.piece.id === "K",
+  );
+  if (kingMoved) return out;
+  if (inCheck(state, king.color)) return out;
+
+  // Castling direction is lateral to pawn movement.
+  // Wide boards: pawns push along columns → castle along rows (dr=±1, dc=0).
+  // Tall boards: pawns push along rows → castle along columns (dr=0, dc=±1).
+  const lateralOffsets: Offset[] = wide
+    ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }]
+    : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+
+  for (const o of lateralOffsets) {
+    // Scan outward from the king for a friendly, un-moved rook on the same rank/file.
+    let r = from.r + o.dr;
+    let c = from.c + o.dc;
+    let rookSq: Square | null = null;
+    while (r >= 0 && r < rows && c >= 0 && c < cols) {
+      const t = board[r][c];
+      if (t) {
+        if (t.color === king.color && t.id === "R") rookSq = { r, c };
+        break;
+      }
+      r += o.dr;
+      c += o.dc;
+    }
+    if (!rookSq) continue;
+
+    const rookMoved = state.history.some(
+      (m) => m.piece.color === king.color && m.piece.id === "R" &&
+        m.from && m.from.r === rookSq!.r && m.from.c === rookSq!.c,
+    );
+    if (rookMoved) continue;
+
+    // Path between king and rook is already empty (loop above). King moves 2
+    // toward the rook; rook lands on the square the king passed through.
+    const kingTo: Square = { r: from.r + 2 * o.dr, c: from.c + 2 * o.dc };
+    const rookTo: Square = { r: from.r + o.dr, c: from.c + o.dc };
+    // King must not pass through or land on an attacked square.
+    if (isSquareAttacked(state, rookTo, opp)) continue;
+    if (isSquareAttacked(state, kingTo, opp)) continue;
+
+    out.push({
+      from,
+      to: kingTo,
+      piece: king,
+      captured: null,
+      kind: "castle",
+      rookFrom: rookSq,
+      rookTo,
+    });
+  }
+  return out;
 }
 
 /** All drops a side can play right now. */
@@ -543,6 +618,13 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   if (move.kind === "dragonAttack") {
     // Dragon stays; enemy removed.
     b[move.to.r][move.to.c] = null;
+    return b;
+  }
+  if (move.kind === "castle" && move.from && move.rookFrom && move.rookTo) {
+    b[move.from.r][move.from.c] = null;
+    b[move.rookFrom.r][move.rookFrom.c] = null;
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    b[move.rookTo.r][move.rookTo.c] = { id: "R", color: move.piece.color };
     return b;
   }
   if (move.kind === "portalSwap" && move.from) {
@@ -674,6 +756,8 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
           // but here `to` IS the destination — so it's a real capture path.
           if (m.kind === "juggShift" || m.kind === "juggExit") continue;
+          // castling is not an attack on the king's destination square.
+          if (m.kind === "castle") continue;
           return true;
         }
       }
@@ -778,12 +862,15 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   if (!p || p.color !== state.turn) return [];
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
+    // Knights leap onto their target — they strike the square directly and
+    // bypass front-arc immunity on juggernauts and barricades.
+    const attackerBypassesFrontArc = m.piece.id === "N";
     // Front-arc immunity: a juggernaut cannot be captured from the front.
-    if (m.captured && m.captured.id === "J" && m.from) {
+    if (m.captured && m.captured.id === "J" && m.from && !attackerBypassesFrontArc) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Front-arc immunity: a barricade cannot be captured from the front.
-    if (m.captured && state.registry[m.captured.id]?.immobile && m.from) {
+    if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !attackerBypassesFrontArc) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Juggernaut charges that would trample a front-protected barricade are also blocked.
