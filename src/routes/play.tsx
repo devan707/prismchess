@@ -416,7 +416,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
       </main>
 
-      {terminal && !reviewOpen && overlayHost && createPortal(
+      {terminal && showEndModal && !reviewOpen && overlayHost && createPortal(
         <div
           className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-auto touch-none"
           role="presentation"
