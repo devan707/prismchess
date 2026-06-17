@@ -361,8 +361,46 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     return moves;
   }
 
-
-
+  if (def.special === "assassin") {
+    const { rows, cols } = rowsCols(board);
+    const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
+    const diagDirs: Offset[] = [
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ];
+    const allDirs: Offset[] = [
+      { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ];
+    const seen = new Set<string>();
+    // Diagonal "stop" squares = 0..3 unobstructed steps. 0 steps means no diagonal portion (still allowed).
+    type Stop = { r: number; c: number };
+    const stops: Stop[] = [{ r: from.r, c: from.c }];
+    for (const d of diagDirs) {
+      let r = from.r, c = from.c;
+      for (let k = 1; k <= 3; k++) {
+        r += d.dr; c += d.dc;
+        if (!inB(r, c)) break;
+        const occ = board[r][c];
+        if (occ) break; // diagonal path must be unobstructed
+        stops.push({ r, c });
+      }
+    }
+    for (const s of stops) {
+      for (const o of allDirs) {
+        const r = s.r + o.dr, c = s.c + o.dc;
+        if (!inB(r, c)) continue;
+        if (r === from.r && c === from.c) continue; // can't end on own starting square
+        const occ = board[r][c];
+        if (isBarricade(occ, state.registry)) continue;
+        if (occ && occ.color === piece.color) continue;
+        const key = `${r},${c}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        moves.push({ from, to: { r, c }, piece, captured: occ ?? null });
+      }
+    }
+    return moves;
+  }
 
   // Generic data-driven piece
   if (def.movement || def.capture) {
