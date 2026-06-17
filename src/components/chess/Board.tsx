@@ -108,6 +108,59 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     return null;
   })();
 
+  // ── Juggernaut multi-cell move preview ─────────────────────────────────
+  // When a juggernaut is selected we need to highlight the FULL 2-square
+  // footprint at every legal destination, plus any trampled / path cells
+  // for forward charges. Clicking on either cell of a destination footprint
+  // must commit the move (translated to the lead cell stored in `to`).
+  type SquareKey = string;
+  const k = (r: number, c: number) => `${r},${c}`;
+  const juggInfo: {
+    footprint: Set<SquareKey>;         // every cell that becomes part of the titan after a legal move
+    tramplePath: Set<SquareKey>;       // path cells a forward charge sweeps through (lead + partner lanes)
+    trampleEnemies: Set<SquareKey>;    // cells where an enemy would be destroyed
+    leadOf: Map<SquareKey, Square>;    // map any footprint cell → the move.to (lead) cell to send to onMove
+  } | null = (() => {
+    if (!selected) return null;
+    const sp = state.board[selected.r][selected.c];
+    if (!sp || state.registry[sp.id]?.special !== "juggernaut") return null;
+    if (sp.color !== state.turn || sp.color !== humanColor) return null;
+    if (!selectedPartner) return null;
+    const offDr = selectedPartner.r - selected.r;
+    const offDc = selectedPartner.c - selected.c;
+    const footprint = new Set<SquareKey>();
+    const tramplePath = new Set<SquareKey>();
+    const trampleEnemies = new Set<SquareKey>();
+    const leadOf = new Map<SquareKey, Square>();
+    const moves = legalMovesFrom(state, selected);
+    for (const m of moves) {
+      const leadTo = m.to;
+      const partnerTo = { r: leadTo.r + offDr, c: leadTo.c + offDc };
+      footprint.add(k(leadTo.r, leadTo.c));
+      footprint.add(k(partnerTo.r, partnerTo.c));
+      leadOf.set(k(leadTo.r, leadTo.c), leadTo);
+      leadOf.set(k(partnerTo.r, partnerTo.c), leadTo);
+      if (m.kind === "juggCharge") {
+        const dr = leadTo.r - selected.r;
+        const dc = leadTo.c - selected.c;
+        const steps = Math.max(Math.abs(dr), Math.abs(dc));
+        const sDr = steps ? Math.sign(dr) : 0;
+        const sDc = steps ? Math.sign(dc) : 0;
+        for (let s = 1; s <= steps; s++) {
+          const a = { r: selected.r + s * sDr, c: selected.c + s * sDc };
+          const b = { r: selectedPartner.r + s * sDr, c: selectedPartner.c + s * sDc };
+          tramplePath.add(k(a.r, a.c));
+          tramplePath.add(k(b.r, b.c));
+          const ta = state.board[a.r]?.[a.c];
+          const tb = state.board[b.r]?.[b.c];
+          if (ta && ta.color !== sp.color) trampleEnemies.add(k(a.r, a.c));
+          if (tb && tb.color !== sp.color) trampleEnemies.add(k(b.r, b.c));
+        }
+      }
+    }
+    return { footprint, tramplePath, trampleEnemies, leadOf };
+  })();
+
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
   const checkSquares = checkColor ? findRoyals(state, checkColor) : [];
 
