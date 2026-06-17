@@ -42,6 +42,7 @@ export function normalizePlaybook(p: Partial<Playbook> | null | undefined): Play
   const base: Playbook = {
     ...DEFAULT_PLAYBOOK,
     pieceValueMultipliers: { ...DEFAULT_PLAYBOOK.pieceValueMultipliers },
+    squareDefenseBonuses: { ...DEFAULT_PLAYBOOK.squareDefenseBonuses },
   };
   if (!p) return base;
   if (Array.isArray(p.lessons)) {
@@ -50,6 +51,13 @@ export function normalizePlaybook(p: Partial<Playbook> | null | undefined): Play
   if (p.pieceValueMultipliers && typeof p.pieceValueMultipliers === "object") {
     for (const [k, v] of Object.entries(p.pieceValueMultipliers)) {
       if (typeof v === "number") base.pieceValueMultipliers[k] = clampMult(v);
+    }
+  }
+  if (p.squareDefenseBonuses && typeof p.squareDefenseBonuses === "object") {
+    for (const [k, v] of Object.entries(p.squareDefenseBonuses)) {
+      if (typeof v === "number" && Number.isFinite(v) && /^[a-l]\d{1,2}$/i.test(k)) {
+        base.squareDefenseBonuses[k.toLowerCase()] = Math.max(-300, Math.min(300, v));
+      }
     }
   }
   if (typeof p.cautionMultiplier === "number") base.cautionMultiplier = clampMult(p.cautionMultiplier);
