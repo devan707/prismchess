@@ -293,6 +293,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               {isLast && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-last)" }} />
               )}
+              {/* Juggernaut charge path — faint sweep so players see the lane. */}
+              {juggPath && !juggFoot && (
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{ background: "color-mix(in oklab, var(--color-board-capture) 22%, transparent)" }} />
+              )}
+              {/* Juggernaut destination footprint — both cells shaded together. */}
+              {juggFoot && (
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: "color-mix(in oklab, var(--color-board-legal) 30%, transparent)",
+                    boxShadow: "inset 0 0 0 2px var(--color-board-legal)",
+                  }} />
+              )}
               {isSelected && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-highlight)" }} />
               )}
