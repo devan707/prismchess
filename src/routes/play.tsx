@@ -477,7 +477,7 @@ function ShareGameButton({ design }: { design: Design }) {
   const [open, setOpen] = useState(false);
   const gameName = `${design.rows}×${design.cols} ${design.placements.length}-piece variant`;
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/` : "https://kingdom-chess.lovable.app/";
-  const shareText = `I'm playing ${gameName} on Kingdom Chess — design your own variant and play vs AI.`;
+  const shareText = `I'm playing ${gameName} on Prism Chess — design your own variant and play vs AI.`;
 
   const stashDesign = () => {
     try {
@@ -491,7 +491,7 @@ function ShareGameButton({ design }: { design: Design }) {
   const nativeShare = async () => {
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Kingdom Chess", text: shareText, url: shareUrl });
+        await navigator.share({ title: "Prism Chess", text: shareText, url: shareUrl });
         setOpen(false);
       } else {
         await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);

@@ -10,7 +10,7 @@ import { ArrowLeft, Gamepad2, Lightbulb, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/forum/suggest")({
-  head: () => ({ meta: [{ title: "Suggest a topic — Kingdom Chess" }] }),
+  head: () => ({ meta: [{ title: "Suggest a topic — Prism Chess" }] }),
   component: SuggestPage,
 });
 

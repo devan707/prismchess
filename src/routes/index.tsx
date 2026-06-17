@@ -11,9 +11,9 @@ import logoUrl from "@/assets/logo.png";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kingdom Chess — Design your own variant" },
-      { name: "description", content: "Kingdom Chess: pick a built-in variant or design your own boards and pieces, play vs AI, and discuss strategy." },
-      { property: "og:title", content: "Kingdom Chess" },
+      { title: "Prism Chess — Design your own variant" },
+      { name: "description", content: "Prism Chess: pick a built-in variant or design your own boards and pieces, play vs AI, and discuss strategy." },
+      { property: "og:title", content: "Prism Chess" },
       { property: "og:description", content: "Design your own chess variant. Rule the board." },
       { property: "og:image", content: "/og-banner.jpg" },
       { property: "og:url", content: "https://mini-chess-buddy.lovable.app/" },
@@ -46,9 +46,9 @@ function Home() {
         <UserMenu />
       </div>
       <header className="max-w-5xl mx-auto px-4 pt-2 pb-6 text-center">
-        <img src={logoUrl} alt="Kingdom Chess crest" width={128} height={128} className="mx-auto h-28 w-28 mb-2" />
+        <img src={logoUrl} alt="Prism Chess crest" width={128} height={128} className="mx-auto h-28 w-28 mb-2" />
         <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">
-          Kingdom <span className="text-primary">Chess</span>
+          Prism <span className="text-primary">Chess</span>
         </h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
           Design your own variant. Rule the board. Pick a game to play, build your own, or join the community.

@@ -10,7 +10,7 @@ import { saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
 
 export const Route = createFileRoute("/_authenticated/forum/$topicId")({
-  head: () => ({ meta: [{ title: "Topic — Kingdom Chess" }] }),
+  head: () => ({ meta: [{ title: "Topic — Prism Chess" }] }),
   component: TopicPage,
 });
 

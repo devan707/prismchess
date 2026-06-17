@@ -12,7 +12,7 @@ import { ArrowLeft, Gamepad2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/forum/new")({
-  head: () => ({ meta: [{ title: "New topic — Kingdom Chess" }] }),
+  head: () => ({ meta: [{ title: "New topic — Prism Chess" }] }),
   component: NewTopicPage,
 });
 

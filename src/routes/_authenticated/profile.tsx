@@ -9,7 +9,7 @@ import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/profile")({
-  head: () => ({ meta: [{ title: "Your profile — Kingdom Chess" }] }),
+  head: () => ({ meta: [{ title: "Your profile — Prism Chess" }] }),
   component: ProfilePage,
 });
 
