@@ -116,6 +116,16 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     const onPromoLine = (sq: Square) => (wide ? sq.c : sq.r) === promoLine;
     const onStartLine = (sq: Square) => (wide ? sq.c : sq.r) === startLine;
     const pushPawn = (to: Square, captured: Piece | null, extra: Partial<Move> = {}) => {
+      // Shapeshifter: capturing transforms into the captured piece (no promotion);
+      // a non-capturing push to the promotion line just stays a shapeshifter.
+      if (isShifter) {
+        if (captured) {
+          moves.push({ from, to, piece, captured, ...extra, shapeshiftTo: captured.id });
+        } else {
+          moves.push({ from, to, piece, captured, ...extra });
+        }
+        return;
+      }
       if (onPromoLine(to)) {
         for (const promo of promotionOptionsFor(state)) {
           moves.push({ from, to, piece, captured, promotion: promo, kind: extra.kind, epCapture: extra.epCapture });
