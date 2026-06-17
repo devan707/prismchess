@@ -4,6 +4,7 @@ import { Board } from "@/components/chess/Board";
 import { useGame } from "@/hooks/useGame";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
+import { Graveyard } from "@/components/chess/Graveyard";
 import { ReservesPanel } from "@/components/designer/ReservesPanel";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
-import type { Color, Design, Difficulty, Square } from "@/game/types";
+import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X } from "lucide-react";
 
@@ -84,7 +85,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
-    state, status, tryMove, tryDrop, legalFor, legalDropSquares,
+    state, status, tryMove, tryDrop, tryResurrect, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
     undo, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
@@ -94,13 +95,26 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
   });
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
-  const handleSelectionChange = useCallback((sq: Square | null) => setSelectedSquare(sq), []);
+  const [resurrectChoice, setResurrectChoice] = useState<PieceId | null>(null);
+  const handleSelectionChange = useCallback((sq: Square | null) => {
+    setSelectedSquare(sq);
+    setResurrectChoice(null);
+  }, []);
   useEffect(() => {
     try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
   }, [tipsOn]);
 
   const selectedPiece = selectedSquare ? state.board[selectedSquare.r][selectedSquare.c] : null;
   const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+  const isHumanNecromancer = !!(
+    selectedPiece &&
+    selectedPiece.color === humanColor &&
+    state.registry[selectedPiece.id]?.special === "necromancer"
+  );
+  // Friendly fallen = pieces of humanColor that the opponent captured.
+  const humansFallen = state.captured[humanColor === "w" ? "b" : "w"];
+  const resurrectMode = isHumanNecromancer && humansFallen.length > 0;
+
 
 
   const check = status.kind === "playing" ? status.check : false;
@@ -274,13 +288,33 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           humanColor={humanColor}
           flipped={flipped}
           legalFor={legalFor}
-          onMove={(f, t) => tryMove(f, t)}
+          onMove={(f, t) => {
+            // If a human necromancer is selected and a fallen piece has been
+            // picked, route the move through the resurrect path so the right
+            // piece comes back. Falls back to a normal move otherwise.
+            if (resurrectMode && resurrectChoice) {
+              if (tryResurrect(f, t, resurrectChoice)) {
+                setResurrectChoice(null);
+                return true;
+              }
+            }
+            return tryMove(f, t);
+          }}
           dropPiece={selectedDrop}
           dropTargets={dropTargets}
           onDrop={(id, to) => tryDrop(id, to)}
           disabled={terminal}
           onSelectionChange={handleSelectionChange}
         />
+
+        <Graveyard
+          state={state}
+          humanColor={humanColor}
+          resurrectMode={resurrectMode}
+          resurrectChoice={resurrectChoice}
+          onPickResurrect={setResurrectChoice}
+        />
+
 
         {tipsOn && (
           <div
