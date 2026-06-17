@@ -1,117 +1,77 @@
-## Goal
+# Plan — The Prism
 
-Make the platform feel social without overbuilding. Add friends, direct messages, in-match chat, public game sharing with likes/comments, and basic safety (block/report).
+A new **board fixture** (not really a piece) that occupies **2 adjacent cells** in a line and flips the color of any piece that touches its aura. Featured on the Grand Menagerie next to each Portal, and available in the custom designer.
 
-## Feature scope
+## Rules summary
 
-1. **Friends**
-   - Send / accept / decline / cancel friend requests
-   - Friends list with online indicator (presence)
-   - Remove friend, block user (block auto-removes friendship + hides them)
+- 2-cell long fixture (2 squares in a row/column, like a stretched domino, distinct from the Juggernaut's side-by-side pair).
+- Indestructible — cannot be captured, moved, swapped, trampled, or resurrected. Blocks movement like a Barricade. Cannot be targeted by Portal swaps or Dragon strikes.
+- **Aura** = the union of all 8 king-neighbors of each of its 2 cells (≈10 squares around the prism, including diagonals).
+- **Flip triggers**:
+  1. On a piece's move, if it **enters or passes through** any aura cell during that move (sliders included; leapers only if they land in aura), it flips to the opposite color at the end of that move.
+  2. At the **end of every turn**, any piece (either color) currently sitting in the aura that did NOT just move out flips again. This is the "stickiness" rule — to keep a converted piece, you must walk it out of the aura on your next turn.
+- **King immunity**: Royal pieces never flip. Their moves through the aura are unaffected.
+- Pieces flipped retain their type, history (raisedOnce, etc.) — only `color` changes. Pawn promotion direction follows the new color from then on.
+- The Portal interaction the user described emerges naturally: swap a pawn onto the prism-adjacent cell where the Portal sat → pawn flips to enemy on next end-of-turn → Portal is now safely on your side of the board.
 
-2. **Direct messages (inbox)**
-   - 1:1 conversations, reachable from a new "Messages" item in the main menu
-   - Allowed to DM: friends, OR a user you are currently in an active match with (auto-expires from "can DM" list when match ends, but the thread stays in inbox if either is friends)
-   - Unread badge in nav, thread list sorted by last activity
-   - Realtime updates via Lovable Cloud realtime
+## Visual
 
-3. **In-game + post-game chat**
-   - Chat panel inside the match screen between the two players
-   - Same thread persists into a "post-game" state so you can keep talking after the result
-   - Quick "Add friend" button on the opponent's name in-match
+A rainbow-tinted long triangular prism glyph spanning its 2 cells (rendered similar to the Juggernaut's double-cell glyph, but oriented along the long axis). A faint rainbow halo on aura squares when the prism is selected/hovered in the designer or during play (purely cosmetic hint).
 
-4. **Game sharing (user-created sandbox games)**
-   - "Publish" toggle on saved games → public, shareable URL `/g/:slug`
-   - Public game page: tutorial preview, "Play this game" button, like button, comments
-   - Likes (one per user), comments (threaded one level deep, edit/delete own)
-   - Profile page lists a user's published games + like counts
+## Files to change
 
-5. **Moderation**
-   - Block user: hides their messages, comments, games from your view; prevents new DMs/friend requests
-   - Report user / report message / report game / report comment → goes to a `reports` table for later admin review (no admin UI in v1)
+### New piece definition
+- `src/game/types.ts` — extend the `special` union with `"prism"`.
+- `src/game/pieces.ts` — add `Y` (Prism) to `PIECE_LIBRARY` and `BUILTIN_CUSTOM_IDS`. Marked `immobile: true`, `special: "prism"`, `builtinCustom: true`, with a description matching the rules above.
 
-## Out of scope (deferred)
+### Engine
+- `src/game/moves.ts`
+  - Treat Prism cells as impassable (like Barricade — extend `isBarricade` or add a sibling `isFixture` check so sliders stop before them and leapers cannot land on them).
+  - Block Portal swaps, Dragon strikes, Juggernaut trample, Necromancer raise targeting Prism cells.
+  - After applying a move (in whatever function commits a move to `GameState`), run a **`applyPrismEffects(state, justMovedPiece, path)`** pass:
+    1. Compute the union aura of every Prism on the board.
+    2. For the moving piece: if any square on its travel path (from→to inclusive for sliders; just `to` for leapers and drops) intersects the aura, flip its color (skip if royal).
+    3. End-of-turn sweep: for every non-royal piece currently on an aura square that did NOT just vacate, flip its color.
+  - The path-tracing helper already exists implicitly inside slider generation; add a small `pathSquares(from, to)` util for orthogonal/diagonal lines, and `[to]` for everything else.
+- `src/game/board.ts` — helpers to detect prism cells / aura.
+- `src/game/rules.ts` — make sure check/checkmate detection runs **after** flips are applied (a flipped piece may suddenly be giving check, or a previously-checking piece may now be friendly).
 
-- Group chats, voice, typing indicators, message reactions, attachments
-- Activity feed / notifications center (we'll surface unread badges only)
-- Profanity filter, admin moderation dashboard
-- Sharing built-in (preset) games — only user-created games get share pages
+### AI
+- `src/game/ai/evaluate.ts` — add awareness:
+  - Treat aura squares as risky for own pieces (small penalty per non-royal friendly piece adjacent to a Prism that didn't just move).
+  - Reward moves that flip an enemy piece (delta = value of that piece × 2, since they lose it and we gain it).
+  - Prism cells contribute zero material and are never capture targets.
+- `src/game/ai/index.ts` — no structural change; the search already iterates legal moves, so flips happen via `applyMove`.
 
-## UX surfaces
+### Designer & presets
+- `src/game/design.ts`
+  - `grand-menagerie` preset: replace the two cells the user described (the squares next to each Portal on White's side; mirrored for Black) with Prism placements. Each Prism = 2 placements with `pieceId: "Y"` on adjacent cells along the column the Portal sits on (so the Prism runs lengthwise toward the Portal).
+  - Add a `placePrismPair(...)` helper analogous to `placeJuggernautPair` so the designer can drop a Prism and it auto-fills the partner cell along the long axis.
+  - `validateDesign`: a Prism cell must have a partner Prism cell in line.
+- `src/components/designer/PiecePalette.tsx` — surface the Prism in the custom-pieces tray with its rainbow glyph.
+- `src/components/designer/DesignerBoard.tsx` — handle the 2-cell drop using the new helper.
 
-- **Top nav**: add "Friends" and "Messages" entries with unread/request badges
-- **Match screen**: collapsible chat drawer + "Add friend" on opponent name
-- **Post-game screen**: chat stays open, plus "Rematch" / "Back to lobby"
-- **Profile page** (`/u/:username`): bio, published games, Add friend / Message / Block
-- **Published game page** (`/g/:slug`): description, tutorial preview, Play button, like, comments
-- **Sandbox**: "Publish" switch + share link copy
-- **Help center**: short "Social & safety" section
+### Rendering
+- `src/components/chess/PieceGlyph.tsx` — render the Prism with a rainbow gradient triangular-prism emoji or SVG; both cells share one continuous glyph (like `JuggernautGlyph`).
+- New `src/components/chess/PrismGlyph.tsx` — SVG long triangular prism with a horizontal rainbow gradient (red→orange→yellow→green→blue→indigo→violet) spanning the two cells. Color-neutral (no side ring) since it belongs to neither player.
+- `src/components/chess/Board.tsx` — when a Prism cell is hovered/selected, paint a faint rainbow tint on aura squares (cosmetic only).
 
-## Technical plan
+### UI & content
+- `src/components/chess/MoveDiagram.tsx` — add a Prism diagram with two friendly pawns and an enemy pawn, showing one of your pawns walking into the aura and turning enemy-colored on the next turn. Use the same "scenario" format as Assassin and Archer.
+- `src/routes/sandbox.tsx` — add the Prism card and full description.
+- `src/lib/api/analyze-game.functions.ts` — extend the AI rules prompt with the Prism's behavior so post-game analysis explains flips correctly.
+- `src/lib/chess-names.ts` — add an entry so move notation can refer to "Prism" when relevant (e.g. "flipped by Prism").
 
-### New tables (Lovable Cloud, RLS on, GRANTs included)
+### Move history & SFX
+- `src/components/chess/MoveHistory.tsx` — append a small "↔ flipped by Prism" annotation when a move triggered a flip.
+- Optional: a soft chime SFX on flip via `src/lib/sfx.ts` (re-use existing capture/promotion sound infra).
 
-- `friendships` — `user_a`, `user_b` (canonically ordered), `status` (`pending`/`accepted`), `requested_by`, timestamps. Unique on (user_a, user_b).
-- `blocks` — `blocker_id`, `blocked_id`, timestamps. Unique pair.
-- `dm_threads` — `id`, `user_a`, `user_b` (canonical order), `last_message_at`.
-- `dm_messages` — `id`, `thread_id`, `sender_id`, `body`, `created_at`, `read_at`.
-- `game_likes` — `game_id`, `user_id`, unique pair.
-- `game_comments` — `id`, `game_id`, `parent_id` (nullable), `author_id`, `body`, timestamps.
-- `reports` — `reporter_id`, `target_type` (`user`/`message`/`comment`/`game`), `target_id`, `reason`, `created_at`.
-- `match_chat_messages` — `match_id`, `sender_id`, `body`, `created_at` (lives with match, separate from DMs so it disappears from the inbox surface unless a DM thread is also created).
+## Out of scope
 
-Plus columns on existing tables:
-- `saved_games` (or equivalent): `is_public boolean`, `slug text unique`, `like_count int`, `comment_count int`.
+- Multiplayer schema changes — flips are deterministic from the move, so existing `match_moves` replay still works without new columns.
+- Tutorials — not requested; can be added later.
 
-### Server functions (TanStack `createServerFn`, RLS-as-user)
+## Open follow-ups (not blocking)
 
-- `friends.functions.ts`: `sendRequest`, `respondRequest`, `cancelRequest`, `removeFriend`, `listFriends`, `listIncomingRequests`
-- `blocks.functions.ts`: `blockUser`, `unblockUser`, `listBlocks`
-- `dm.functions.ts`: `listThreads`, `getThread`, `sendDm` (server-side check: friends OR active match opponent), `markRead`
-- `matchChat.functions.ts`: `sendMatchMessage`, `listMatchMessages`
-- `gameSocial.functions.ts`: `toggleLike`, `addComment`, `editComment`, `deleteComment`, `listComments`, `publishGame`, `unpublishGame`
-- `reports.functions.ts`: `submitReport`
-
-### Authorization rules (in handlers + RLS)
-
-- DMs: sender must be friend of recipient OR share an active (non-terminal) match; neither party blocked the other.
-- Friend request: blocked users can't send; can't request yourself or an existing friend.
-- Comments/likes: only on `is_public = true` games; blocker can't be seen by blocked.
-- Match chat: only the two match participants.
-
-### Realtime
-
-- Enable realtime on `dm_messages`, `match_chat_messages`, `friendships` (for incoming requests), `game_comments`.
-- Client subscribes per thread / per match / per active game page; clean teardown on unmount.
-
-### Routes (TanStack)
-
-- `_authenticated/friends.tsx`
-- `_authenticated/messages.tsx` (thread list) and `_authenticated/messages.$threadId.tsx`
-- `_authenticated/u.$username.tsx` (own + others' profiles)
-- Public `g.$slug.tsx` for shared game pages (SSR-friendly head/OG tags for shareability)
-- Update match route to embed chat drawer
-
-### Components
-
-- `FriendButton`, `BlockMenu`, `ReportDialog`
-- `ChatThread`, `ChatComposer` (shared by DM + match chat)
-- `MessagesInbox`, `FriendsList`, `IncomingRequests`
-- `LikeButton`, `CommentsSection`, `PublishGameDialog`, `ShareLinkButton`
-- `UnreadBadge` wired into nav
-
-### Safety / validation
-
-- Zod validation on every server fn input; message body max 2000 chars, comment max 1000, report reason max 500.
-- Rate-limit-ish guard: cap DMs/comments per minute per user via simple DB check.
-- No PII leaks: profile lookups expose only `username`, `display_name`, `avatar`, public game list.
-
-## Rollout order (so you can review incrementally)
-
-1. Migrations + grants + RLS for all new tables
-2. Friends + blocks (UI + server fns)
-3. DM inbox + realtime
-4. Match chat drawer + "Add friend" in match
-5. Publish/share games + likes + comments
-6. Reports + report dialogs wired across surfaces
-7. Help center update + nav badges polish
+- Should two adjacent Prisms with overlapping auras flip a piece twice (net no-op) in a single end-of-turn? Default: each flip is independent and applied once per Prism aura the piece is in, so overlap = even flips = no change. Documented in the description.
+- Should Shapeshifter Pawns / Undead retain their owner-history after a flip? Default: yes — only `color` changes, all other flags persist.
