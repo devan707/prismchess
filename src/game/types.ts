@@ -47,7 +47,7 @@ export interface PieceDef {
   /** Optional separate capture pattern. */
   capture?: MovementSpec;
   /** Special hand-coded behavior. */
-  special?: "pawn" | "dragon";
+  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter";
   /** Royal: loss of all royal pieces of a color = game over. */
   royal?: boolean;
   /** Cannot move; blocks travel; cannot be captured. */
