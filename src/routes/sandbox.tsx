@@ -52,7 +52,26 @@ function Sandbox() {
     setSelectedSquare(null);
   };
 
+  const applyPreset = (id: string) => {
+    const preset = PRESETS.find((p) => p.id === id);
+    if (!preset) return;
+    setDesign((d) => ({ ...d, placements: preset.build(d.rows, d.cols) }));
+    setSelectedSquare(null);
+  };
+
+  const swapPawns = (from: PieceId, to: PieceId) => {
+    setDesign((d) => {
+      const placements = d.placements.map((p) =>
+        p.pieceId === from ? { ...p, pieceId: to } : p,
+      );
+      const count = placements.filter((p) => p.pieceId !== d.placements.find((x) => x === p)?.pieceId).length;
+      return { ...d, placements };
+    });
+    setSelectedSquare(null);
+  };
+
   const setPlacements = (placements: Placement[]) => setDesign((d) => ({ ...d, placements }));
+
 
   const setReserve = (pieceId: PieceId, color: Color, count: number) => {
     setDesign((d) => ({
