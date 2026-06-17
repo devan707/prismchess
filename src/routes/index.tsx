@@ -99,6 +99,11 @@ function Home() {
               <History className="h-4 w-4 mr-2" /> History
             </Button>
           </Link>
+          <Link to="/help">
+            <Button size="lg" variant="outline">
+              <BookOpen className="h-4 w-4 mr-2" /> Help
+            </Button>
+          </Link>
         </div>
       </header>
 
