@@ -1,0 +1,43 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const UsernameSchema = z
+  .string()
+  .min(3)
+  .max(24)
+  .regex(/^[a-z0-9_]+$/, "Username must be lowercase letters, numbers, or underscores");
+
+export const getMyProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("profiles")
+      .select("id, username, display_name, created_at")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+export const updateMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        username: UsernameSchema,
+        display_name: z.string().min(1).max(60),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("profiles")
+      .update({ username: data.username, display_name: data.display_name })
+      .eq("id", context.userId);
+    if (error) {
+      if (error.code === "23505") throw new Error("That username is already taken.");
+      throw new Error(error.message);
+    }
+    return { ok: true };
+  });
