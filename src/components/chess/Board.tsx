@@ -102,15 +102,21 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   };
   const ghostMap = new Map<string, GhostInfo>();
   if (necromancerSelected) {
+    // Only the MOST RECENT corpse on each square is shown. If that latest
+    // corpse is an "object" piece (portal, juggernaut, barricade/immobile)
+    // the square is not raisable — do not fall back to an older corpse.
+    const latest = new Map<string, (typeof state.corpses)[number]>();
     for (const corp of state.corpses ?? []) {
-      const key = `${corp.square.r},${corp.square.c}`;
+      latest.set(`${corp.square.r},${corp.square.c}`, corp);
+    }
+    for (const [key, corp] of latest) {
       const cdef = state.registry[corp.pieceId];
       if (!cdef) continue;
-      if (cdef.special === "juggernaut" || cdef.immobile) continue;
-      // Latest corpse for a given square wins.
+      if (cdef.special === "juggernaut" || cdef.special === "portal") continue;
+      if (cdef.immobile) continue;
       ghostMap.set(key, {
         id: corp.pieceId,
-        color: humanColor, // a raised piece becomes ours (undead if enemy)
+        color: humanColor,
         originalOwner: corp.originalOwner,
         occupied: !!state.board[corp.square.r][corp.square.c],
       });
