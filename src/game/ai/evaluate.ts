@@ -1,23 +1,53 @@
-import type { Board, Color } from "../types";
+import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
 
-const VALUES: Record<string, number> = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 };
+const BASE_VALUES: Record<string, number> = {
+  K: 20000, Q: 900, R: 500, B: 330, N: 320, P: 100,
+  H: 280, A: 350, D: 850, X: 50,
+};
 
-export function evaluate(board: Board, toMove: Color): number {
+function valueFor(id: PieceId, def: PieceDef | undefined): number {
+  if (BASE_VALUES[id] != null) return BASE_VALUES[id];
+  if (!def) return 100;
+  // Compute a rough value: slides count more than leaps.
+  let v = 100;
+  if (def.royal) v += 5000;
+  const slides = def.movement?.slides?.length ?? 0;
+  const leaps = def.movement?.leaps?.length ?? 0;
+  v += slides * 80 + leaps * 30;
+  return v;
+}
+
+export function evaluate(state: GameState, toMove: Color): number {
   let score = 0;
-  const n = board.length;
-  const center = (n - 1) / 2;
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
+  const board: Board = state.board;
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+  const cr = (rows - 1) / 2;
+  const cc = (cols - 1) / 2;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const p = board[r][c];
       if (!p) continue;
-      let v = VALUES[p.type] ?? 0;
-      const centerDist = Math.abs(r - center) + Math.abs(c - center);
-      v += Math.max(0, (n - centerDist)) * 2;
-      if (p.type === "P") {
-        v += p.color === "w" ? r * 6 : (n - 1 - r) * 6;
+      const def = state.registry[p.id];
+      let v = valueFor(p.id, def);
+      const centerDist = Math.abs(r - cr) + Math.abs(c - cc);
+      v += Math.max(0, ((rows + cols) / 2 - centerDist)) * 2;
+      if (def?.special === "pawn") {
+        v += p.color === "w" ? r * 6 : (rows - 1 - r) * 6;
       }
       score += p.color === toMove ? v : -v;
     }
   }
+  // Reserves: small value for keeping drops.
+  for (const color of ["w", "b"] as const) {
+    for (const id of Object.keys(state.reserves[color])) {
+      const count = state.reserves[color][id];
+      if (!count) continue;
+      const v = valueFor(id, state.registry[id]) * 0.5 * count;
+      score += color === toMove ? v : -v;
+    }
+  }
   return score;
 }
+
+export { valueFor };

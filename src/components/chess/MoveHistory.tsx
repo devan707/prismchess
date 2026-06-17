@@ -2,18 +2,20 @@ import type { GameState, Move, Piece } from "@/game/types";
 import { FILES } from "@/game/board";
 import { PieceGlyph } from "./PieceGlyph";
 
-function notation(m: Move): string {
-  if (m.kind === "castle" && m.rookFrom) {
-    // O-O if king moved toward higher file, O-O-O if toward lower file
-    return m.to.c > m.from.c ? "O-O" : "O-O-O";
-  }
-  const piece = m.piece.type === "P" ? "" : m.piece.type;
-  const from = `${FILES[m.from.c]}${m.from.r + 1}`;
-  const to = `${FILES[m.to.c]}${m.to.r + 1}`;
+function fileRank(c: number, r: number) { return `${FILES[c] ?? "?"}${r + 1}`; }
+
+function notation(state: GameState, m: Move): string {
+  const def = state.registry[m.piece.id];
+  const letter = def?.special === "pawn" ? "" : m.piece.id;
+  const to = fileRank(m.to.c, m.to.r);
+  if (m.kind === "drop") return `${m.piece.id}@${to}`;
+  if (m.kind === "dragonAttack") return `${letter}x${to}*`;
+  if (!m.from) return `?${to}`;
+  const from = fileRank(m.from.c, m.from.r);
   const sep = m.captured ? "x" : "-";
   const promo = m.promotion ? `=${m.promotion}` : "";
   const ep = m.kind === "ep" ? " e.p." : "";
-  return `${piece}${from}${sep}${to}${promo}${ep}`;
+  return `${letter}${from}${sep}${to}${promo}${ep}`;
 }
 
 export function MoveHistory({ state }: { state: GameState }) {
@@ -35,8 +37,8 @@ export function MoveHistory({ state }: { state: GameState }) {
           rows.map((row) => (
             <div key={row.n} className="grid grid-cols-[2rem_1fr_1fr] gap-2 px-3 py-1 odd:bg-muted/40">
               <span className="text-muted-foreground">{row.n}.</span>
-              <span>{row.w ? notation(row.w) : ""}</span>
-              <span>{row.b ? notation(row.b) : ""}</span>
+              <span>{row.w ? notation(state, row.w) : ""}</span>
+              <span>{row.b ? notation(state, row.b) : ""}</span>
             </div>
           ))
         )}
@@ -53,7 +55,7 @@ export function Captured({ state }: { state: GameState }) {
         {pieces.length === 0 ? (
           <span className="text-xs text-muted-foreground italic">—</span>
         ) : (
-          pieces.map((p, i) => <PieceGlyph key={i} piece={p} className="text-2xl" />)
+          pieces.map((p, i) => <PieceGlyph key={i} piece={p} def={state.registry[p.id]} className="text-2xl" />)
         )}
       </div>
     </div>

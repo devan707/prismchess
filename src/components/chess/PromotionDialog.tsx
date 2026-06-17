@@ -1,16 +1,17 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PieceGlyph } from "./PieceGlyph";
-import type { Color, PromotionPiece } from "@/game/types";
+import { PieceById } from "./PieceGlyph";
+import type { Color, PieceDef, PieceId } from "@/game/types";
 
 interface Props {
   open: boolean;
   color: Color;
-  options: PromotionPiece[];
-  onChoose: (p: PromotionPiece) => void;
+  options: PieceId[];
+  registry: Record<PieceId, PieceDef>;
+  onChoose: (p: PieceId) => void;
 }
 
-export function PromotionDialog({ open, color, options, onChoose }: Props) {
+export function PromotionDialog({ open, color, options, registry, onChoose }: Props) {
   return (
     <Dialog open={open}>
       <DialogContent className="max-w-sm">
@@ -18,14 +19,14 @@ export function PromotionDialog({ open, color, options, onChoose }: Props) {
           <DialogTitle className="font-display">Promote pawn</DialogTitle>
         </DialogHeader>
         <div className="flex flex-wrap justify-center gap-3 py-2">
-          {options.map((t) => (
+          {options.map((id) => (
             <Button
-              key={t}
+              key={id}
               variant="outline"
               className="h-20 w-20 text-4xl"
-              onClick={() => onChoose(t)}
+              onClick={() => onChoose(id)}
             >
-              <PieceGlyph piece={{ type: t, color }} className="text-5xl" />
+              <PieceById id={id} color={color} def={registry[id]} className="text-5xl" />
             </Button>
           ))}
         </div>
