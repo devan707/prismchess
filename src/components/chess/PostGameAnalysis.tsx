@@ -39,18 +39,20 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
   const runAnalyze = useServerFn(analyzeGame);
 
   const moves = useMemo(
-    () => state.history.map((m, i) => fmtMove(m, state.cols, i + 1)),
-    [state.history, state.cols],
+    () => state.history.map((m, i) => fmtMove(m, state.cols, i + 1, state.registry)),
+    [state.history, state.cols, state.registry],
   );
   const legend = useMemo(() => {
     const seen = new Set<string>();
-    const lines: string[] = [];
+    const lines: string[] = [
+      "Side prefix in move list: (W)=White, (B)=Black. Piece names are spelled out — do NOT shorten or guess.",
+    ];
     for (const [id, def] of Object.entries(state.registry)) {
       if (seen.has(id)) continue;
       seen.add(id);
-      lines.push(`${id} = ${def.name}${def.special ? ` (${def.special})` : ""}`);
+      lines.push(`${def.name} [id=${id}]${def.special ? ` (${def.special})` : ""}`);
     }
-    return lines.join(", ");
+    return lines.join("\n");
   }, [state.registry]);
 
   const displayed = useMemo(() => {
