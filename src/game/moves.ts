@@ -1128,8 +1128,8 @@ export function allLegalMoves(state: GameState): Move[] {
   }
   // Drops
   for (const m of dropMoves(state, state.turn)) {
-    const next = applyMoveToState(state, m);
-    if (!inCheck({ ...next, turn: state.turn }, state.turn)) out.push(m);
+    const preFlipBoard = applyMoveToBoard(state.board, m);
+    if (!inCheck({ ...state, board: preFlipBoard }, state.turn)) out.push(m);
   }
   return out;
 }
