@@ -218,6 +218,56 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     return moves;
   }
 
+  if (def.special === "portal") {
+    // Swap with any friendly piece on the board (other than self).
+    const { rows, cols } = rowsCols(board);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (r === from.r && c === from.c) continue;
+        const t = board[r][c];
+        if (!t || t.color !== piece.color) continue;
+        if (isBarricade(t, state.registry)) continue;
+        moves.push({ from, to: { r, c }, piece, captured: null, kind: "portalSwap" });
+      }
+    }
+    return moves;
+  }
+
+  if (def.special === "necromancer") {
+    // Normal diagonal moves come from the generic spec below; add resurrection actions.
+    if (def.movement || def.capture) {
+      const moveSpec = def.movement ?? {};
+      const captureSpec = def.capture ?? moveSpec;
+      const moveTargets = emitFromSpec(board, state.registry, from, piece, moveSpec, "move");
+      const captureTargets = emitFromSpec(board, state.registry, from, piece, captureSpec, "capture");
+      for (const t of moveTargets) moves.push({ from, to: t, piece, captured: null });
+      for (const t of captureTargets) {
+        const occ = board[t.r][t.c];
+        if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
+          moves.push({ from, to: t, piece, captured: occ });
+        }
+      }
+    }
+    // Friendly captured pieces live in state.captured[opposite color].
+    const friendlyCaptured = state.captured[piece.color === "w" ? "b" : "w"];
+    if (friendlyCaptured.length > 0) {
+      const uniqueIds = Array.from(new Set(friendlyCaptured.map((p) => p.id)));
+      for (const o of [
+        { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+        { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+      ]) {
+        const to = { r: from.r + o.dr, c: from.c + o.dc };
+        if (!inBoardBounds(board, to)) continue;
+        if (board[to.r][to.c]) continue;
+        for (const id of uniqueIds) {
+          moves.push({ from, to, piece, captured: null, kind: "resurrect", resurrectPieceId: id });
+        }
+      }
+    }
+    return moves;
+  }
+
+
   // Generic data-driven piece
   if (def.movement || def.capture) {
     const moveSpec = def.movement ?? {};
