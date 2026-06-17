@@ -11,7 +11,7 @@ import {
   type SavedGame,
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
