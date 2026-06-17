@@ -836,7 +836,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
   // pieces that merely moved away from a square.)
   const prevCorpses = state.corpses ?? [];
   let nextCorpses = [...prevCorpses];
-  if (move.captured && move.kind !== "necroRaise") {
+  if (move.captured && move.kind !== "necroRaise" && !move.captured.raisedOnce) {
     const sq = move.epCapture ?? move.to;
     nextCorpses.push({ square: sq, pieceId: move.captured.id, originalOwner: move.captured.color });
     // Juggernaut partner also dies on a side/rear capture (see line ~724).
