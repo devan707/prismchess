@@ -112,3 +112,8 @@
   }
   h1, h2, h3, .font-display { font-family: var(--font-display); }
 }
+
+@keyframes piece-slide {
+  from { transform: translate(var(--slide-x, 0), var(--slide-y, 0)); }
+  to { transform: translate(0, 0); }
+}
