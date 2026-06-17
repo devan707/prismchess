@@ -320,8 +320,8 @@ export const publishGame = createServerFn({ method: "POST" })
           slug,
           name: data.name,
           description: data.description,
-          design: data.design,
-          tutorial: data.tutorial ?? null,
+          design: data.design as never,
+          tutorial: (data.tutorial ?? null) as never,
         })
         .select("id, slug").single();
       if (!error) return inserted;
