@@ -291,7 +291,18 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     // Friendly captured pieces live in state.captured[opposite color].
     const friendlyCaptured = state.captured[piece.color === "w" ? "b" : "w"];
     if (friendlyCaptured.length > 0) {
-      const uniqueIds = Array.from(new Set(friendlyCaptured.map((p) => p.id)));
+      const uniqueIds = Array.from(new Set(
+        friendlyCaptured
+          .filter((p) => {
+            const d = state.registry[p.id];
+            // Juggernauts and barricades cannot be resurrected.
+            if (!d) return false;
+            if (d.special === "juggernaut") return false;
+            if (d.immobile) return false;
+            return true;
+          })
+          .map((p) => p.id),
+      ));
       for (const o of [
         { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
         { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
