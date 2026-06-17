@@ -608,7 +608,26 @@ function applyMoveToState(state: GameState, move: Move): GameState {
 export function legalMovesFrom(state: GameState, from: Square): Move[] {
   const p = state.board[from.r][from.c];
   if (!p || p.color !== state.turn) return [];
+  const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
+    // Front-arc immunity: a juggernaut cannot be captured from the front.
+    if (m.captured && m.captured.id === "J" && m.from) {
+      if (attackerInJuggFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+    }
+    // Juggernaut charge trampling also obeys front-arc immunity for any enemy J in path.
+    if (m.juggTrampled && m.juggTrampled.some((p) => p.id === "J") && m.from) {
+      // The juggernaut chargers come head-on (their forward = enemy J's front) — so
+      // a charge tramples an enemy J only if approaching from the rear arc. Reject head-on.
+      const enemyColor = m.juggTrampled.find((p) => p.id === "J")!.color;
+      const dir = m.piece.color === "w" ? 1 : -1;
+      if (m.piece.color !== enemyColor && dir === (enemyColor === "w" ? 1 : -1)) {
+        // same direction means they face same way — possible (e.g. both white). Different
+        // colors charging head-on would always be front-arc for the defender. Block it.
+        return false;
+      }
+      // Different-color juggernauts always face opposite — head-on charge would be front-arc, illegal.
+      if (m.piece.color !== enemyColor) return false;
+    }
     const next = applyMoveToState(state, m);
     return !inCheck({ ...next, turn: state.turn }, state.turn);
   });
