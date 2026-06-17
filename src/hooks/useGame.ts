@@ -168,6 +168,7 @@ export function useGame(opts: UseGameOptions) {
     gameOver,
     reset,
     undo,
+    takeback,
     tryMove,
     tryDrop,
     tryResurrect,
