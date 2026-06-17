@@ -36,6 +36,13 @@ export function applyMove(state: GameState, move: Move): GameState {
   if (move.captured) {
     captured[state.turn].push(move.captured as Piece);
   }
+  if (move.kind === "resurrect" && move.resurrectPieceId) {
+    // Remove one matching friendly piece from the graveyard.
+    const friendlyKey: "w" | "b" = state.turn === "w" ? "b" : "w";
+    const list = captured[friendlyKey];
+    const idx = list.findIndex((p) => p.id === move.resurrectPieceId);
+    if (idx >= 0) captured[friendlyKey] = [...list.slice(0, idx), ...list.slice(idx + 1)];
+  }
   return {
     ...next,
     history: [...state.history, move],
