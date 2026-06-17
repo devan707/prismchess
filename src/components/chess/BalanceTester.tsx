@@ -13,7 +13,7 @@ interface Result {
   avgPlies: number;
 }
 
-export function BalanceTester() {
+export function BalanceTester({ variantId }: { variantId: string }) {
   const [white, setWhite] = useState<Difficulty>("medium");
   const [black, setBlack] = useState<Difficulty>("medium");
   const [games, setGames] = useState(50);
@@ -39,7 +39,7 @@ export function BalanceTester() {
         workerRef.current = null;
       }
     };
-    w.postMessage({ white, black, games });
+    w.postMessage({ white, black, games, variantId });
   };
 
   const stop = () => {

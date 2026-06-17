@@ -14,12 +14,13 @@ export function simulateGames(
   white: Difficulty,
   black: Difficulty,
   games: number,
+  variantId: string,
   maxPlies = 200,
   onProgress?: (done: number) => void,
 ): SimResult {
   let w = 0, b = 0, d = 0, plies = 0;
   for (let i = 0; i < games; i++) {
-    let s = initialState();
+    let s = initialState(variantId);
     let n = 0;
     while (n < maxPlies) {
       const status = gameStatus(s);

@@ -6,7 +6,7 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-const PIECE_VAL: Record<string, number> = { P: 1, N: 3, B: 3, R: 5, K: 100 };
+const PIECE_VAL: Record<string, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 100 };
 
 function easyMove(state: GameState): Move | null {
   const moves = allLegalMoves(state.board, state.turn);
