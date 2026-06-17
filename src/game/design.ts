@@ -288,29 +288,6 @@ export function placeJuggernautPair(
   return { placements: next, partner: null };
 }
 
-/** Candidate orthogonal partner cells for placing a Prism (2-cell pair). */
-export function prismPartnerCandidates(): { dr: number; dc: number }[] {
-  return [{ dr: 0, dc: 1 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: -1, dc: 0 }];
-}
-
-/** Place a Prism as an orthogonally adjacent pair. */
-export function placePrismPair(
-  placements: Placement[],
-  rows: number, cols: number,
-  r: number, c: number, color: "w" | "b",
-): { placements: Placement[]; partner: { r: number; c: number } | null } {
-  let next = placements.filter((p) => !(p.r === r && p.c === c));
-  next.push({ r, c, pieceId: "Y", color });
-  for (const o of prismPartnerCandidates()) {
-    const pr = r + o.dr, pc = c + o.dc;
-    if (pr < 0 || pr >= rows || pc < 0 || pc >= cols) continue;
-    if (next.some((p) => p.r === pr && p.c === pc)) continue;
-    next.push({ r: pr, c: pc, pieceId: "Y", color });
-    return { placements: next, partner: { r: pr, c: pc } };
-  }
-  return { placements: next, partner: null };
-}
-
 /** Validate a design before play. Returns error string or null. */
 export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): string | null {
   const royals = { w: 0, b: 0 };
@@ -336,15 +313,6 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
       return d.placements.some((q) => q.pieceId === "J" && q.color === p.color && q.r === r && q.c === c);
     });
     if (!hasPartner) return "A Juggernaut needs an adjacent twin (its partner square) to function.";
-  }
-  // Prism cells must come in orthogonally adjacent pairs.
-  for (const p of d.placements) {
-    if (p.pieceId !== "Y") continue;
-    const hasPartner = prismPartnerCandidates().some((o) => {
-      const r = p.r + o.dr, c = p.c + o.dc;
-      return d.placements.some((q) => q.pieceId === "Y" && q.r === r && q.c === c);
-    });
-    if (!hasPartner) return "A Prism needs an adjacent partner cell — it occupies two squares in a row.";
   }
   return null;
 }
