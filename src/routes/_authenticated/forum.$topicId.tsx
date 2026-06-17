@@ -4,8 +4,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { getTopic, createReply, toggleLike } from "@/lib/forum.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, Gamepad2, Heart, Pin, Play, Star } from "lucide-react";
 import { toast } from "sonner";
+import { saveDesign } from "@/game/design";
+import type { Design } from "@/game/types";
 
 export const Route = createFileRoute("/_authenticated/forum/$topicId")({
   head: () => ({ meta: [{ title: "Topic — Kingdom Chess" }] }),
