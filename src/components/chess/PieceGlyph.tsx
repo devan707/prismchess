@@ -46,6 +46,8 @@ export function PieceGlyph({ piece, def, className }: Props) {
       )}
       {isNecro ? (
         <NecromancerGlyph color={piece.color} />
+      ) : isPrism ? (
+        <PrismGlyph />
       ) : (
         <span
           className="relative"
