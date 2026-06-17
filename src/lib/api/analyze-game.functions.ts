@@ -131,21 +131,22 @@ export const analyzeGame = createServerFn({ method: "POST" })
       promptParts.push(`User message:\n${data.userMessage}`);
     }
 
-    const conversation = data.priorTurns.map((t) => ({ role: t.role, content: t.content } as const));
-    conversation.push({ role: "user" as const, content: promptParts.join("\n\n") });
-
+    const conversation: Array<{ role: "user" | "assistant"; content: string }> =
+      data.priorTurns.map((t) => ({ role: t.role, content: t.content }));
     const jsonInstruction = `Respond with ONLY a single JSON object (no markdown, no prose around it) matching this shape exactly:
 {
   "analysis": "markdown string addressed to the developer",
   "updatedPlaybook": {
-    "lessons": ["short imperative lesson", ...],   // up to 24 strings, each <=280 chars
+    "lessons": ["short imperative lesson", ...],
     "pieceValueMultipliers": { "<pieceId>": <number 0.3..2.5>, ... },
     "cautionMultiplier": <number 0.3..2.5>,
     "aggressionBonus": <number -150..150>
   }
 }`;
-    const lastUser = conversation[conversation.length - 1];
-    lastUser.content = `${lastUser.content}\n\n${jsonInstruction}`;
+    conversation.push({
+      role: "user",
+      content: `${promptParts.join("\n\n")}\n\n${jsonInstruction}`,
+    });
 
     try {
       const { text } = await generateText({
