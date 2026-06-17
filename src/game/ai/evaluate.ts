@@ -308,7 +308,44 @@ export function evaluate(state: GameState, toMove: Color): number {
   score -= hangingTerm(state, toMove === "w" ? "b" : "w") * pb.cautionMultiplier;
   // Learned tactical squares — defend the ones the AI lost to last game.
   score += squareControlTerm(state, toMove, pb.squareDefenseBonuses);
+  // Anti-shuffle: discourage repeatedly moving the same piece without capturing.
+  score += shuffleTerm(state, toMove);
+  score -= shuffleTerm(state, toMove === "w" ? "b" : "w");
   return score;
+}
+
+/**
+ * Penalize the side whose recent quiet moves chain through the same piece.
+ * Mirrors the move-ordering bonus so deep search also avoids Dragon shuffling.
+ */
+function shuffleTerm(state: GameState, color: Color): number {
+  const h = state.history;
+  if (!h || h.length < 2) return 0;
+  const start = Math.max(0, h.length - 6);
+  // Walk back through this side's recent quiet moves, chaining piece-by-piece.
+  let chasing: { r: number; c: number } | null = null;
+  let chain = 0;
+  let special: string | undefined;
+  for (let i = h.length - 1; i >= start; i--) {
+    const m = h[i];
+    if (m.piece.color !== color) continue;
+    if (m.captured) break;
+    if (chasing === null) {
+      chasing = m.to;
+      chain = 1;
+      special = state.registry[m.piece.id]?.special;
+      continue;
+    }
+    if (m.to.r === chasing.r && m.to.c === chasing.c) {
+      chain += 1;
+      chasing = m.from;
+      if (!chasing) break;
+    }
+  }
+  if (chain < 2) return 0;
+  const weight =
+    special === "dragon" || special === "portal" || special === "necromancer" || special === "wizard" ? 70 : 30;
+  return -(chain - 1) * weight;
 }
 
 /** Convert "g12" → {r:11, c:6}. Returns null on parse failure / out of bounds. */
