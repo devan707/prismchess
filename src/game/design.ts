@@ -155,6 +155,32 @@ export const PRESETS: Preset[] = [
     },
   },
   {
+    id: "grand-menagerie",
+    name: "Grand Menagerie (12×12)",
+    description: "12×12 showcase featuring every custom piece. Best on a 12×12 board.",
+    build: (rows, cols) => {
+      if (rows < 12 || cols < 12) {
+        // Fall back to classic if the board is too small to host the layout.
+        return PRESETS[0].build(rows, cols);
+      }
+      // White rows 0..2; black mirrored to rows 9..11.
+      // Row 0 — back rank: R N B W Q K H M W B N R
+      // Row 1 — front:     P S A P P P P P P A S P
+      // Row 2 — vanguard:  Z . . . J J D D . . . Z   (J pair side-by-side; tall board → horizontal partners)
+      // (Barricades come in via default reserves.)
+      const row0: PieceId[] = ["R", "N", "B", "W", "Q", "K", "H", "M", "W", "B", "N", "R"];
+      const row1: PieceId[] = ["P", "S", "A", "P", "P", "P", "P", "P", "P", "A", "S", "P"];
+      const row2: Array<PieceId | null> = [
+        "Z", null, null, null, "J", "J", "D", "D", null, null, null, "Z",
+      ];
+      const white: Placement[] = [];
+      row0.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 0, c }));
+      row1.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 1, c }));
+      row2.forEach((id, c) => { if (id) white.push({ color: "w", pieceId: id, r: 2, c }); });
+      return mirror(white, rows, cols);
+    },
+  },
+  {
     id: "empty",
     name: "Empty",
     description: "Start from scratch. Drag pieces onto the board.",
