@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMultiplayerRouteImport } from './routes/_authenticated/multiplayer'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/forum'
@@ -53,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMultiplayerRoute =
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/forum': typeof AuthenticatedForumRouteWithChildren
   '/history': typeof AuthenticatedHistoryRoute
   '/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/forum'
     | '/history'
     | '/multiplayer'
+    | '/onboarding'
     | '/profile'
     | '/forum/$topicId'
     | '/forum/new'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/play'
     | '/sandbox'
     | '/history'
+    | '/onboarding'
     | '/profile'
     | '/forum/$topicId'
     | '/forum/new'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/_authenticated/forum'
     | '/_authenticated/history'
     | '/_authenticated/multiplayer'
+    | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
@@ -266,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/multiplayer': {
@@ -381,6 +400,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedForumRoute: typeof AuthenticatedForumRouteWithChildren
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedMultiplayerRoute: typeof AuthenticatedMultiplayerRouteWithChildren
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
@@ -388,6 +408,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedForumRoute: AuthenticatedForumRouteWithChildren,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedMultiplayerRoute: AuthenticatedMultiplayerRouteWithChildren,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }
 
