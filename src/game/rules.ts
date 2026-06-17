@@ -1,4 +1,4 @@
-import type { Design, GameState, Move, Piece } from "./types";
+import type { Design, GameState, Move } from "./types";
 import { emptyBoard, findRoyals } from "./board";
 import { allLegalMoves, applyMoveToState, inCheck } from "./moves";
 import { buildRegistry } from "./pieces";
