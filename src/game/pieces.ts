@@ -12,9 +12,20 @@ const KNIGHT_OFFSETS: Offset[] = [
   { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
   { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
 ];
-// Archer: ranged specialist. Moves one square in any direction (no capture
-// on the move). Attacks by firing diagonally at range 2 or 3 only, arcing
-// over every piece in between. Captures by occupying the target square.
+// Archer: ranged specialist. Moves one square orthogonally OR jumps 1-3
+// squares diagonally (cannot capture by moving). Attacks by firing diagonally
+// at range 2 or 3 only, arcing over every piece in between. Captures by
+// occupying the target square.
+const ARCHER_MOVE_OFFSETS: Offset[] = [
+  // orthogonal range 1
+  { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+  // diagonal range 1
+  { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+  // diagonal range 2 (jumps over pieces)
+  { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
+  // diagonal range 3 (jumps over pieces)
+  { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
+];
 const ARCHER_ATTACK_OFFSETS: Offset[] = [
   // diagonal range 2
   { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
