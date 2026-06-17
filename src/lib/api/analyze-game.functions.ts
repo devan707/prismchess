@@ -248,6 +248,13 @@ function extractAndValidate(
       pieceValueMultipliers[k] = Math.max(0.3, Math.min(2.5, v));
     }
   }
+  const sqBonusRaw = (upRaw.squareDefenseBonuses ?? {}) as Record<string, unknown>;
+  const squareDefenseBonuses: Record<string, number> = {};
+  for (const [k, v] of Object.entries(sqBonusRaw)) {
+    if (typeof v === "number" && Number.isFinite(v) && /^[a-l]\d{1,2}$/i.test(k)) {
+      squareDefenseBonuses[k.toLowerCase()] = Math.max(-300, Math.min(300, v));
+    }
+  }
   const updatedPlaybook = {
     lessons,
     pieceValueMultipliers: Object.keys(pieceValueMultipliers).length
@@ -255,6 +262,9 @@ function extractAndValidate(
       : current.pieceValueMultipliers,
     cautionMultiplier: clampNum(upRaw.cautionMultiplier, 0.3, 2.5, current.cautionMultiplier),
     aggressionBonus: clampNum(upRaw.aggressionBonus, -150, 150, current.aggressionBonus),
+    squareDefenseBonuses: Object.keys(squareDefenseBonuses).length
+      ? squareDefenseBonuses
+      : current.squareDefenseBonuses,
   };
   return { ok: true, analysis, updatedPlaybook };
 }
