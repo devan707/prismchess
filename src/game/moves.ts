@@ -20,6 +20,13 @@ function isBarricade(_p: Piece | null, _registry: Record<PieceId, PieceDef>): bo
   return false;
 }
 
+/** True for board fixtures (currently: the Prism) — impassable AND uncapturable.
+ *  Sliders must stop BEFORE one. Leapers/pawns/dragons cannot capture one.
+ *  Drops, portal swaps, and necromancer raises cannot target one. */
+function isFixture(p: Piece | null, registry: Record<PieceId, PieceDef>): boolean {
+  return !!p && registry[p.id]?.special === "prism";
+}
+
 function emitFromSpec(
   board: Board,
   registry: Record<PieceId, PieceDef>,
