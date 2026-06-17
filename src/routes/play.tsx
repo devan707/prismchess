@@ -8,10 +8,14 @@ import { ReservesPanel } from "@/components/designer/ReservesPanel";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
 import type { Color, Design, Difficulty } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2 } from "lucide-react";
+import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen } from "lucide-react";
 
 export const Route = createFileRoute("/play")({
   head: () => ({
@@ -76,6 +80,7 @@ interface GVProps {
 }
 
 function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColor, setDifficulty, setFlipped, setMuted, onNewGame }: GVProps) {
+  const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
     state, status, tryMove, tryDrop, legalFor, legalDropSquares,
@@ -83,11 +88,18 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     undo, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
 
+  const [resignedBy, setResignedBy] = useState<Color | null>(null);
+
   const check = status.kind === "playing" ? status.check : false;
-  const winner = status.kind === "checkmate" || status.kind === "royal-loss" ? status.winner : null;
+  const winner = resignedBy
+    ? (resignedBy === "w" ? "b" : "w")
+    : (status.kind === "checkmate" || status.kind === "royal-loss" ? status.winner : null);
+
+  const terminal = resignedBy !== null || status.kind === "checkmate" || status.kind === "royal-loss" || status.kind === "stalemate";
 
   const statusLabel =
-    status.kind === "checkmate" ? `Checkmate — ${winner === "w" ? "White" : "Black"} wins`
+    resignedBy ? `${resignedBy === humanColor ? "You" : "Opponent"} resigned — ${winner === "w" ? "White" : "Black"} wins`
+    : status.kind === "checkmate" ? `Checkmate — ${winner === "w" ? "White" : "Black"} wins`
     : status.kind === "royal-loss" ? `Royal captured — ${winner === "w" ? "White" : "Black"} wins`
     : status.kind === "stalemate" ? "Stalemate"
     : check ? `${state.turn === "w" ? "White" : "Black"} in check`
@@ -96,6 +108,10 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const dropTargets = selectedDrop ? legalDropSquares(selectedDrop) : [];
   const hasReserves = Object.values(state.reserves.w).some((n) => n > 0) ||
                       Object.values(state.reserves.b).some((n) => n > 0);
+
+  const handleResign = () => setResignedBy(humanColor);
+  const handleQuit = () => navigate({ to: "/" });
+  const handleNewGame = () => { setResignedBy(null); onNewGame(); };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -159,10 +175,10 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={onNewGame} size="sm" className="flex-1">
+                  <Button onClick={handleNewGame} size="sm" className="flex-1">
                     <RefreshCw className="h-4 w-4 mr-1" /> New game
                   </Button>
-                  <Button onClick={undo} size="sm" variant="outline" className="flex-1" disabled={state.history.length === 0}>
+                  <Button onClick={undo} size="sm" variant="outline" className="flex-1" disabled={state.history.length === 0 || terminal}>
                     <RotateCcw className="h-4 w-4 mr-1" /> Undo
                   </Button>
                 </div>
@@ -175,6 +191,44 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                     {muted ? "Unmute" : "Mute"}
                   </Button>
                 </div>
+                <div className="border-t pt-3 space-y-2">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full" disabled={terminal}>
+                        <Flag className="h-4 w-4 mr-1" /> Resign
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Resign this game?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Your opponent will be awarded the win. You can start a new game right after.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep playing</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResign}>Resign</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full">
+                        <DoorOpen className="h-4 w-4 mr-1" /> Quit to menu
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogTitle>Leave this game?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your current progress will be lost.
+                      </AlertDialogDescription>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Stay</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleQuit}>Quit</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -182,14 +236,14 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
       </header>
 
       {/* Board fills the rest */}
-      <main className="flex-1 flex flex-col items-center justify-center gap-3 p-3">
+      <main className="flex-1 flex flex-col items-center justify-center gap-3 p-3 relative">
         {hasReserves && (
           <ReservesPanel
             state={state}
             color={state.turn === humanColor ? humanColor : (humanColor === "w" ? "b" : "w")}
             selectedDrop={selectedDrop}
             onSelectDrop={setSelectedDrop}
-            disabled={state.turn !== humanColor || status.kind !== "playing"}
+            disabled={state.turn !== humanColor || terminal}
           />
         )}
         <Board
@@ -201,8 +255,24 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           dropPiece={selectedDrop}
           dropTargets={dropTargets}
           onDrop={(id, to) => tryDrop(id, to)}
-          disabled={status.kind !== "playing"}
+          disabled={terminal}
         />
+
+        {terminal && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm p-4">
+            <div className="bg-card border rounded-xl shadow-2xl p-6 text-center max-w-xs space-y-3">
+              <div className="font-display text-xl font-bold">{statusLabel}</div>
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleNewGame}>
+                  <RefreshCw className="h-4 w-4 mr-1" /> New game
+                </Button>
+                <Button variant="outline" onClick={handleQuit}>
+                  <Home className="h-4 w-4 mr-1" /> Back to menu
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <PromotionDialog
