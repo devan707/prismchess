@@ -942,7 +942,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       (cp) => !(cp.square.r === move.to.r && cp.square.c === move.to.c),
     );
   }
-  return {
+  const next: GameState = {
     ...state,
     board,
     reserves,
@@ -955,6 +955,77 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       : null,
     turn: state.turn === "w" ? "b" : "w",
   };
+  applyPrismFlips(next.board, move, state.registry);
+  return next;
+}
+
+/** PRISM EFFECTS — flip non-royal pieces that pass through or sit in the
+ *  rainbow aura around any Prism. Mutates `board` in place. */
+function prismAuraCells(board: Board, registry: Record<PieceId, PieceDef>): Set<string> {
+  const aura = new Set<string>();
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = board[r][c];
+      if (!p || registry[p.id]?.special !== "prism") continue;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+          const o = board[nr][nc];
+          if (o && registry[o.id]?.special === "prism") continue;
+          aura.add(`${nr},${nc}`);
+        }
+      }
+    }
+  }
+  return aura;
+}
+
+function flipPieceAt(board: Board, r: number, c: number, registry: Record<PieceId, PieceDef>) {
+  const p = board[r][c];
+  if (!p) return;
+  const d = registry[p.id];
+  if (!d) return;
+  if (d.royal) return;
+  if (d.special === "prism") return;
+  if (d.special === "juggernaut") return; // pair would desync
+  if (d.special === "portal") return;
+  board[r][c] = { ...p, color: p.color === "w" ? "b" : "w" };
+}
+
+function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, PieceDef>) {
+  const aura = prismAuraCells(board, registry);
+  if (aura.size === 0) return;
+  const inAura = (r: number, c: number) => aura.has(`${r},${c}`);
+  // Pass-through: a slider crossed an aura square but ended outside the aura.
+  if (move.from && move.kind !== "drop" && move.kind !== "portalSwap" &&
+      move.kind !== "necroRaise" && move.kind !== "resurrect" &&
+      move.kind !== "juggShift" && move.kind !== "juggCharge" && move.kind !== "juggExit") {
+    const dr = move.to.r - move.from.r;
+    const dc = move.to.c - move.from.c;
+    const aR = Math.abs(dr), aC = Math.abs(dc);
+    const linear = aR === 0 || aC === 0 || aR === aC;
+    if (linear) {
+      const steps = Math.max(aR, aC);
+      const sR = steps ? dr / steps : 0;
+      const sC = steps ? dc / steps : 0;
+      let crossed = false;
+      for (let s = 1; s < steps; s++) {
+        if (inAura(move.from.r + s * sR, move.from.c + s * sC)) { crossed = true; break; }
+      }
+      if (crossed && !inAura(move.to.r, move.to.c)) {
+        flipPieceAt(board, move.to.r, move.to.c, registry);
+      }
+    }
+  }
+  // End-of-turn sweep: every non-royal piece currently in the aura flips.
+  for (const key of aura) {
+    const [r, c] = key.split(",").map(Number);
+    flipPieceAt(board, r, c, registry);
+  }
 }
 
 export function legalMovesFrom(state: GameState, from: Square): Move[] {
