@@ -33,7 +33,7 @@ export function evaluate(state: GameState, toMove: Color): number {
       let v = valueFor(p.id, def);
       const centerDist = Math.abs(r - cr) + Math.abs(c - cc);
       v += Math.max(0, ((rows + cols) / 2 - centerDist)) * 2;
-      if (def?.special === "pawn") {
+      if (def?.special === "pawn" || def?.special === "shapeshifter") {
         if (cols > rows) {
           v += p.color === "w" ? c * 6 : (cols - 1 - c) * 6;
         } else {
