@@ -393,12 +393,12 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ];
     const seen = new Set<string>();
-    // Diagonal "stop" squares = 0..3 unobstructed steps. 0 steps means no diagonal portion (still allowed).
+    // Diagonal "stop" squares = 0..2 unobstructed steps. 0 steps means no diagonal portion (still allowed).
     type Stop = { r: number; c: number };
     const stops: Stop[] = [{ r: from.r, c: from.c }];
     for (const d of diagDirs) {
       let r = from.r, c = from.c;
-      for (let k = 1; k <= 3; k++) {
+      for (let k = 1; k <= 2; k++) {
         r += d.dr; c += d.dc;
         if (!inB(r, c)) break;
         const occ = board[r][c];
