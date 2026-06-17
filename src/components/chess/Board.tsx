@@ -212,6 +212,22 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   </div>
                 );
               })()}
+              {/* Spirit View ghost — only when no piece occupies the square. */}
+              {!piece && necromancerSelected && ghostMap.has(`${r},${c}`) && (() => {
+                const g = ghostMap.get(`${r},${c}`)!;
+                const gdef = state.registry[g.id];
+                const isEnemy = g.originalOwner !== humanColor;
+                return (
+                  <div
+                    className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none"
+                    style={{ opacity: 0.45 }}
+                    aria-hidden
+                    title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " (will rise as Undead)" : ""}`}
+                  >
+                    <PieceGlyph piece={{ id: g.id, color: g.color, undead: isEnemy }} def={gdef} />
+                  </div>
+                );
+              })()}
             </div>
           );
         }),
