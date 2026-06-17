@@ -132,10 +132,19 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     builtinCustom: true,
     description: "Moves and captures exactly like a pawn. Whenever it captures, it permanently transforms into the piece it captured.",
   },
+  J: {
+    id: "J",
+    name: "Juggernaut",
+    glyph: "🛡️",
+    emoji: true,
+    special: "juggernaut",
+    builtinCustom: true,
+    description: "A 2-square siege engine. Each turn it may SHIFT one square sideways OR CHARGE straight forward (tramples enemies, stops before friendly pieces, exits off the enemy edge). Immune to capture from its front arc; captured normally from the sides or rear — losing either square destroys the whole Juggernaut.",
+  },
 };
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
-export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S"];
+export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S", "J"];
 export const ALL_BUILTIN_IDS: PieceId[] = [...STANDARD_PIECE_IDS, ...BUILTIN_CUSTOM_IDS];
 
 /** Build a registry from the built-ins + user-defined pieces. */
