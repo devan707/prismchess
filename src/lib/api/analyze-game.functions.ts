@@ -106,11 +106,14 @@ You will receive:
 
 Your job:
 1. Briefly analyze the game in the "analysis" field (markdown, friendly tone). Cite move numbers when discussing mistakes/highlights. If there's a human message in priorTurns, treat this as a continuing conversation and respond accordingly.
+
+   IMPORTANT — reading the move list: each entry is formatted as "PLY. (SIDE) PieceName from→to xCapturedName[flags]" where SIDE is W (White) or B (Black). The parenthesised side prefix is NOT a piece — for example "(W) Pawn e2→e4" is a WHITE PAWN, not a Wizard. The Wizard, Bishop, Barricade, etc. all appear by their full names. Never invent piece moves that aren't literally in the move list, and never confuse the side prefix with a piece name.
 2. Produce an UPDATED full playbook. Improve it incrementally — keep what still applies, add new lessons learned from this game/feedback, drop redundancies. Never wipe lessons unless they directly conflict with new evidence.
 3. Adjust numeric weights conservatively:
    - pieceValueMultipliers: only override pieces whose true value the engine seems to be mis-estimating. e.g. if the AI keeps trading its Wizard for pawns, the Wizard multiplier should rise.
    - cautionMultiplier: raise if the AI hung valuable pieces; lower if it played too passively.
    - aggressionBonus: positive if the AI missed clearly good trades; negative if it traded too greedily.
+   - squareDefenseBonuses: this is the most direct lever — when the user describes a specific tactical square they used to win (e.g. "Archer mate on g12"), add that square with a strong positive weight (80–200) so the minimax engine actively fights to defend/occupy it next game. Prune squares from past games that are no longer relevant. Keep ≤ 8 entries.
 4. Keep lessons short, imperative, piece-specific where possible. Example: "Never move the Wizard adjacent to an Assassin's launch diagonal."
 5. If the user explicitly asks you to forget or change something, honor it.`;
 
