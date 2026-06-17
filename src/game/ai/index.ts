@@ -128,16 +128,29 @@ export function chooseMove(state: GameState, difficulty: Difficulty): Move | nul
   if (difficulty === "easy") return easyMove(state);
   // Scale depth down for big boards / many pieces to keep responsive.
   // Portals (swap to any friendly), dragons (teleport to any empty), and
-  // wide-range pieces blow up the branching factor on 12×12 — a full minimax
-  // at depth 2 there can lock the main thread for many seconds. Clamp hard.
+  // wide-range pieces blow up the branching factor — a full minimax at
+  // depth 2 can lock the main thread for many seconds. Clamp hard.
   const area = state.rows * state.cols;
+  // Detect "explosive-branching" specials currently on the board.
+  let heavyBranching = false;
+  for (let r = 0; r < state.board.length && !heavyBranching; r++) {
+    for (let c = 0; c < state.board[r].length && !heavyBranching; c++) {
+      const p = state.board[r][c];
+      if (!p) continue;
+      const sp = state.registry[p.id]?.special;
+      if (sp === "dragon" || sp === "portal") heavyBranching = true;
+    }
+  }
   if (difficulty === "medium") {
     if (area > 100) return easyMove(state);
+    if (heavyBranching) return rootSearch(state, 2, true);
     const depth = area > 64 ? 2 : 3;
     return rootSearch(state, depth, true);
   }
   // hard
   if (area > 100) return rootSearch(state, 1, true);
+  if (heavyBranching) return rootSearch(state, 2, true);
   const depth = area > 64 ? 3 : 4;
   return rootSearch(state, depth, true);
 }
+
