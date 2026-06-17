@@ -82,30 +82,36 @@ function Row({
       </span>
       <div className="flex flex-wrap gap-1 flex-1">
         {ids.length === 0 ? (
-          <span className="text-xs text-muted-foreground italic">— none —</span>
+          <span className="text-xs text-muted-foreground italic">
+            {clickable ? "— no fallen pieces yet —" : "— none —"}
+          </span>
         ) : (
           ids.map((id) => {
             const def = state.registry[id];
             const count = groups.get(id)!;
             const selected = clickable && choice === id;
+            // Juggernauts and barricades cannot be resurrected.
+            const unresurrectable =
+              !!clickable && (def?.special === "juggernaut" || !!def?.immobile);
+            const enabled = clickable && !unresurrectable;
             return (
               <button
                 key={id}
                 type="button"
-                disabled={!clickable}
+                disabled={!enabled}
                 onClick={() => onPick?.(selected ? null : id)}
                 className={`relative inline-flex items-center justify-center rounded-md transition-colors ${
-                  clickable ? "cursor-pointer hover:bg-accent" : "cursor-default"
+                  enabled ? "cursor-pointer hover:bg-accent" : "cursor-default"
                 } ${
                   selected
                     ? "ring-2 ring-primary bg-accent"
-                    : clickable
+                    : enabled
                     ? "ring-1 ring-border"
                     : ""
-                }`}
+                } ${unresurrectable ? "opacity-40" : ""}`}
                 style={{ width: "2rem", height: "2rem" }}
-                aria-label={`${def?.name ?? id}${count > 1 ? ` ×${count}` : ""}`}
-                title={def?.name ?? id}
+                aria-label={`${def?.name ?? id}${count > 1 ? ` ×${count}` : ""}${unresurrectable ? " (cannot be resurrected)" : ""}`}
+                title={unresurrectable ? `${def?.name ?? id} — cannot be resurrected` : def?.name ?? id}
               >
                 <PieceGlyph
                   piece={{ id, color }}
