@@ -102,6 +102,7 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
   const game = useMultiplayerGame({ matchId, meId, initialMatch, initialMoves, initialEvents });
   const resignFn = useServerFn(resign);
   const claimFn = useServerFn(claimTimeout);
+  const addFriendFn = useServerFn(sendFriendRequest);
 
   const [flipped] = useState(false);
   const [now, setNow] = useState(Date.now());
