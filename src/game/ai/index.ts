@@ -120,13 +120,42 @@ function orderMoves(state: GameState, moves: Move[]): Move[] {
   return moves.slice().sort((a, b) => moveScore(state, b) - moveScore(state, a));
 }
 
+/**
+ * Quiescence search: at search horizon, keep playing only "loud" moves
+ * (captures, promotions, juggernaut trample, shapeshift-captures) so the
+ * static eval is taken on a stable position. This is the single biggest
+ * fix for "the AI didn't see the trade two plies away".
+ */
+function qsearch(state: GameState, alpha: number, beta: number, depthLeft: number): number {
+  const standPat = evaluate(state, state.turn);
+  if (depthLeft <= 0) return standPat;
+  if (standPat >= beta) return beta;
+  if (standPat > alpha) alpha = standPat;
+  const moves = allLegalMoves(state);
+  const loud: Move[] = [];
+  for (const m of moves) {
+    if (m.captured || m.promotion || m.shapeshiftTo || (m.juggTrampled && m.juggTrampled.length)) {
+      loud.push(m);
+    }
+  }
+  if (loud.length === 0) return standPat;
+  loud.sort((a, b) => moveScore(state, b) - moveScore(state, a));
+  for (const m of loud) {
+    const next = applyMoveToState(state, m);
+    const score = -qsearch(next, -beta, -alpha, depthLeft - 1);
+    if (score >= beta) return beta;
+    if (score > alpha) alpha = score;
+  }
+  return alpha;
+}
+
 function search(state: GameState, depth: number, alpha: number, beta: number, useAB: boolean): number {
   const moves = allLegalMoves(state);
   if (moves.length === 0) {
     if (inCheck(state, state.turn)) return -100000 - depth;
     return 0;
   }
-  if (depth === 0) return evaluate(state, state.turn);
+  if (depth === 0) return qsearch(state, alpha, beta, 4);
   let best = -Infinity;
   for (const m of orderMoves(state, moves)) {
     const next = applyMoveToState(state, m);
