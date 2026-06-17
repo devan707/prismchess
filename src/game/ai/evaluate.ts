@@ -17,7 +17,7 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   N: 3,
   P: 1,
   S: 2,    // Shapeshifter Pawn
-  A: 6,    // Archer
+  A: 4,    // Archer — fragile diagonal-only ranged specialist
   T: 5,    // Portal
   H: 4,    // King's Hand
   Z: 6,    // Assassin
