@@ -93,6 +93,9 @@ export interface Move {
   dropPieceId?: PieceId;
   /** Resurrect target piece id (necromancer). */
   resurrectPieceId?: PieceId;
+  /** Original owner of the corpse being raised (for necroRaise). If it
+   *  differs from the necromancer's color the result is an undead piece. */
+  resurrectOriginalOwner?: Color;
   /** Shapeshifter capture: piece id to transform into (= captured.id). */
   shapeshiftTo?: PieceId;
   /** Juggernaut: enemy pieces trampled during a charge. */
