@@ -297,6 +297,72 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     return moves;
   }
 
+  if (def.special === "juggernaut") {
+    const partner = findJuggPartner(board, from, piece.color, state.registry);
+    if (!partner) return moves; // orphan J can't act
+    const { rows, cols } = rowsCols(board);
+    const wide = boardIsWide(board);
+    const dir = piece.color === "w" ? 1 : -1;
+    const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
+    const isSelfCell = (r: number, c: number) =>
+      (r === from.r && c === from.c) || (r === partner.r && c === partner.c);
+
+    // SHIFT ±1 along the perpendicular axis (sideways).
+    for (const sign of [1, -1]) {
+      const dRow = wide ? sign : 0;
+      const dCol = wide ? 0 : sign;
+      const nF = { r: from.r + dRow, c: from.c + dCol };
+      const nP = { r: partner.r + dRow, c: partner.c + dCol };
+      if (!inB(nF.r, nF.c) || !inB(nP.r, nP.c)) continue;
+      const okCell = (r: number, c: number) => {
+        if (isSelfCell(r, c)) return true;
+        return board[r][c] === null;
+      };
+      if (!okCell(nF.r, nF.c) || !okCell(nP.r, nP.c)) continue;
+      moves.push({ from, to: nF, piece, captured: null, kind: "juggShift" });
+    }
+
+    // CHARGE forward — single maximal move; tramples enemies, stops before friendly, exits off enemy edge.
+    const stepDr = wide ? 0 : dir;
+    const stepDc = wide ? dir : 0;
+    const trampled: Piece[] = [];
+    let steps = 0;
+    let exited = false;
+    let curF = { ...from };
+    let curP = { ...partner };
+    while (true) {
+      const nF = { r: curF.r + stepDr, c: curF.c + stepDc };
+      const nP = { r: curP.r + stepDr, c: curP.c + stepDc };
+      const outF = !inB(nF.r, nF.c);
+      const outP = !inB(nP.r, nP.c);
+      if (outF && outP) { exited = true; break; }
+      if (outF || outP) break;
+      const t1 = board[nF.r][nF.c];
+      const t2 = board[nP.r][nP.c];
+      const blocks = (t: Piece | null) =>
+        !!t && (t.color === piece.color || isBarricade(t, state.registry));
+      if (blocks(t1) || blocks(t2)) break;
+      if (t1 && t1.color !== piece.color) trampled.push(t1);
+      if (t2 && t2.color !== piece.color) trampled.push(t2);
+      curF = nF; curP = nP;
+      steps++;
+    }
+    if (exited) {
+      moves.push({
+        from, to: { ...from }, piece, captured: null, kind: "juggExit",
+        juggTrampled: trampled.length ? trampled : undefined,
+      });
+    } else if (steps > 0) {
+      moves.push({
+        from, to: curF, piece, captured: trampled[0] ?? null, kind: "juggCharge",
+        juggTrampled: trampled.length ? trampled : undefined,
+      });
+    }
+    return moves;
+  }
+
+
+
 
   // Generic data-driven piece
   if (def.movement || def.capture) {
