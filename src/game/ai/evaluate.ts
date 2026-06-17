@@ -116,22 +116,37 @@ function dynamicBonus(state: GameState, color: Color): number {
           break;
         }
         case "necromancer": {
-          // Value of friendly graveyard pieces it could resurrect.
-          const graveyard = state.captured[opp]; // pieces of `color` that were taken
-          let graveValue = 0;
-          for (const g of graveyard) {
-            graveValue += valueFor(g.id, state.registry[g.id]);
+          // Corpse-based scoring: the Necromancer is non-combat. Its power is
+          // proximity to valuable corpses (friendly recovery + enemy stealing).
+          const corpses = state.corpses ?? [];
+          let nearbyValue = 0;
+          let bestNearby = 0;
+          let mapValue = 0;
+          for (const cp of corpses) {
+            const cdef = state.registry[cp.pieceId];
+            if (!cdef) continue;
+            if (cdef.special === "juggernaut" || cdef.immobile) continue;
+            // Can't raise onto an occupied square.
+            if (board[cp.square.r][cp.square.c]) continue;
+            const v = valueFor(cp.pieceId, cdef);
+            // Stealing an enemy corpse is even sweeter (we gain + they lose
+            // the chance to get them back).
+            const ownBonus = cp.originalOwner !== color ? 1.25 : 1.0;
+            const adj = Math.max(Math.abs(cp.square.r - r), Math.abs(cp.square.c - c));
+            mapValue += v * 0.04 * ownBonus;
+            if (adj <= 1) {
+              // Can resurrect right now — count nearly the full piece value.
+              nearbyValue += v * 0.7 * ownBonus;
+              if (v * ownBonus > bestNearby) bestNearby = v * ownBonus;
+            } else {
+              // Reward closing the distance; falls off with Chebyshev distance.
+              nearbyValue += (v * ownBonus) / (adj * adj + 4);
+            }
           }
-          // Open adjacent squares = resurrection slots.
-          let openAdj = 0;
-          for (const [dr, dc] of ALL_8) {
-            const nr = r + dr, nc = c + dc;
-            if (!inB(board, nr, nc)) continue;
-            if (!board[nr][nc]) openAdj += 1;
-          }
-          bonus += Math.min(graveValue * 0.25, 400);
-          bonus += openAdj * (graveyard.length > 0 ? 8 : 1);
-          // Penalty: enemy attackers next to the necromancer (it's fragile).
+          bonus += Math.min(nearbyValue, 1200) + Math.min(mapValue, 400);
+          bonus += bestNearby * 0.05;
+          // Penalty: enemy attackers next to the necromancer (it's fragile and
+          // cannot defend itself).
           let enemyAdj = 0;
           for (const [dr, dc] of ALL_8) {
             const nr = r + dr, nc = c + dc;
@@ -139,7 +154,7 @@ function dynamicBonus(state: GameState, color: Color): number {
             const t = board[nr][nc];
             if (t && t.color === opp) enemyAdj += 1;
           }
-          bonus -= enemyAdj * 20;
+          bonus -= enemyAdj * 35;
           break;
         }
         case "portal": {
