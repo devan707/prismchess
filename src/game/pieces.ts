@@ -103,10 +103,39 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     builtinCustom: true,
     description: "Off-board reserve. Drop it on any empty square — it stays there forever, blocks all movement, and cannot be captured.",
   },
-};
+  T: {
+    id: "T",
+    name: "Portal",
+    glyph: "🌀",
+    emoji: true,
+    special: "portal",
+    builtinCustom: true,
+    description: "Cannot move, capture, or give check — but can be captured. Instead of moving, swap places with any one of your own pieces anywhere on the board (uses your full turn). You may swap with the King, but not into check.",
+  },
+  M: {
+    id: "M",
+    name: "Necromancer",
+    glyph: "💀",
+    emoji: true,
+    movement: { leaps: [
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ] },
+    builtinCustom: true,
+    description: "Moves and captures one square diagonally. Instead of moving, may resurrect one of your captured pieces onto any empty adjacent square (uses your full turn).",
+  },
+  S: {
+    id: "S",
+    name: "Shapeshifter Pawn",
+    glyph: "🦎",
+    emoji: true,
+    special: "shapeshifter",
+    builtinCustom: true,
+    description: "Moves and captures exactly like a pawn. Whenever it captures, it permanently transforms into the piece it captured.",
+  },
+}
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
-export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X"];
+export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S"];
 export const ALL_BUILTIN_IDS: PieceId[] = [...STANDARD_PIECE_IDS, ...BUILTIN_CUSTOM_IDS];
 
 /** Build a registry from the built-ins + user-defined pieces. */
