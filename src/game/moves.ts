@@ -1108,8 +1108,12 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
       // Different-color juggernauts always face opposite — head-on charge would be front-arc, illegal.
       if (m.piece.color !== enemyColor) return false;
     }
-    const next = applyMoveToState(state, m);
-    return !inCheck({ ...next, turn: state.turn }, state.turn);
+    // Evaluate own-king safety on the post-move board BEFORE prism aura flips.
+    // Otherwise stepping a piece (e.g. the queen) into the rainbow aura would
+    // instantly flip it to the enemy color and falsely "check" your own king,
+    // making legal moves into the aura impossible.
+    const preFlipBoard = applyMoveToBoard(state.board, m);
+    return !inCheck({ ...state, board: preFlipBoard }, state.turn);
   });
 }
 
