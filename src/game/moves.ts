@@ -712,11 +712,46 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     }
     captured = { w, b };
   }
+  // Corpse tracking: diff pre/post boards. Any enemy piece (relative to the
+  // mover) that disappeared from a square becomes a corpse on that square.
+  // The mover's own pieces moving around are skipped.
+  const prevCorpses = state.corpses ?? [];
+  const corpses = [...prevCorpses];
+  const mover = state.turn;
+  for (let r = 0; r < state.board.length; r++) {
+    const row = state.board[r];
+    for (let c = 0; c < row.length; c++) {
+      const pre = row[c];
+      if (!pre) continue;
+      if (pre.color === mover) continue;
+      const post = board[r][c];
+      const sameOccupant =
+        !!post && post.id === pre.id && post.color === pre.color && !post.undead;
+      if (sameOccupant) continue;
+      corpses.push({ square: { r, c }, pieceId: pre.id, originalOwner: pre.color });
+    }
+  }
+  // necroRaise consumes one matching corpse at `to`.
+  let nextCorpses = corpses;
+  if (move.kind === "necroRaise" && move.resurrectPieceId) {
+    const idx = nextCorpses.findIndex(
+      (cp) =>
+        cp.square.r === move.to.r &&
+        cp.square.c === move.to.c &&
+        cp.pieceId === move.resurrectPieceId &&
+        cp.originalOwner === move.resurrectOriginalOwner,
+    );
+    if (idx >= 0) {
+      nextCorpses = nextCorpses.slice();
+      nextCorpses.splice(idx, 1);
+    }
+  }
   return {
     ...state,
     board,
     reserves,
     captured,
+    corpses: nextCorpses,
     enPassant: move.kind === "double" && move.from
       ? (move.from.r !== move.to.r
           ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
