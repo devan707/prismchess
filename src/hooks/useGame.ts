@@ -98,6 +98,25 @@ export function useGame(opts: UseGameOptions) {
     [state, opts.humanColor, gameOver, playMove],
   );
 
+  const tryResurrect = useCallback(
+    (from: Square, to: Square, resurrectPieceId: PieceId) => {
+      if (state.turn !== opts.humanColor || gameOver) return false;
+      const legal = legalMovesFrom(state, from);
+      const chosen = legal.find(
+        (m) =>
+          m.kind === "resurrect" &&
+          m.resurrectPieceId === resurrectPieceId &&
+          m.to.r === to.r &&
+          m.to.c === to.c,
+      );
+      if (!chosen) return false;
+      playMove(chosen);
+      return true;
+    },
+    [state, opts.humanColor, gameOver, playMove],
+  );
+
+
   useEffect(() => {
     if (gameOver) return;
     if (state.turn === opts.humanColor) return;
