@@ -324,7 +324,9 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     board,
     reserves,
     enPassant: move.kind === "double" && move.from
-      ? { r: (move.from.r + move.to.r) / 2, c: move.to.c }
+      ? (move.from.r !== move.to.r
+          ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
+          : { r: move.from.r, c: (move.from.c + move.to.c) / 2 })
       : null,
     turn: state.turn === "w" ? "b" : "w",
   };
