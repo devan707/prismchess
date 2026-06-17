@@ -339,6 +339,19 @@ export const submitMove = createServerFn({ method: "POST" })
     });
     if (iErr) throw new Error(iErr.message);
 
+    // Notify the opponent that it's their turn.
+    const opponentId =
+      context.userId === match.host_id ? match.guest_id : match.host_id;
+    if (opponentId) {
+      const { sendPushBackground } = await import("./push.server");
+      sendPushBackground(opponentId, {
+        title: "Your move",
+        body: "Your opponent just played — your turn.",
+        url: `/multiplayer/${data.matchId}`,
+        tag: `match:${data.matchId}:turn`,
+      });
+    }
+
     return { ok: true };
   });
 
