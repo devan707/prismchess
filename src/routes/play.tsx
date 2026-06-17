@@ -65,7 +65,7 @@ function PlayRoute() {
 
   return (
     <>
-      <Play design={design} onOpenHelp={() => setTutorialOpen(true)} hasTutorial={!!tutorial} />
+      <Play design={design} />
       {meta && tutorial && (
         <TutorialDialog
           gameId={meta.id}
