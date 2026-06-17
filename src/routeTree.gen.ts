@@ -32,6 +32,7 @@ import { Route as AuthenticatedMessagesThreadIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedForumSuggestRouteImport } from './routes/_authenticated/forum.suggest'
 import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
 import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
+import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
 import { Route as AuthenticatedMultiplayerJoinTokenRouteImport } from './routes/_authenticated/multiplayer.join.$token'
 
 const SandboxRoute = SandboxRouteImport.update({
@@ -155,6 +156,12 @@ const AuthenticatedForumTopicIdRoute =
     path: '/$topicId',
     getParentRoute: () => AuthenticatedForumRoute,
   } as any)
+const ApiPublicHooksCleanupStaleChallengesRoute =
+  ApiPublicHooksCleanupStaleChallengesRouteImport.update({
+    id: '/api/public/hooks/cleanup-stale-challenges',
+    path: '/api/public/hooks/cleanup-stale-challenges',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedMultiplayerJoinTokenRoute =
   AuthenticatedMultiplayerJoinTokenRouteImport.update({
     id: '/join/$token',
@@ -186,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/messages/': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
+  '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -208,6 +216,7 @@ export interface FileRoutesByTo {
   '/messages': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
+  '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/messages/': typeof AuthenticatedMessagesIndexRoute
   '/_authenticated/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/_authenticated/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
+  '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/messages/'
     | '/multiplayer/'
     | '/multiplayer/join/$token'
+    | '/api/public/hooks/cleanup-stale-challenges'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/multiplayer'
     | '/multiplayer/join/$token'
+    | '/api/public/hooks/cleanup-stale-challenges'
   id:
     | '__root__'
     | '/'
@@ -310,6 +322,7 @@ export interface FileRouteTypes {
     | '/_authenticated/messages/'
     | '/_authenticated/multiplayer/'
     | '/_authenticated/multiplayer/join/$token'
+    | '/api/public/hooks/cleanup-stale-challenges'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -320,6 +333,7 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
+  ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -485,6 +499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedForumTopicIdRouteImport
       parentRoute: typeof AuthenticatedForumRoute
     }
+    '/api/public/hooks/cleanup-stale-challenges': {
+      id: '/api/public/hooks/cleanup-stale-challenges'
+      path: '/api/public/hooks/cleanup-stale-challenges'
+      fullPath: '/api/public/hooks/cleanup-stale-challenges'
+      preLoaderRoute: typeof ApiPublicHooksCleanupStaleChallengesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/multiplayer/join/$token': {
       id: '/_authenticated/multiplayer/join/$token'
       path: '/join/$token'
@@ -579,6 +600,8 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
+  ApiPublicHooksCleanupStaleChallengesRoute:
+    ApiPublicHooksCleanupStaleChallengesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
