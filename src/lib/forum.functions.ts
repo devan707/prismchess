@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+
+type Json = Database["public"]["Tables"]["forum_topics"]["Row"]["shared_design"];
 
 const SharedDesignSchema = z
   .object({
