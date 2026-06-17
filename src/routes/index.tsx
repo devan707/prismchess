@@ -1,10 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
-import { saveDesign } from "@/game/design";
-import type { Design } from "@/game/types";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History } from "lucide-react";
+import {
+  BUILTIN_GAMES,
+  deleteSavedGame,
+  loadSavedGames,
+  tutorialForBuiltin,
+  tutorialForSaved,
+  type GameType,
+  type SavedGame,
+} from "@/game/library";
+import { saveCurrentMeta, saveDesign } from "@/game/design";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
