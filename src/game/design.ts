@@ -11,7 +11,13 @@ export interface Preset {
   build: (rows: number, cols: number) => Placement[];
 }
 
-function mirror(placements: Placement[], rows: number): Placement[] {
+function mirror(placements: Placement[], rows: number, cols: number): Placement[] {
+  if (cols > rows) {
+    return placements.flatMap((p) => [
+      p,
+      { ...p, color: "b", c: cols - 1 - p.c },
+    ] as Placement[]);
+  }
   return placements.flatMap((p) => [
     p,
     { ...p, color: "b", r: rows - 1 - p.r },
@@ -25,6 +31,16 @@ function fillRow(row: number, ids: PieceId[], cols: number): Placement[] {
   ids.forEach((id, i) => {
     const c = start + i;
     if (c >= 0 && c < cols) out.push({ color: "w", pieceId: id, r: row, c });
+  });
+  return out;
+}
+
+function fillCol(col: number, ids: PieceId[], rows: number): Placement[] {
+  const out: Placement[] = [];
+  const start = Math.floor((rows - ids.length) / 2);
+  ids.forEach((id, i) => {
+    const r = start + i;
+    if (r >= 0 && r < rows) out.push({ color: "w" as const, pieceId: id, r, c: col });
   });
   return out;
 }
