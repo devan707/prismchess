@@ -287,13 +287,13 @@ export function evaluate(state: GameState, toMove: Color): number {
   // Dynamic, piece-specific tactical bonuses.
   score += dynamicBonus(state, toMove);
   score -= dynamicBonus(state, toMove === "w" ? "b" : "w");
-  // Hanging-piece penalty: if a piece is attacked and not adequately defended,
-  // count most of its value as already lost. This stops shallow searches from
-  // happily moving a Wizard next to a pawn that an Assassin can recapture.
-  score += hangingTerm(state, toMove);
-  score -= hangingTerm(state, toMove === "w" ? "b" : "w");
+  // Hanging-piece penalty, scaled by the learned caution multiplier.
+  const pb = loadPlaybook();
+  score += hangingTerm(state, toMove) * pb.cautionMultiplier;
+  score -= hangingTerm(state, toMove === "w" ? "b" : "w") * pb.cautionMultiplier;
   return score;
 }
+
 
 /**
  * Approximate the static-exchange "hanging" value of each piece of `color`.
