@@ -87,7 +87,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     movement: { leaps: ARCHER_OFFSETS },
     builtinCustom: true,
-    description: "Leaps exactly two squares in any direction (orthogonal or diagonal), jumping over pieces. Captures only on the landing square.",
+    description: "Ranged archer. Shoots along any of the 8 directions (orthogonal or diagonal) at range 2 or 3, arcing over every piece in between — friend or foe. Captures by occupying the target square. Cannot attack adjacent squares.",
   },
   D: {
     id: "D",
@@ -96,7 +96,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "dragon",
     builtinCustom: true,
-    description: "On its turn: either teleport to any empty square, OR breathe fire on one adjacent enemy (stays in place, removes the enemy).",
+    description: "Flight: move to any unoccupied square on the board, ignoring all intervening pieces (non-capturing). Strike: capture an enemy within 2 squares and occupy that square (standard capture).",
   },
   X: {
     id: "X",
