@@ -41,6 +41,7 @@ function emitFromSpec(
 
   const accept = (target: Square, occ: Piece | null) => {
     if (isBarricade(occ, registry)) return false;
+    if (isFixture(occ, registry)) return false;
     if (occ === null) return mode === "move" || mode === "both";
     if (isFriendly(occ, piece.color)) return false;
     // enemy
