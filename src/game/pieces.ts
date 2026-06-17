@@ -106,7 +106,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     immobile: true,
     defaultReserve: 2,
     builtinCustom: true,
-    description: "Off-board reserve. Drop it on any empty square — it never moves on its own, but blocks movement and can be captured like any other piece.",
+    description: "Off-board reserve. Drop it on any empty square — it never moves. Blocks movement and gives check coverage. Immune to capture from its front arc; only captured from the sides or rear. Too heavy to be teleported by a Portal.",
   },
   T: {
     id: "T",
