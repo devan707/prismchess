@@ -295,29 +295,9 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           state={displayedState}
           humanColor={humanColor}
           flipped={flipped}
-          legalFor={(from) => {
-            const sqs = legalFor(from);
-            if (!from) return sqs;
-            const p = displayedState.board[from.r]?.[from.c];
-            if (!p || state.registry[p.id]?.special !== "necromancer") return sqs;
-            // For a necromancer: only show resurrect (empty adjacent) squares
-            // once the user has picked a fallen piece. Diagonal move/capture
-            // squares are always shown.
-            if (resurrectChoice) return sqs;
-            const diagOnly = new Set([
-              `${from.r+1},${from.c+1}`, `${from.r+1},${from.c-1}`,
-              `${from.r-1},${from.c+1}`, `${from.r-1},${from.c-1}`,
-            ]);
-            return sqs.filter((s) => diagOnly.has(`${s.r},${s.c}`));
-          }}
+          legalFor={legalFor}
           onMove={(f, t) => {
             if (viewingPast) return false;
-            if (resurrectMode && resurrectChoice) {
-              if (tryResurrect(f, t, resurrectChoice)) {
-                setResurrectChoice(null);
-                return true;
-              }
-            }
             return tryMove(f, t);
           }}
           dropPiece={selectedDrop}
@@ -353,13 +333,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           </div>
         )}
 
-        <Graveyard
-          state={displayedState}
-          humanColor={humanColor}
-          resurrectMode={resurrectMode}
-          resurrectChoice={resurrectChoice}
-          onPickResurrect={setResurrectChoice}
-        />
+        <Graveyard state={displayedState} humanColor={humanColor} />
+
 
 
 
