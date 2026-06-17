@@ -163,21 +163,24 @@ export const PRESETS: Preset[] = [
         // Fall back to classic if the board is too small to host the layout.
         return PRESETS[0].build(rows, cols);
       }
-      // White rows 0..1; mirrored to rows 10..11 for black.
-      // Row 0 — back rank:  J J H A D Q K M T Z J J
-      //   (juggernaut pairs at each end; one of each custom piece flanking K & Q)
-      // Row 1 — front line: all shapeshifter pawns, with a Wizard on each color
-      //   network (cols 3 & 8 land on opposite-colored squares).
-      // Barricades come in via default reserves.
-      const row0: PieceId[] = ["J", "J", "H", "A", "D", "Q", "K", "M", "T", "Z", "J", "J"];
+      // White rows 0..1 + one portal at center of own half; mirrored for black.
+      // Row 0 — back rank:  J J D A H Q K M T A J J
+      //   Juggernaut pairs at each end. Dragon & King's Hand flank the royals,
+      //   Archers on both wings, Necromancer & Assassin in the middle.
+      // Row 1 — shapeshifter pawns, with a single Wizard at the far edge
+      //   (col 11) so it sits on a light square for White / dark square for Black,
+      //   and its first attack stares straight into a Juggernaut's invulnerable front.
+      // Portal (Z) is placed centrally on each side, not on the back rank.
+      const row0: PieceId[] = ["J", "J", "D", "A", "H", "Q", "K", "M", "T", "A", "J", "J"];
       const row1: PieceId[] = [
-        "S", "S", "S", "W", "S", "S", "S", "S", "W", "S", "S", "S",
+        "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "W",
       ];
       const white: Placement[] = [];
       row0.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 0, c }));
       row1.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 1, c }));
+      // Central portal on White's side; mirror() reflects it to Black's side.
+      white.push({ color: "w", pieceId: "Z", r: 5, c: 6 });
       return mirror(white, rows, cols);
-
     },
   },
   {
