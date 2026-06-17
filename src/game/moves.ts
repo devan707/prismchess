@@ -299,6 +299,15 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       if (!cdef) continue;
       if (cdef.special === "juggernaut" || cdef.special === "portal") continue;
       if (cdef.immobile) continue;
+      // Raise must consume a matching piece from the graveyard. The
+      // graveyard pool that holds the corpse is the OPPOSITE color of its
+      // original owner (i.e. captured BY the opponent of the victim).
+      const captorColor: "w" | "b" = corp.originalOwner === "w" ? "b" : "w";
+      const pool = state.captured[captorColor] ?? [];
+      const hasInGraveyard = pool.some(
+        (p) => p.id === corp.pieceId && p.color === corp.originalOwner,
+      );
+      if (!hasInGraveyard) continue;
       raiseSquares.add(`${corp.square.r},${corp.square.c}`);
       moves.push({
         from,
