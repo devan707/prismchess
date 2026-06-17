@@ -862,12 +862,15 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   if (!p || p.color !== state.turn) return [];
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
+    // Knights leap onto their target — they strike the square directly and
+    // bypass front-arc immunity on juggernauts and barricades.
+    const attackerBypassesFrontArc = m.piece.id === "N";
     // Front-arc immunity: a juggernaut cannot be captured from the front.
-    if (m.captured && m.captured.id === "J" && m.from) {
+    if (m.captured && m.captured.id === "J" && m.from && !attackerBypassesFrontArc) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Front-arc immunity: a barricade cannot be captured from the front.
-    if (m.captured && state.registry[m.captured.id]?.immobile && m.from) {
+    if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !attackerBypassesFrontArc) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Juggernaut charges that would trample a front-protected barricade are also blocked.
