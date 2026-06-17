@@ -176,6 +176,16 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     builtinCustom: true,
     description: "Arcane mage. Slides any distance diagonally like a bishop, AND slides orthogonally any distance — but the orthogonal step only lands on squares of its own color, jumping over opposite-colored squares (and any pieces on them). Permanently bound to the color of the square it's placed on.",
   },
+  Y: {
+    id: "Y",
+    name: "Prism",
+    glyph: "🔺",
+    emoji: true,
+    immobile: true,
+    special: "prism",
+    builtinCustom: true,
+    description: "Indestructible 2-cell rainbow board fixture. Cannot move, cannot be captured, and blocks movement like a wall. Any non-royal piece that passes through any of the 8 squares adjacent to the Prism (the rainbow 'aura') is instantly flipped to the opposite color. At the end of EVERY turn, every non-royal piece still standing in the aura is flipped again — so to keep a converted enemy piece you must walk it out of the aura on your next turn. Kings are immune. Place as a 2-cell pair along a row or column.",
+  },
 };
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
