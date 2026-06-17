@@ -90,6 +90,18 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
+  const [tipsOn, setTipsOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
+  });
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const handleSelectionChange = useCallback((sq: Square | null) => setSelectedSquare(sq), []);
+  useEffect(() => {
+    try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
+  }, [tipsOn]);
+
+  const selectedPiece = selectedSquare ? state.board[selectedSquare.r][selectedSquare.c] : null;
+  const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+
 
   const check = status.kind === "playing" ? status.check : false;
   const winner = resignedBy
