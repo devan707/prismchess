@@ -34,8 +34,13 @@ function Sandbox() {
   const [paletteColor, setPaletteColor] = useState<Color>("w");
   const [mirror, setMirror] = useState(true);
   const [saveName, setSaveName] = useState("");
+  const [description, setDescription] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<PieceId | "erase" | null>(null);
+  const suggestDesc = useServerFn(suggestGameDescription);
+  const genTutorial = useServerFn(generateGameTutorial);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
