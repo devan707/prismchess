@@ -129,9 +129,20 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     selectedPiece.color === humanColor &&
     state.registry[selectedPiece.id]?.special === "necromancer"
   );
-  // Friendly fallen = pieces of humanColor that the opponent captured.
-  const humansFallen = state.captured[humanColor === "w" ? "b" : "w"];
-  const resurrectMode = !viewingPast && isHumanNecromancer && humansFallen.length > 0;
+  // Friendly fallen = pieces of humanColor that the opponent captured. Filter out
+  // pieces the necromancer cannot resurrect (juggernauts and immobile barricades).
+  const humansFallenAll = state.captured[humanColor === "w" ? "b" : "w"];
+  const humansFallen = humansFallenAll.filter((p) => {
+    const d = state.registry[p.id];
+    if (!d) return false;
+    if (d.special === "juggernaut") return false;
+    if (d.immobile) return false;
+    return true;
+  });
+  // Show the resurrection prompt whenever a necromancer is selected (so the
+  // user can SEE the graveyard is the next click target). Clicks only do work
+  // when there's actually a fallen piece available.
+  const resurrectMode = !viewingPast && isHumanNecromancer;
 
 
 
