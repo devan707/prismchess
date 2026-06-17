@@ -379,6 +379,15 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
         </p>
       )}
 
+      {diag.scenario && (
+        <ScenarioGrid
+          scenario={diag.scenario}
+          color={color}
+          cellSize={cellSize}
+        />
+      )}
+
+
       {/* Necromancer-only: miniature ghost + undead preview */}
       {id === "M" && (
         <div className="flex items-center justify-center gap-4 mt-1">
