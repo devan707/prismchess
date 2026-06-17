@@ -15,11 +15,16 @@ interface BoardProps {
   dropTargets?: Square[];
   onDrop?: (pieceId: PieceId, to: Square) => boolean;
   disabled?: boolean;
+  /** Notified whenever the on-board selection changes (or clears). */
+  onSelectionChange?: (sq: Square | null) => void;
 }
 
-export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled }: BoardProps) {
+export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
+
+  useEffect(() => { onSelectionChange?.(selected); }, [selected, onSelectionChange]);
+
 
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
