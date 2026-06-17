@@ -540,8 +540,18 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     return b;
   }
   if (move.kind === "resurrect" && move.resurrectPieceId) {
-    // Necromancer stays; new piece appears at `to`.
+    // Legacy path (graveyard-based resurrect). Necromancer stays.
     b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
+    return b;
+  }
+  if (move.kind === "necroRaise" && move.resurrectPieceId) {
+    // Necromancer stays at `from`. New piece appears on the corpse square.
+    // Enemy corpse → undead under the necromancer's control. Friendly → restored.
+    const isEnemyCorpse =
+      !!move.resurrectOriginalOwner && move.resurrectOriginalOwner !== move.piece.color;
+    b[move.to.r][move.to.c] = isEnemyCorpse
+      ? { id: move.resurrectPieceId, color: move.piece.color, undead: true }
+      : { id: move.resurrectPieceId, color: move.piece.color };
     return b;
   }
   if (move.kind === "juggShift" || move.kind === "juggCharge" || move.kind === "juggExit") {
