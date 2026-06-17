@@ -97,13 +97,37 @@ export interface SavedGame {
   createdAt: number;
 }
 
+/** One-time back-compat: shift Prisms in Grand Menagerie from old h-file (c=7)
+ *  to the corrected f-file (c=5). Applies to any 12×12 design with a Prism. */
+function migratePrismPlacement(d: Design): Design {
+  if (d.rows !== 12 || d.cols !== 12) return d;
+  let changed = false;
+  const next = d.placements.map((p) => {
+    if (p.pieceId === "Y" && p.c === 7) {
+      changed = true;
+      return { ...p, c: 5 };
+    }
+    return p;
+  });
+  return changed ? { ...d, placements: next } : d;
+}
+
 export function loadSavedGames(): SavedGame[] {
   try {
     const raw = localStorage.getItem(SAVED_KEY);
     if (!raw) return [];
     const list = JSON.parse(raw) as SavedGame[];
-    // Back-compat: older saves lack `description`.
-    return list.map((g) => ({ ...g, description: g.description ?? "" }));
+    // Back-compat: older saves lack `description`; also fix stale prism coords.
+    const migrated = list.map((g) => {
+      const design = migratePrismPlacement(g.design);
+      return { ...g, description: g.description ?? "", design };
+    });
+    // If anything changed, persist the corrected list so the fix sticks.
+    const anyChanged = migrated.some((g, i) => g.design !== list[i].design);
+    if (anyChanged) {
+      try { localStorage.setItem(SAVED_KEY, JSON.stringify(migrated)); } catch {}
+    }
+    return migrated;
   } catch { return []; }
 }
 
