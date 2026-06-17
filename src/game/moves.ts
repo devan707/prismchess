@@ -104,13 +104,15 @@ function findJuggPartner(
   }
   return null;
 }
-/** True if `attacker` lies in the juggernaut's front arc (strictly ahead along facing). */
-function attackerInJuggFrontArc(jugSq: Square, attacker: Square, juggColor: Color, wide: boolean): boolean {
-  const dir = juggColor === "w" ? 1 : -1;
-  const jf = wide ? jugSq.c : jugSq.r;
+/** True if `attacker` lies in the target's front arc (strictly ahead along facing).
+ *  Shared by juggernauts and barricades. */
+function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Color, wide: boolean): boolean {
+  const dir = targetColor === "w" ? 1 : -1;
+  const tf = wide ? targetSq.c : targetSq.r;
   const af = wide ? attacker.c : attacker.r;
-  return (af - jf) * dir > 0;
+  return (af - tf) * dir > 0;
 }
+const attackerInJuggFrontArc = attackerInFrontArc;
 
 function promotionOptionsFor(state: GameState): PieceId[] {
   const out: PieceId[] = [];
