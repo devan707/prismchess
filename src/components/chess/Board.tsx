@@ -66,6 +66,31 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     return out;
   })();
   const last = state.history[state.history.length - 1];
+  const moveCount = state.history.length;
+
+  // Compute slide animation offsets for the piece that just moved.
+  // Translates the destination piece from its previous (from) square visually.
+  const slideAnim = (() => {
+    if (!last || !last.from) return null;
+    // Display delta: how far the piece moved in visual grid cells.
+    // displayRows is reversed for white, so visual row index = displayRows.indexOf(r).
+    const fromDispR = displayRowsIndex(last.from.r);
+    const toDispR = displayRowsIndex(last.to.r);
+    const fromDispC = displayColsIndex(last.from.c);
+    const toDispC = displayColsIndex(last.to.c);
+    return {
+      to: last.to,
+      dx: (fromDispC - toDispC) * 100,
+      dy: (fromDispR - toDispR) * 100,
+      key: moveCount,
+    };
+    function displayRowsIndex(r: number) {
+      return humanColor === "w" ? (rows - 1 - r) : r;
+    }
+    function displayColsIndex(c: number) {
+      return humanColor === "w" ? c : (cols - 1 - c);
+    }
+  })();
 
   // If a juggernaut is selected, also highlight its partner square as "selected".
   const selectedPartner: Square | null = (() => {
