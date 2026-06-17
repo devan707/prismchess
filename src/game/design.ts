@@ -209,6 +209,32 @@ export function saveCustomPieces(pieces: PieceDef[]) {
   try { localStorage.setItem(CUSTOM_PIECES_KEY, JSON.stringify(pieces)); } catch {}
 }
 
+/** Compute the partner-cell offset(s) to try when placing a Juggernaut.
+ *  Returns the perpendicular-axis offsets (preferred direction first). */
+export function juggPartnerCandidates(rows: number, cols: number): { dr: number; dc: number }[] {
+  // Same convention as the engine: wide boards face along columns → partner differs by row.
+  const wide = cols > rows;
+  return wide ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }] : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+}
+
+/** Place a Juggernaut as an adjacent pair. Returns true if a partner cell was placed. */
+export function placeJuggernautPair(
+  placements: Placement[],
+  rows: number, cols: number,
+  r: number, c: number, color: "w" | "b",
+): { placements: Placement[]; partner: { r: number; c: number } | null } {
+  let next = placements.filter((p) => !(p.r === r && p.c === c));
+  next.push({ r, c, pieceId: "J", color });
+  for (const o of juggPartnerCandidates(rows, cols)) {
+    const pr = r + o.dr, pc = c + o.dc;
+    if (pr < 0 || pr >= rows || pc < 0 || pc >= cols) continue;
+    if (next.some((p) => p.r === pr && p.c === pc)) continue;
+    next.push({ r: pr, c: pc, pieceId: "J", color });
+    return { placements: next, partner: { r: pr, c: pc } };
+  }
+  return { placements: next, partner: null };
+}
+
 /** Validate a design before play. Returns error string or null. */
 export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): string | null {
   const royals = { w: 0, b: 0 };
@@ -226,6 +252,17 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
       const coord = wide ? p.c : p.r;
       if (coord === promoLine) return "A pawn cannot start on its promotion line.";
     }
+  }
+  // Juggernauts must come in adjacent perpendicular pairs.
+  const wide = d.cols > d.rows;
+  const offsets = juggPartnerCandidates(d.rows, d.cols);
+  for (const p of d.placements) {
+    if (p.pieceId !== "J") continue;
+    const hasPartner = offsets.some((o) => {
+      const r = p.r + o.dr, c = p.c + o.dc;
+      return d.placements.some((q) => q.pieceId === "J" && q.color === p.color && q.r === r && q.c === c);
+    });
+    if (!hasPartner) return "A Juggernaut needs an adjacent twin (its partner square) to function.";
   }
   return null;
 }
