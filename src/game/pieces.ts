@@ -12,10 +12,15 @@ const KNIGHT_OFFSETS: Offset[] = [
   { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
   { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
 ];
-// Archer: exactly 2 squares orthogonal or diagonal — 8 leap targets, jumping over.
+// Archer: ranged attacker. Shoots along the 8 compass lines at range 2 or 3,
+// arcing over every piece in between. Cannot strike adjacent squares.
 const ARCHER_OFFSETS: Offset[] = [
+  // range 2
   { dr: 2, dc: 0 }, { dr: -2, dc: 0 }, { dr: 0, dc: 2 }, { dr: 0, dc: -2 },
   { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
+  // range 3
+  { dr: 3, dc: 0 }, { dr: -3, dc: 0 }, { dr: 0, dc: 3 }, { dr: 0, dc: -3 },
+  { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
 ];
 
 export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
