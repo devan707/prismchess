@@ -279,13 +279,11 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "necromancer") {
-    // Collect raisable corpses adjacent to the necromancer first; those
-    // squares are reserved for resurrection and MUST NOT also be offered as
-    // ordinary move destinations. When multiple corpses sit on the same
-    // square (e.g. a piece moved through and was later captured there), only
-    // the MOST RECENT corpse is raisable — matching what Spirit View shows.
+    // For each adjacent square, only the MOST RECENT corpse matters. If that
+    // latest corpse is an "object" (portal, juggernaut, barricade/immobile),
+    // the square is not raisable at all — we do NOT fall back to an older
+    // corpse underneath it.
     const corpses = state.corpses ?? [];
-    const corpseSquares = new Set<string>();
     const latestBySquare = new Map<string, (typeof corpses)[number]>();
     for (const corp of corpses) {
       const dr = corp.square.r - from.r;
@@ -293,15 +291,15 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       if (dr === 0 && dc === 0) continue;
       if (Math.abs(dr) > 1 || Math.abs(dc) > 1) continue;
       if (board[corp.square.r][corp.square.c]) continue;
+      latestBySquare.set(`${corp.square.r},${corp.square.c}`, corp); // later overwrites
+    }
+    const raiseSquares = new Set<string>();
+    for (const corp of latestBySquare.values()) {
       const cdef = state.registry[corp.pieceId];
       if (!cdef) continue;
-      if (cdef.special === "juggernaut") continue;
+      if (cdef.special === "juggernaut" || cdef.special === "portal") continue;
       if (cdef.immobile) continue;
-      const key = `${corp.square.r},${corp.square.c}`;
-      corpseSquares.add(key);
-      latestBySquare.set(key, corp); // later iterations overwrite — latest wins
-    }
-    for (const corp of latestBySquare.values()) {
+      raiseSquares.add(`${corp.square.r},${corp.square.c}`);
       moves.push({
         from,
         to: corp.square,
@@ -312,17 +310,23 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         resurrectOriginalOwner: corp.originalOwner,
       });
     }
-    // Non-combat: moves exactly 1 square diagonally onto an empty square that
-    // does NOT contain a corpse (clicking a corpse always raises it).
+    // Necromancer also moves one square diagonally — and CAN capture an enemy
+    // piece on that diagonal square, delivering check/mate like any other piece.
     const diagOffs: Offset[] = [
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ];
     for (const o of diagOffs) {
       const to = { r: from.r + o.dr, c: from.c + o.dc };
       if (!inBoardBounds(board, to)) continue;
-      if (board[to.r][to.c]) continue; // cannot capture, cannot land on any piece
-      if (corpseSquares.has(`${to.r},${to.c}`)) continue; // reserved for resurrection
-      moves.push({ from, to, piece, captured: null });
+      if (raiseSquares.has(`${to.r},${to.c}`)) continue; // reserved for resurrection
+      const t = board[to.r][to.c];
+      if (!t) {
+        moves.push({ from, to, piece, captured: null });
+      } else if (t.color !== piece.color) {
+        const tdef = state.registry[t.id];
+        if (tdef?.immobile) continue; // barricades etc. cannot be captured
+        moves.push({ from, to, piece, captured: t });
+      }
     }
     return moves;
   }
