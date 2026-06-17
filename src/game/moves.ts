@@ -228,8 +228,8 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "dragon") {
-    // Teleport: to any empty (non-barricade) square != from
     const { rows, cols } = rowsCols(board);
+    // Flight: move to any empty square anywhere on the board (no capture).
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         if (r === from.r && c === from.c) continue;
@@ -237,16 +237,17 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         moves.push({ from, to: { r, c }, piece, captured: null, kind: "normal" });
       }
     }
-    // Adjacent attack-in-place
-    for (const o of [
-      { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
-      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
-    ]) {
-      const to = { r: from.r + o.dr, c: from.c + o.dc };
-      if (!inBoardBounds(board, to)) continue;
-      const t = board[to.r][to.c];
-      if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
-        moves.push({ from, to, piece, captured: t, kind: "dragonAttack" });
+    // Strike: capture an enemy within Chebyshev distance 2, moving onto the square.
+    // Ignores intervening pieces. Standard chess capture (dragon occupies the target).
+    for (let dr = -2; dr <= 2; dr++) {
+      for (let dc = -2; dc <= 2; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const to = { r: from.r + dr, c: from.c + dc };
+        if (!inBoardBounds(board, to)) continue;
+        const t = board[to.r][to.c];
+        if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
+          moves.push({ from, to, piece, captured: t, kind: "normal" });
+        }
       }
     }
     return moves;
@@ -628,8 +629,9 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
       const moves = pseudoMovesFrom(state, { r, c });
       for (const m of moves) {
         if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
-          // dragon teleport attacks empty squares; doesn't capture there. Filter:
-          if (m.kind === "normal" && state.registry[p.id]?.special === "dragon") continue;
+          // dragon flights land on empty squares (no capture) — not an attack.
+          // Dragon strikes carry a captured piece and ARE attacks.
+          if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
           // portal swaps land on friendly squares (never an enemy king square anyway).
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
