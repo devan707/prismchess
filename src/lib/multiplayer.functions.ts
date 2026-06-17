@@ -208,7 +208,7 @@ export const joinMatch = createServerFn({ method: "POST" })
     const filter = data.matchId ? { id: data.matchId } : { share_token: data.token! };
     const { data: match, error: fErr } = await context.supabase
       .from("matches")
-      .select("id, host_id, guest_id, status")
+      .select("id, host_id, guest_id, status, design_name")
       .match(filter)
       .maybeSingle();
     if (fErr) throw new Error(fErr.message);
@@ -228,10 +228,21 @@ export const joinMatch = createServerFn({ method: "POST" })
         status: "active",
         started_at: now,
         last_clock_update_at: now,
+        expires_at: null,
       })
       .eq("id", match.id)
       .eq("status", "open");
     if (error) throw new Error(error.message);
+
+    // Notify the host that their challenge was accepted.
+    const { sendPushBackground } = await import("./push.server");
+    sendPushBackground(match.host_id, {
+      title: "Challenge accepted",
+      body: `Someone joined your "${match.design_name}" challenge — it's your move if you're white.`,
+      url: `/multiplayer/${match.id}`,
+      tag: `match:${match.id}:accept`,
+    });
+
     return { id: match.id };
   });
 
