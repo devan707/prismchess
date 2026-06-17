@@ -816,8 +816,8 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
     const targetPool = state.turn === "w" ? w : b;
-    // For juggCharge, `captured` is also the first entry in juggTrampled — don't double-count.
-    if (move.captured && move.kind !== "juggCharge") {
+    // For juggCharge/juggShift, `captured` is also the first entry in juggTrampled — don't double-count.
+    if (move.captured && move.kind !== "juggCharge" && move.kind !== "juggShift") {
       targetPool.push(move.captured as Piece);
       if (move.captured.id === "J") {
         targetPool.push({ id: "J", color: move.captured.color });
