@@ -1,5 +1,6 @@
 import type { Design, Placement, PieceId } from "./types";
 import { buildDefaultDesign, defaultReserves, loadCustomPieces, PRESETS } from "./design";
+import { buildBaseTutorial, type GameTutorial } from "./tutorials";
 
 const SAVED_KEY = "designer:savedGames";
 
@@ -85,13 +86,14 @@ export const BUILTIN_GAMES: GameType[] = [
     rows: 8, cols: 8, builtin: true,
     build: () => presetDesign(8, 8, "lone-king"),
   },
-
 ];
 
 export interface SavedGame {
   id: string;
   name: string;
+  description: string;
   design: Design;
+  tutorial?: GameTutorial;
   createdAt: number;
 }
 
@@ -99,16 +101,24 @@ export function loadSavedGames(): SavedGame[] {
   try {
     const raw = localStorage.getItem(SAVED_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as SavedGame[];
+    const list = JSON.parse(raw) as SavedGame[];
+    // Back-compat: older saves lack `description`.
+    return list.map((g) => ({ ...g, description: g.description ?? "" }));
   } catch { return []; }
 }
 
-export function saveSavedGame(name: string, design: Design): SavedGame {
+export function saveSavedGame(
+  name: string,
+  design: Design,
+  opts: { description?: string; tutorial?: GameTutorial } = {},
+): SavedGame {
   const list = loadSavedGames();
   const entry: SavedGame = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     name: name.trim() || "Untitled game",
+    description: (opts.description ?? "").trim(),
     design,
+    tutorial: opts.tutorial,
     createdAt: Date.now(),
   };
   list.unshift(entry);
@@ -119,6 +129,19 @@ export function saveSavedGame(name: string, design: Design): SavedGame {
 export function deleteSavedGame(id: string) {
   const list = loadSavedGames().filter((g) => g.id !== id);
   try { localStorage.setItem(SAVED_KEY, JSON.stringify(list)); } catch {}
+}
+
+/** Resolve a tutorial for a built-in game (built programmatically from the design). */
+export function tutorialForBuiltin(g: GameType): GameTutorial {
+  return buildBaseTutorial({ name: g.name, description: g.description, design: g.build() });
+}
+
+/** Resolve a tutorial for a saved game (use AI-generated if present, else fall back). */
+export function tutorialForSaved(g: SavedGame): GameTutorial {
+  return (
+    g.tutorial ??
+    buildBaseTutorial({ name: g.name, description: g.description, design: g.design })
+  );
 }
 
 // Re-export buildDefaultDesign for convenience
