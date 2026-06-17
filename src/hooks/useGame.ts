@@ -156,6 +156,7 @@ export function useGame(opts: UseGameOptions) {
     undo,
     tryMove,
     tryDrop,
+    tryResurrect,
     legalFor,
     legalDropSquares,
     selectedDrop,
