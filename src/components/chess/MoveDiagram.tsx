@@ -92,20 +92,27 @@ function buildDiagram(id: PieceId): Diagram | null {
       // Necromancer: 1 diagonal, move only.
       for (const [dr, dc] of DIAG) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
       return { rows, cols, center, markers };
-    case "Z":
-      // Assassin: 0–2 diagonal glide, then 1 step in any direction. Every
-      // landing square is reachable as either a move OR a capture → "both".
-      for (const [dr, dc] of DIAG) {
-        for (let k = 1; k <= 2; k++) {
-          const r = cr + dr * k;
-          const c = cc + dc * k;
-          markers.push({ r, c, type: "b" });
-          for (const [ddr, ddc] of ALL8) markers.push({ r: r + ddr, c: c + ddc, type: "b" });
+    case "Z": {
+      // Assassin: exactly 3 king-steps per turn; first 2 must be empty,
+      // 3rd can capture; no revisits; never 3 steps in the same direction.
+      // Reachable final squares = every cell at Chebyshev distance 1–3,
+      // EXCEPT the 8 straight-line endpoints at distance 3 (those would
+      // require 3 identical steps).
+      for (let dr = -3; dr <= 3; dr++) {
+        for (let dc = -3; dc <= 3; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const cheb = Math.max(Math.abs(dr), Math.abs(dc));
+          if (cheb > 3) continue;
+          if (cheb === 3) {
+            // Straight-line endpoints: pure ortho or pure diag at range 3.
+            if (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)) continue;
+          }
+          markers.push({ r: cr + dr, c: cc + dc, type: "b" });
         }
       }
-      // 0-glide + 1-step landing squares — adjacent ring is also "both".
-      for (const [dr, dc] of ALL8) markers.push({ r: cr + dr, c: cc + dc, type: "b" });
       return { rows, cols, center, markers };
+    }
+
 
     case "W":
       // Wizard: diagonals like a bishop + orthogonal same-color squares (every other step).
