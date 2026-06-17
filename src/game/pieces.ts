@@ -125,6 +125,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     movement: { leaps: [
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ] },
+    special: "necromancer",
     builtinCustom: true,
     description: "Fragile support piece. Moves exactly 1 square diagonally onto an empty square — cannot attack or capture anything. When killed, every piece leaves a corpse on its death square. Select your Necromancer to enter Spirit View (translucent ghosts appear on each corpse square). To resurrect: have your Necromancer adjacent to a corpse, then click that corpse — the piece returns to life on its death square (the Necromancer stays put). Friendly corpses return as their original piece. Enemy corpses return as Undead under your control (same abilities, green glow). Juggernauts and Barricades cannot be resurrected.",
   },
