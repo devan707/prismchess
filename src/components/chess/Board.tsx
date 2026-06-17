@@ -32,7 +32,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const legalTargets = legalFor(selected ?? dragFrom);
   const inspectPiece = selected ? state.board[selected.r][selected.c] : null;
   const inspectSelected = !!inspectPiece && inspectPiece.color !== humanColor;
-  const inspectTargets = inspectSelected && selected ? pseudoMovesFrom(state, selected).map((m) => m.to) : [];
+  const inspectTargets = inspectSelected && selected ? pseudoMovesFrom(state, selected).filter((m) => !!m.captured).map((m) => m.to) : [];
   const last = state.history[state.history.length - 1];
 
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
