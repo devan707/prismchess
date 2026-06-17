@@ -1,26 +1,27 @@
-import { BOARD_SIZE, type Board, type GameState, type Piece, type Square } from "./types";
+import { type Board, type GameState, type Piece, type Square, type Variant, VARIANTS, DEFAULT_VARIANT_ID } from "./types";
 
-export function emptyBoard(): Board {
-  return Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => null as Piece | null),
+export function emptyBoard(size: number): Board {
+  return Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => null as Piece | null),
   );
 }
 
-export function initialBoard(): Board {
-  const b = emptyBoard();
-  const back: Piece["type"][] = ["R", "K", "B", "N", "R"];
-  for (let c = 0; c < BOARD_SIZE; c++) {
-    b[0][c] = { type: back[c], color: "w" };
+export function initialBoard(variant: Variant): Board {
+  const size = variant.size;
+  const b = emptyBoard(size);
+  for (let c = 0; c < size; c++) {
+    b[0][c] = { type: variant.backRank[c], color: "w" };
     b[1][c] = { type: "P", color: "w" };
-    b[3][c] = { type: "P", color: "b" };
-    b[4][c] = { type: back[c], color: "b" };
+    b[size - 2][c] = { type: "P", color: "b" };
+    b[size - 1][c] = { type: variant.backRank[c], color: "b" };
   }
   return b;
 }
 
-export function initialState(): GameState {
+export function initialState(variantId: string = DEFAULT_VARIANT_ID): GameState {
+  const variant = VARIANTS[variantId] ?? VARIANTS[DEFAULT_VARIANT_ID];
   return {
-    board: initialBoard(),
+    board: initialBoard(variant),
     turn: "w",
     history: [],
     captured: { w: [], b: [] },
@@ -31,8 +32,13 @@ export function cloneBoard(b: Board): Board {
   return b.map((row) => row.slice());
 }
 
-export function inBounds(s: Square): boolean {
-  return s.r >= 0 && s.r < BOARD_SIZE && s.c >= 0 && s.c < BOARD_SIZE;
+export function boardSize(board: Board): number {
+  return board.length;
+}
+
+export function inBoardBounds(board: Board, s: Square): boolean {
+  const n = board.length;
+  return s.r >= 0 && s.r < n && s.c >= 0 && s.c < n;
 }
 
 export function squareEq(a: Square, b: Square): boolean {
@@ -43,14 +49,15 @@ export function squareKey(s: Square): string {
   return `${s.r},${s.c}`;
 }
 
-export const FILES = ["a", "b", "c", "d", "e"];
+export const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export function squareName(s: Square): string {
   return `${FILES[s.c]}${s.r + 1}`;
 }
 
 export function findKing(board: Board, color: "w" | "b"): Square | null {
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
+  const n = board.length;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
       const p = board[r][c];
       if (p && p.type === "K" && p.color === color) return { r, c };
     }

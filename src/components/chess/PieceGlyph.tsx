@@ -1,9 +1,8 @@
 import type { Piece } from "@/game/types";
 
-// Unicode chess glyphs
 const GLYPHS: Record<string, string> = {
-  wK: "♔", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
-  bK: "♚", bR: "♜", bB: "♝", bN: "♞", bP: "♟",
+  wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
+  bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟",
 };
 
 export function PieceGlyph({ piece, className }: { piece: Piece; className?: string }) {

@@ -1,23 +1,24 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PieceGlyph } from "./PieceGlyph";
-import type { Color } from "@/game/types";
+import type { Color, PromotionPiece } from "@/game/types";
 
 interface Props {
   open: boolean;
   color: Color;
-  onChoose: (p: "R" | "N" | "B") => void;
+  options: PromotionPiece[];
+  onChoose: (p: PromotionPiece) => void;
 }
 
-export function PromotionDialog({ open, color, onChoose }: Props) {
+export function PromotionDialog({ open, color, options, onChoose }: Props) {
   return (
     <Dialog open={open}>
-      <DialogContent className="max-w-xs">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display">Promote pawn</DialogTitle>
         </DialogHeader>
-        <div className="flex justify-center gap-4 py-2">
-          {(["R", "N", "B"] as const).map((t) => (
+        <div className="flex flex-wrap justify-center gap-3 py-2">
+          {options.map((t) => (
             <Button
               key={t}
               variant="outline"
