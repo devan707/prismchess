@@ -184,7 +184,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     immobile: true,
     special: "prism",
     builtinCustom: true,
-    description: "Indestructible 2-cell rainbow board fixture. Cannot move, cannot be captured, and blocks movement like a wall. Any non-royal piece that passes through any of the 8 squares adjacent to the Prism (the rainbow 'aura') is instantly flipped to the opposite color. At the end of EVERY turn, every non-royal piece still standing in the aura is flipped again — so to keep a converted enemy piece you must walk it out of the aura on your next turn. Kings are immune. Place as a 2-cell pair along a row or column.",
+    description: "Indestructible single-square rainbow board fixture. Cannot move, cannot be captured, and blocks movement like a wall. Any non-royal piece that passes through any of the 8 squares adjacent to the Prism (the rainbow 'aura') is instantly flipped to the opposite color. At the end of EVERY turn, every non-royal piece still standing in the aura is flipped again — so to keep a converted enemy piece you must walk it out of the aura on your next turn. Kings are immune.",
   },
 };
 
