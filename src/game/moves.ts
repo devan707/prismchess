@@ -754,6 +754,8 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
           // but here `to` IS the destination — so it's a real capture path.
           if (m.kind === "juggShift" || m.kind === "juggExit") continue;
+          // castling is not an attack on the king's destination square.
+          if (m.kind === "castle") continue;
           return true;
         }
       }
