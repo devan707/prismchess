@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Color, PieceDef, PieceId } from "@/game/types";
 import { PieceById } from "@/components/chess/PieceGlyph";
-import { Button } from "@/components/ui/button";
+import { Eraser } from "lucide-react";
 
 interface Props {
   pieces: PieceDef[];
@@ -9,9 +9,17 @@ interface Props {
   onColorChange: (c: Color) => void;
   reserves: { w: Record<PieceId, number>; b: Record<PieceId, number> };
   onReserveChange: (pieceId: PieceId, color: Color, count: number) => void;
+  /** "erase" = clear-square tool, otherwise a piece id */
+  selectedPiece: PieceId | "erase" | null;
+  onSelectPiece: (id: PieceId | "erase" | null) => void;
+  /** Whether a board square is currently selected — drives the helper hint. */
+  hasSquareSelected: boolean;
 }
 
-export function PiecePalette({ pieces, color, onColorChange, reserves, onReserveChange }: Props) {
+export function PiecePalette({
+  pieces, color, onColorChange, reserves, onReserveChange,
+  selectedPiece, onSelectPiece, hasSquareSelected,
+}: Props) {
   const [hovered, setHovered] = useState<PieceId | null>(null);
   return (
     <div className="rounded-lg border bg-card p-3 space-y-3">
@@ -29,16 +37,29 @@ export function PiecePalette({ pieces, color, onColorChange, reserves, onReserve
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Drag onto the board. Right-click a square to clear. Drop pieces use the reserve count.
+        {hasSquareSelected
+          ? "Square selected — click a piece to place it (or Empty to clear)."
+          : "Click a piece, then click a square. Or drag pieces onto the board."}
       </p>
       <div className="grid grid-cols-4 gap-2">
+        <button
+          type="button"
+          onClick={() => onSelectPiece(selectedPiece === "erase" ? null : "erase")}
+          className={`relative rounded-md border bg-background hover:bg-accent/40 transition flex flex-col items-center justify-center p-2 ${selectedPiece === "erase" ? "ring-2 ring-primary" : ""}`}
+          title="Empty — clears the chosen square"
+        >
+          <Eraser className="h-7 w-7 text-muted-foreground" />
+          <span className="text-[10px] mt-1 text-muted-foreground">Empty</span>
+        </button>
         {pieces.map((def) => {
           const reserveCount = def.defaultReserve != null ? reserves[color][def.id] ?? 0 : null;
+          const isSelected = selectedPiece === def.id;
           return (
             <div
               key={def.id}
-              className="relative rounded-md border bg-background hover:bg-accent/40 transition flex flex-col items-center justify-center p-2 cursor-grab"
+              className={`relative rounded-md border bg-background hover:bg-accent/40 transition flex flex-col items-center justify-center p-2 cursor-pointer ${isSelected ? "ring-2 ring-primary" : ""}`}
               draggable
+              onClick={() => onSelectPiece(isSelected ? null : def.id)}
               onDragStart={(e) => {
                 e.dataTransfer.setData("application/x-piece", `${def.id}|${color}`);
                 e.dataTransfer.effectAllowed = "copy";

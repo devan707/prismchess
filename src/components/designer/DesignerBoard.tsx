@@ -7,9 +7,11 @@ interface Props {
   registry: Record<PieceId, PieceDef>;
   onChange: (placements: Placement[]) => void;
   mirror: boolean;
+  selectedSquare: Square | null;
+  onSelectSquare: (sq: Square | null) => void;
 }
 
-export function DesignerBoard({ design, registry, onChange, mirror }: Props) {
+export function DesignerBoard({ design, registry, onChange, mirror, selectedSquare, onSelectSquare }: Props) {
   const { rows, cols } = design;
   const grid: (Placement | null)[][] = Array.from({ length: rows }, () => Array(cols).fill(null));
   for (const p of design.placements) {
@@ -23,9 +25,8 @@ export function DesignerBoard({ design, registry, onChange, mirror }: Props) {
     if (pieceId) next.push({ r, c, pieceId, color });
     if (mirror && pieceId) {
       const mr = rows - 1 - r;
-      const mc = c;
       const mColor: "w" | "b" = color === "w" ? "b" : "w";
-      next.push({ r: mr, c: mc, pieceId, color: mColor });
+      next.push({ r: mr, c, pieceId, color: mColor });
     }
     onChange(next);
   };
@@ -36,14 +37,17 @@ export function DesignerBoard({ design, registry, onChange, mirror }: Props) {
     if (!data) return;
     const [pieceId, color] = data.split("|") as [PieceId, "w" | "b"];
     writeAt(sq.r, sq.c, pieceId, color);
+    onSelectSquare(null);
   };
 
-  const handleRightClick = (e: React.MouseEvent, sq: Square) => {
-    e.preventDefault();
-    writeAt(sq.r, sq.c, null, "w");
+  const handleClick = (sq: Square) => {
+    if (selectedSquare && selectedSquare.r === sq.r && selectedSquare.c === sq.c) {
+      onSelectSquare(null);
+    } else {
+      onSelectSquare(sq);
+    }
   };
 
-  // Display: render bottom-to-top so row 0 is at the bottom (white side).
   const rowOrder = Array.from({ length: rows }, (_, i) => rows - 1 - i);
   const colOrder = Array.from({ length: cols }, (_, i) => i);
 
@@ -61,29 +65,27 @@ export function DesignerBoard({ design, registry, onChange, mirror }: Props) {
           const light = (r + c) % 2 === 1;
           const placement = grid[r][c];
           const def = placement ? (registry[placement.pieceId] ?? PIECE_LIBRARY[placement.pieceId]) : undefined;
+          const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
           return (
             <div
               key={`${r}-${c}`}
-              className="relative flex items-center justify-center select-none"
+              className={`relative flex items-center justify-center select-none cursor-pointer ${isSelected ? "ring-2 ring-inset ring-primary z-10" : ""}`}
               style={{ background: light ? "var(--color-board-light)" : "var(--color-board-dark)" }}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, { r, c })}
-              onContextMenu={(e) => handleRightClick(e, { r, c })}
+              onClick={() => handleClick({ r, c })}
             >
               {placement && def && (
                 <span
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData("application/x-piece", `${placement.pieceId}|${placement.color}`);
-                    // also remove from current square on drop elsewhere — we handle this by
-                    // letting the user drag away to a different square (which overwrites and removes here via writeAt).
-                    // For dragging OFF the board entirely, we add a dragend handler that clears this square if the drop target wasn't a square:
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   onDragEnd={(e) => {
                     if (e.dataTransfer.dropEffect === "none") writeAt(r, c, null, "w");
                   }}
-                  className="flex items-center justify-center w-full h-full cursor-grab"
+                  className="flex items-center justify-center w-full h-full cursor-grab pointer-events-auto"
                 >
                   <PieceGlyph
                     piece={{ id: placement.pieceId, color: placement.color }}

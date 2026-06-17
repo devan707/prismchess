@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { buildDefaultDesign, PRESETS, saveDesign, validateDesign } from "@/game/design";
 import { saveSavedGame } from "@/game/library";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
-import type { Color, Design, PieceId, Placement } from "@/game/types";
+import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
 import { ArrowLeft, Play, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +29,8 @@ function Sandbox() {
   const [paletteColor, setPaletteColor] = useState<Color>("w");
   const [mirror, setMirror] = useState(true);
   const [saveName, setSaveName] = useState("");
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<PieceId | "erase" | null>(null);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
@@ -40,12 +42,14 @@ function Sandbox() {
 
   const setSize = (rows: number, cols: number) => {
     setDesign((d) => ({ ...d, rows, cols, placements: d.placements.filter((p) => p.r < rows && p.c < cols) }));
+    setSelectedSquare(null);
   };
 
   const applyPreset = (id: string) => {
     const preset = PRESETS.find((p) => p.id === id);
     if (!preset) return;
     setDesign((d) => ({ ...d, placements: preset.build(d.rows, d.cols) }));
+    setSelectedSquare(null);
   };
 
   const setPlacements = (placements: Placement[]) => setDesign((d) => ({ ...d, placements }));
@@ -55,6 +59,47 @@ function Sandbox() {
       ...d,
       reserves: { ...d.reserves, [color]: { ...d.reserves[color], [pieceId]: count } },
     }));
+  };
+
+  /** Write a piece (or empty) at a square, honoring mirror. */
+  const writeAt = (sq: Square, pieceId: PieceId | null, color: Color) => {
+    const { rows } = design;
+    const filtered = design.placements.filter((p) => !(p.r === sq.r && p.c === sq.c));
+    const mirrored = mirror ? filtered.filter((p) => !(p.r === rows - 1 - sq.r && p.c === sq.c)) : filtered;
+    const next: Placement[] = mirrored;
+    if (pieceId) next.push({ r: sq.r, c: sq.c, pieceId, color });
+    if (mirror && pieceId) {
+      next.push({ r: rows - 1 - sq.r, c: sq.c, pieceId, color: color === "w" ? "b" : "w" });
+    }
+    setPlacements(next);
+  };
+
+  /** Click-to-edit orchestration */
+  const handleSelectSquare = (sq: Square | null) => {
+    if (!sq) { setSelectedSquare(null); return; }
+    if (selectedPiece) {
+      writeAt(sq, selectedPiece === "erase" ? null : selectedPiece, paletteColor);
+      setSelectedPiece(null);
+      setSelectedSquare(null);
+      return;
+    }
+    setSelectedSquare(sq);
+  };
+
+  const handleSelectPiece = (id: PieceId | "erase" | null) => {
+    if (selectedSquare && id) {
+      writeAt(selectedSquare, id === "erase" ? null : id, paletteColor);
+      setSelectedSquare(null);
+      setSelectedPiece(null);
+      return;
+    }
+    setSelectedPiece(id);
+  };
+
+  const clearSelectedSquare = () => {
+    if (!selectedSquare) return;
+    writeAt(selectedSquare, null, paletteColor);
+    setSelectedSquare(null);
   };
 
   const validationError = validateDesign(design, registry);
@@ -83,9 +128,7 @@ function Sandbox() {
             </Button>
           </Link>
           <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">
-              Sandbox
-            </h1>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Sandbox</h1>
             <p className="text-xs text-muted-foreground">Design a board, save it, then play it.</p>
           </div>
         </div>
@@ -121,7 +164,23 @@ function Sandbox() {
               Mirror to Black
             </label>
           </div>
-          <DesignerBoard design={design} registry={registry} onChange={setPlacements} mirror={mirror} />
+          <DesignerBoard
+            design={design}
+            registry={registry}
+            onChange={setPlacements}
+            mirror={mirror}
+            selectedSquare={selectedSquare}
+            onSelectSquare={handleSelectSquare}
+          />
+          {selectedSquare && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">
+                Square selected — pick a piece on the right, or
+              </span>
+              <Button size="sm" variant="outline" onClick={clearSelectedSquare}>Clear square</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedSquare(null)}>Cancel</Button>
+            </div>
+          )}
           {validationError && (
             <div className="text-xs text-destructive flex items-center gap-1">
               <Sparkles className="h-3 w-3" /> {validationError}
@@ -136,6 +195,9 @@ function Sandbox() {
             onColorChange={setPaletteColor}
             reserves={design.reserves}
             onReserveChange={setReserve}
+            selectedPiece={selectedPiece}
+            onSelectPiece={handleSelectPiece}
+            hasSquareSelected={!!selectedSquare}
           />
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
