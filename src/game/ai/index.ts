@@ -1,9 +1,44 @@
-import type { Difficulty, GameState, Move } from "../types";
-import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
+import type { Difficulty, GameState, Move, Square } from "../types";
+import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 import { evaluate, valueFor } from "./evaluate";
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * Cheap static-exchange check for the destination square of a move: after
+ * playing `m`, is our piece sitting on a square the opponent can recapture
+ * for less material than it costs us? If so, return the (positive) material
+ * we expect to lose. This is what stops the AI from grabbing a defended pawn
+ * with its Wizard.
+ */
+function recaptureLoss(state: GameState, m: Move): number {
+  // Only the most common case matters: a normal move/capture that leaves a
+  // single one of our pieces on m.to. Skip special multi-square moves.
+  if (m.kind === "juggCharge" || m.kind === "juggExit" || m.kind === "juggShift") return 0;
+  if (m.kind === "resurrect" || m.kind === "portalSwap" || m.kind === "drop") return 0;
+  const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
+  const movingValue = valueFor(movingId, state.registry[movingId]);
+  const next = applyMoveToState(state, m);
+  const us = m.piece.color;
+  const opp = us === "w" ? "b" : "w";
+  const sq: Square = m.to;
+  // Dragon "flight" lands on an empty square but doesn't actually capture —
+  // landing under attack is still bad. For every other move, attacked = bad.
+  const attacked = isSquareAttacked(next, sq, opp);
+  if (!attacked) return 0;
+  // Defended? Temporarily flip the resident piece so friendly recapturers
+  // appear as attackers of that square.
+  const board = next.board;
+  const resident = board[sq.r][sq.c];
+  if (!resident) return 0;
+  board[sq.r][sq.c] = { id: resident.id, color: opp };
+  const defended = isSquareAttacked(next, sq, us);
+  board[sq.r][sq.c] = resident;
+  // Captured value already credited in moveScore; here we subtract the
+  // expected loss of our own piece on the recapture.
+  return defended ? movingValue * 0.25 : movingValue * 0.9;
 }
 
 function moveScore(state: GameState, m: Move): number {
@@ -15,26 +50,33 @@ function moveScore(state: GameState, m: Move): number {
   if (m.juggTrampled) {
     for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]);
   }
-  if (m.kind === "juggExit") s -= 900; // losing both J squares is costly; only do it for tactical reasons
-  if (m.kind === "juggCharge") s += 20; // tiny bias toward forward progress
+  if (m.kind === "juggExit") s -= 900;
+  if (m.kind === "juggCharge") s += 20;
+  s -= recaptureLoss(state, m);
   return s;
 }
 
 function easyMove(state: GameState): Move | null {
   const moves = allLegalMoves(state);
   if (moves.length === 0) return null;
-  const captures = moves.filter((m) => m.captured);
-  if (captures.length > 0) {
-    let best = captures[0];
-    let bestV = -1;
-    for (const m of captures) {
-      const v = moveScore(state, m);
-      if (v > bestV) { bestV = v; best = m; }
-    }
-    return best;
+  // Score every move (captures AND quiet moves) so the AI weighs material
+  // gained against material it would hang. Without this, even an "easy" bot
+  // will happily sac a Wizard for a defended pawn.
+  let best = moves[0];
+  let bestV = -Infinity;
+  for (const m of moves) {
+    const v = moveScore(state, m);
+    if (v > bestV) { bestV = v; best = m; }
   }
-  return pickRandom(moves);
+  // If the best "safe" option is a quiet move (score 0) and there are
+  // several, sprinkle some variety so it doesn't look robotic.
+  if (bestV <= 0) {
+    const ties = moves.filter((m) => moveScore(state, m) === bestV);
+    return pickRandom(ties);
+  }
+  return best;
 }
+
 
 function orderMoves(state: GameState, moves: Move[]): Move[] {
   return moves.slice().sort((a, b) => moveScore(state, b) - moveScore(state, a));
