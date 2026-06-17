@@ -89,6 +89,16 @@ function Home() {
               <Hammer className="h-4 w-4 mr-2" /> Sandbox mode
             </Button>
           </Link>
+          <Link to="/friends">
+            <Button size="lg" variant="outline">
+              <Users className="h-4 w-4 mr-2" /> Friends
+            </Button>
+          </Link>
+          <Link to="/messages">
+            <Button size="lg" variant="outline">
+              <Mail className="h-4 w-4 mr-2" /> Messages
+            </Button>
+          </Link>
           <Link to="/forum">
             <Button size="lg" variant="outline">
               <MessagesSquare className="h-4 w-4 mr-2" /> Community
