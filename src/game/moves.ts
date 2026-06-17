@@ -256,7 +256,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const to = { r: from.r + dr, c: from.c + dc };
         if (!inBoardBounds(board, to)) continue;
         const t = board[to.r][to.c];
-        if (!t || t.color === piece.color || isBarricade(t, state.registry)) continue;
+        if (!t || t.color === piece.color || isBarricade(t, state.registry) || isFixture(t, state.registry)) continue;
         const dist = Math.max(Math.abs(dr), Math.abs(dc));
         if (dist === 2) {
           const midR = from.r + dr / 2;
