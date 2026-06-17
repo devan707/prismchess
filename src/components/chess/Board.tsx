@@ -130,16 +130,59 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"
                   style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 2px var(--color-board-legal)" }} />
               )}
-              {piece && (
-                <div
-                  draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
-                  onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
-                  onDragEnd={() => setDragFrom(null)}
-                  className="relative z-10 flex items-center justify-center w-full h-full"
-                >
-                  <PieceGlyph piece={piece} def={def} className="text-[clamp(1.8rem,8vw,4rem)] drop-shadow" />
-                </div>
-              )}
+              {piece && (() => {
+                const isJugg = state.registry[piece.id]?.special === "juggernaut";
+                if (isJugg) {
+                  // Find partner (perpendicular to facing). Wide boards face along
+                  // columns → partners differ by row; otherwise partners differ by column.
+                  const wide = cols > rows;
+                  const perpOffsets = wide
+                    ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }]
+                    : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+                  let partner: Square | null = null;
+                  for (const o of perpOffsets) {
+                    const nr = r + o.dr, nc = c + o.dc;
+                    if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+                    const t = state.board[nr][nc];
+                    if (t && t.color === piece.color && state.registry[t.id]?.special === "juggernaut") {
+                      partner = { r: nr, c: nc };
+                      break;
+                    }
+                  }
+                  // Render the unified 2-cell glyph only on the "lead" half (lower index
+                  // on the perpendicular axis); the trailing half stays visually empty
+                  // but still clickable/highlightable as its own square.
+                  if (partner) {
+                    const isLead = wide ? r < partner.r : c < partner.c;
+                    if (!isLead) return null;
+                    const orientation = wide ? "vertical" : "horizontal";
+                    const facing: "up" | "down" | "left" | "right" = wide
+                      ? (piece.color === "w" ? "right" : "left")
+                      : (piece.color === "w" ? "up" : "down");
+                    return (
+                      <div
+                        draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
+                        onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
+                        onDragEnd={() => setDragFrom(null)}
+                        className="relative z-10 w-full h-full"
+                      >
+                        <JuggernautGlyph color={piece.color} orientation={orientation} facing={facing} />
+                      </div>
+                    );
+                  }
+                  // Orphan juggernaut (no partner) — fall through to normal glyph.
+                }
+                return (
+                  <div
+                    draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
+                    onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
+                    onDragEnd={() => setDragFrom(null)}
+                    className="relative z-10 flex items-center justify-center w-full h-full"
+                  >
+                    <PieceGlyph piece={piece} def={def} className="text-[clamp(1.8rem,8vw,4rem)] drop-shadow" />
+                  </div>
+                );
+              })()}
             </div>
           );
         }),
