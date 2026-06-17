@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { loadDesign, loadCurrentMeta, type CurrentGameMeta } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
-import type { Color, Design, Difficulty, Square } from "@/game/types";
+import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
+import { PieceById } from "@/components/chess/PieceGlyph";
+import { MoveDiagram } from "@/components/chess/MoveDiagram";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { recordSoloGame } from "@/lib/history.functions";
@@ -467,22 +469,30 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         {tipsOn && (
           <div
             className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card px-3 py-2 text-sm shadow-sm overflow-y-auto"
-            style={{ height: "9rem" }}
+            style={{ minHeight: "9rem", maxHeight: "20rem" }}
           >
             {selectedDef && selectedPiece ? (
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-display font-semibold text-foreground">
-                    {selectedPiece.color === "w" ? "White" : "Black"} {selectedDef.name}
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 flex flex-col items-center gap-2">
+                  <div className="h-10 w-10 rounded-md bg-background border flex items-center justify-center">
+                    <PieceById id={selectedPiece.id} color={selectedPiece.color} def={selectedDef} className="h-7 w-7" />
                   </div>
-                  <p className="text-xs text-muted-foreground leading-snug mt-1">
+                  <MoveDiagram id={selectedPiece.id as PieceId} color={selectedPiece.color} maxSize={130} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <div className="font-display font-semibold text-foreground text-sm">
+                      {selectedPiece.color === "w" ? "White" : "Black"} {selectedDef.name}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-snug mt-1.5">
                     {selectedDef.description}
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic py-8">
                 Click any piece to see how it moves.
               </div>
             )}
