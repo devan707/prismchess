@@ -39,6 +39,9 @@ export const createChallenge = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const budget = TC_BUDGET_MS[data.timeControl];
+    // Open challenges auto-expire after 15 min of inactivity so unjoined invites
+    // don't pile up if the host closes the tab without cancelling.
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     const { data: row, error } = await context.supabase
       .from("matches")
       .insert({
@@ -52,6 +55,7 @@ export const createChallenge = createServerFn({ method: "POST" })
         white_time_ms: budget,
         black_time_ms: budget,
         turn: "w",
+        expires_at: expiresAt,
       })
       .select("id, share_token")
       .single();
@@ -204,7 +208,7 @@ export const joinMatch = createServerFn({ method: "POST" })
     const filter = data.matchId ? { id: data.matchId } : { share_token: data.token! };
     const { data: match, error: fErr } = await context.supabase
       .from("matches")
-      .select("id, host_id, guest_id, status")
+      .select("id, host_id, guest_id, status, design_name")
       .match(filter)
       .maybeSingle();
     if (fErr) throw new Error(fErr.message);
@@ -224,10 +228,21 @@ export const joinMatch = createServerFn({ method: "POST" })
         status: "active",
         started_at: now,
         last_clock_update_at: now,
+        expires_at: null,
       })
       .eq("id", match.id)
       .eq("status", "open");
     if (error) throw new Error(error.message);
+
+    // Notify the host that their challenge was accepted.
+    const { sendPushBackground } = await import("./push.server");
+    sendPushBackground(match.host_id, {
+      title: "Challenge accepted",
+      body: `Someone joined your "${match.design_name}" challenge — it's your move if you're white.`,
+      url: `/multiplayer/${match.id}`,
+      tag: `match:${match.id}:accept`,
+    });
+
     return { id: match.id };
   });
 
@@ -323,6 +338,19 @@ export const submitMove = createServerFn({ method: "POST" })
       time_left_ms: moverNewTime,
     });
     if (iErr) throw new Error(iErr.message);
+
+    // Notify the opponent that it's their turn.
+    const opponentId =
+      context.userId === match.host_id ? match.guest_id : match.host_id;
+    if (opponentId) {
+      const { sendPushBackground } = await import("./push.server");
+      sendPushBackground(opponentId, {
+        title: "Your move",
+        body: "Your opponent just played — your turn.",
+        url: `/multiplayer/${data.matchId}`,
+        tag: `match:${data.matchId}:turn`,
+      });
+    }
 
     return { ok: true };
   });
