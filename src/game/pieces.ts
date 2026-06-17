@@ -95,10 +95,10 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     name: "Archer",
     glyph: "🏹",
     emoji: true,
-    movement: { leaps: KING_OFFSETS },
+    movement: { leaps: ARCHER_MOVE_OFFSETS },
     capture: { leaps: ARCHER_ATTACK_OFFSETS },
     builtinCustom: true,
-    description: "Fragile ranged specialist. MOVES one square in any direction (orthogonal or diagonal) onto an empty square only — cannot capture by moving. ATTACKS by firing along diagonals at exactly 2 or 3 squares, arcing over every piece in between (friend or foe). A successful attack captures the target and the Archer occupies that square. Cannot attack adjacent squares, orthogonals, or with knight-jumps.",
+    description: "Fragile ranged specialist. MOVES one square orthogonally OR jumps 1, 2, or 3 squares diagonally to an empty square (leaping over any pieces in between) — cannot capture by moving. ATTACKS by firing along diagonals at exactly 2 or 3 squares, arcing over every piece in between (friend or foe). A successful attack captures the target and the Archer occupies that square. Cannot attack adjacent squares, orthogonals, or with knight-jumps.",
   },
   D: {
     id: "D",
