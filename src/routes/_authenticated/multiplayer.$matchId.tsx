@@ -63,13 +63,13 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
     white_time_ms: Number(bootstrap.match.white_time_ms),
     black_time_ms: Number(bootstrap.match.black_time_ms),
     last_clock_update_at: bootstrap.match.last_clock_update_at,
-    result: bootstrap.match.result,
+    result: bootstrap.match.result as MatchSnapshot["result"],
     result_reason: bootstrap.match.result_reason,
     time_control: bootstrap.match.time_control as MatchSnapshot["time_control"],
-    design: bootstrap.match.design,
+    design: bootstrap.match.design as unknown as MatchSnapshot["design"],
     design_name: bootstrap.match.design_name,
   };
-  const initialMoves = (bootstrap.moves ?? []).map((m: { move: Move }) => m.move);
+  const initialMoves = (bootstrap.moves ?? []).map((m) => m.move as unknown as Move);
 
   return (
     <ActiveGameView
@@ -257,11 +257,11 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, hostName, g
 
       {pendingPromotion && (
         <PromotionDialog
+          open
           options={promotionOptions}
           registry={state.registry}
           color={myColor}
-          onPick={confirmPromotion}
-          onCancel={cancelPromotion}
+          onChoose={(p) => { confirmPromotion(p); cancelPromotion(); }}
         />
       )}
     </div>

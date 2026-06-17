@@ -43,7 +43,7 @@ export const createChallenge = createServerFn({ method: "POST" })
       .from("matches")
       .insert({
         host_id: context.userId,
-        design: data.design as unknown as Record<string, unknown>,
+        design: data.design as never,
         design_name: data.designName,
         time_control: data.timeControl,
         host_color: data.hostColor,
@@ -312,13 +312,13 @@ export const submitMove = createServerFn({ method: "POST" })
       black_time_ms: meColor === "b" ? moverNewTime : match.black_time_ms,
       last_clock_update_at: new Date(now).toISOString(),
     };
-    const { error: uErr } = await context.supabase.from("matches").update(update).eq("id", data.matchId);
+    const { error: uErr } = await context.supabase.from("matches").update(update as never).eq("id", data.matchId);
     if (uErr) throw new Error(uErr.message);
 
     const { error: iErr } = await context.supabase.from("match_moves").insert({
       match_id: data.matchId,
       ply: data.ply,
-      move: data.move as Record<string, unknown>,
+      move: data.move as never,
       actor_id: context.userId,
       time_left_ms: moverNewTime,
     });
