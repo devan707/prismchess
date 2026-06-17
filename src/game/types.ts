@@ -76,7 +76,8 @@ export interface PieceDef {
 export type MoveKind =
   | "normal" | "double" | "ep" | "drop"
   | "dragonAttack" | "portalSwap" | "resurrect" | "necroRaise"
-  | "juggShift" | "juggCharge" | "juggExit";
+  | "juggShift" | "juggCharge" | "juggExit"
+  | "castle";
 
 export interface Move {
   /** Null only for drops. */
@@ -100,6 +101,9 @@ export interface Move {
   shapeshiftTo?: PieceId;
   /** Juggernaut: enemy pieces trampled during a charge. */
   juggTrampled?: Piece[];
+  /** Castling: rook source/destination squares. */
+  rookFrom?: Square;
+  rookTo?: Square;
 }
 
 export type Reserves = Record<PieceId, number>;
