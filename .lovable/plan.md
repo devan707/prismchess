@@ -1,161 +1,74 @@
+## 1. Rebrand to Kingdom Chess
 
-# Design Your Own Chess — Rebuild Plan
+Palette: emerald `#0B3D2E`, gold `#D4AF37`, parchment `#F5E9C8`, ink `#1A1A1A`. Already loosely fits the current emerald/gold theme — tighten tokens in `src/styles.css` so accents are gold and primary is emerald.
 
-The app stops being "5×5/6×6 variants" and becomes a sandbox where every game starts in a **Designer** screen. You pick a board, drop pieces, optionally invent your own piece, then hit Play.
+- Update `<title>`, meta description, OG/Twitter tags in `src/routes/__root.tsx` and per-route `head()` to "Kingdom Chess".
+- Replace site name everywhere it appears in the UI (main menu, headers, footer).
+- Generate three brand assets with `imagegen`:
+  - `src/assets/logo.png` — emerald shield with a stylized gold king crown + "Kingdom Chess" wordmark (premium, transparent bg).
+  - `public/favicon.ico`-equivalent (generate `src/assets/favicon-512.png`, wire as PNG icon in head + manifest).
+  - `src/assets/og-banner.jpg` — 1200×630 social banner (premium).
+- Wire the logo into the main menu hero on `src/routes/index.tsx`.
 
----
+## 2. Enable Lovable Cloud + auth
 
-## 1. New top-level flow
+Enable Lovable Cloud (Supabase). Configure:
+- **Email + password** sign-in.
+- **Google** OAuth via Lovable broker (`lovable.auth.signInWithOAuth("google", …)`), then `supabase--configure_social_auth` for Google.
 
-```text
-Home (Designer)  ──▶  Play  ──▶  Result
-       ▲                            │
-       └──────── New game ──────────┘
-```
+Schema (migration):
+- `profiles` table: `id uuid PK references auth.users(id) on delete cascade`, `username text unique not null`, `display_name text`, `created_at`. Trigger on `auth.users` insert auto-creates a row with a placeholder username derived from email; user is prompted to set it on first login. RLS: anyone signed-in can read; only owner can update. GRANTs per template rules.
+- `user_roles` + `app_role` enum + `has_role()` security-definer per template (used later for forum moderation; seed nothing).
 
-- `/` — **Designer** (board size + piece placement + custom piece editor)
-- `/play` — the actual game (board, history, AI, promotion, etc.)
-- "Save as preset" stores the setup in `localStorage` so users can reuse their creations.
+New routes:
+- `src/routes/auth.tsx` — public; tabs for Sign in / Sign up; Google button.
+- `src/routes/_authenticated/profile.tsx` — edit display name + username.
+- Header avatar/menu in main shell with Sign in / Sign out.
 
----
+## 3. Basic forum
 
-## 2. Board size picker
+Schema (one migration, with GRANTs + RLS):
+- `forum_topics`: `id`, `author_id → auth.users`, `title`, `body`, `created_at`, `reply_count int default 0`, `like_count int default 0`.
+- `forum_replies`: `id`, `topic_id → forum_topics on delete cascade`, `author_id`, `body`, `created_at`, `like_count int default 0`.
+- `forum_likes`: `id`, `user_id`, `target_type text check in ('topic','reply')`, `target_id uuid`, unique `(user_id, target_type, target_id)`.
+- Triggers to keep `like_count` and `reply_count` in sync.
 
-Two side-by-side controls, both editing the same state:
+RLS:
+- Topics/replies: `SELECT` to `authenticated` (forum is sign-in-gated v1 — simpler, prevents spam); `INSERT` where `author_id = auth.uid()`; `UPDATE/DELETE` by author or admin.
+- Likes: `SELECT/INSERT/DELETE` scoped to `auth.uid()`.
 
-- **Quick presets**: chips for 5×5, 6×6, 8×8, 10×10, plus "Rectangular" examples (3×12, 5×8).
-- **Custom**: two number inputs (Rows × Cols), each clamped to **3–12**. Live-updates the preview board.
+Routes (all under `_authenticated/`):
+- `_authenticated/forum.tsx` — list topics, "New topic" button, like buttons, sort by recent.
+- `_authenticated/forum.$topicId.tsx` — topic detail + replies + reply composer.
+- `_authenticated/forum.new.tsx` — new topic form.
 
-Constraints enforced before "Play":
-- Exactly one King per side (a King's Hand does **not** count as a King).
-- Both sides have at least one legal move.
-- No pawn on its own promotion rank.
+Server fns in `src/lib/forum.functions.ts` (use `requireSupabaseAuth`): `listTopics`, `getTopic`, `createTopic`, `createReply`, `toggleLike`. Reads via TanStack Query (`ensureQueryData` in loader + `useSuspenseQuery` in component).
 
----
+Main menu adds a "Community" tile linking to `/forum` (redirects unauthenticated visitors to `/auth`).
 
-## 3. Piece placement
+## 4. Installable PWA (manifest only)
 
-**Preset → then customize** flow:
+Per the PWA skill — installable scope only, no service worker.
 
-1. User picks a **starting preset** (auto-scaled to current board):
-   - *Empty* (drag everything yourself)
-   - *Classic-ish*: pawns on rank 2 / n-1, back rank = `R N B [extras] K [extras] B N R` trimmed/padded to width.
-   - *All pawns*: pawns row 2 / n-1, lone King centered on back rank.
-   - *Mirror standard chess* (only offered when width ≥ 8).
-   - *Battle of the Knights* (knights filling back rank, King centered).
-2. After applying a preset, the board enters **edit mode**:
-   - Palette on the side shows every available piece (standard + custom + user-defined) with counts.
-   - **Drag** a piece from the palette onto any square (replaces what's there).
-   - **Drag** a piece off the board to remove it.
-   - **Right-click** a square to clear it.
-   - "Mirror to Black" toggle: edits on White's half are auto-reflected on Black's half.
+- Add `public/manifest.webmanifest` with name "Kingdom Chess", short name "Kingdom", emerald `theme_color`/`background_color`, `display: "standalone"`, `start_url: "/"`, icon entries (192, 512, maskable 512).
+- Generate icons from the logo via `imagegen` into `public/icons/`.
+- Add `<link rel="manifest">`, `theme-color`, `apple-touch-icon`, and updated favicons to `__root.tsx` head.
+- Do NOT add `vite-plugin-pwa`, service workers, or registration code.
 
----
+## 5. SEO + share metadata
 
-## 4. Built-in custom pieces
+- Per-route `head()` already on `index`, `play`, `sandbox`. Update all three plus add `og:image` (banner asset) only on `index` (root keeps it off per leaf-only rule).
+- Title pattern: `"{Page} — Kingdom Chess"`.
 
-| Piece          | Glyph | Movement                                                                                                  | Capture                                          | Notes                                                                                       |
-| -------------- | ----- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| King's Hand    | ♔̃    | Same as King (1 step any direction). **May move into or through check.**                                  | Normal capture.                                  | Capturing it does **not** end the game. Max 1 per side. Cannot be a promotion target.       |
-| Barricade      | ▦     | **Off-board reserve.** On your turn you may instead **drop** a barricade onto any empty square.           | Cannot be captured; blocks all movement through. | Each side starts with **2** in reserve (configurable in Designer, 0–4). Drop = full turn.   |
-| Archer         | ⤲     | Jumps to a square exactly **2 away** orthogonally or diagonally (8 targets), ignoring pieces in between.  | Captures only on the landing square.             | Cannot land on a friendly piece.                                                            |
-| Dragon         | 🐉    | On your turn choose **one**: (a) **teleport** to any empty square, or (b) **attack** one adjacent enemy in place (Dragon stays put). | (b) removes the enemy piece. | Cannot teleport onto an occupied square.                                                    |
+## Out of scope (v1)
 
-All four ship as **standard options** in the palette and the AI knows them.
+- Offline play (would require service worker — user picked installable-only).
+- Forum moderation UI (admin role exists in schema, no UI yet).
+- Avatars/file uploads.
+- Password reset page (can add in a follow-up if needed; not requested).
 
----
+## Files touched (approximate)
 
-## 5. User-defined custom pieces
+Created: `src/assets/logo.png`, `src/assets/og-banner.jpg`, `public/manifest.webmanifest`, `public/icons/*`, `src/routes/auth.tsx`, `src/routes/_authenticated/route.tsx` (integration-managed), `src/routes/_authenticated/profile.tsx`, `src/routes/_authenticated/forum.tsx`, `src/routes/_authenticated/forum.$topicId.tsx`, `src/routes/_authenticated/forum.new.tsx`, `src/lib/forum.functions.ts`, `src/lib/profile.functions.ts`, `src/components/UserMenu.tsx`, migrations for profiles/roles/forum.
 
-A "**+ Create a piece**" button opens a modal:
-
-- **Name** (free text)
-- **Icon** — pick from a curated glyph set (chess symbols, unicode shapes, emoji), with a color tint
-- **Movement pattern** — choose one or combine:
-  - Slider directions: rook-lines / bishop-lines / both, with **max range** (1–N or unlimited)
-  - Leap offsets: presets (knight, archer, dabbaba, alfil) + a small grid where the user clicks offset squares relative to the piece
-  - "Can jump over pieces" toggle (affects sliders only — leaps always jump)
-- **Capture pattern** — "Same as movement" (default) OR a separate set of offsets/sliders (lets you build pawn-like asymmetry)
-- **Entry rule** — when does this piece appear?
-  - *Placed at setup* (default — appears in Designer palette)
-  - *Promotion target* (appears in promotion dialog; choose which pieces promote into it — default: pawns)
-  - *Reserve drop* (like Barricade — set starting count 0–5)
-- **Royal?** — toggle. If on, the piece is treated like a King for check/checkmate.
-
-Custom pieces persist in `localStorage` and appear in the palette and promotion dialog.
-
----
-
-## 6. Engine changes
-
-`src/game/types.ts`
-- `Board` becomes `(Piece|null)[][]` with independent `rows` × `cols`.
-- New `PieceDef` registry: each piece (built-in or user) has an id, glyph, movement spec, capture spec, royal flag, special kind (`none | kingsHand | barricade | dragon | archer | reserve-drop`).
-- `GameState` gains: `reserves: { w: Record<PieceId, number>; b: Record<PieceId, number> }`, `dimensions: { rows, cols }`, `pieceRegistry`.
-- `Move` gains `kind: "drop" | "dragon-attack" | ...` and a `dropPiece?: PieceId`.
-
-`src/game/moves.ts`
-- Move generation is now data-driven from each piece's `MovementSpec` (sliders + leaps + jump flag). Standard pieces are expressed in the same format so there's one code path.
-- King's Hand: special-cased to skip the "filter moves that leave own king in check" only for itself, and to allow moving through attacked squares.
-- Barricade: never generates moves; a "drop reserve" move generator emits a drop-move per empty square if `reserves[color][barricade] > 0`.
-- Dragon: emits teleport moves (every empty square) **and** adjacent-attack moves (target stays empty, enemy removed but Dragon doesn't move). The two kinds are tagged so the UI can label them.
-- Archer: leap-only with `canJump: true`, captures on landing.
-
-`src/game/rules.ts`
-- Game ends when **all royal pieces** of a color are captured (supports King's Hand correctly — only the real King counts).
-- Stalemate uses the same legal-move generator, now including drops.
-- Castling/en passant remain, gated on classic Rook+King back-rank pattern (auto-detected from placement).
-
-`src/game/ai/*`
-- Evaluation table extended; defaults: King 20000, Queen 900, Rook 500, Bishop 330, Knight 320, Pawn 100, Archer 350, Dragon 850, King's Hand 250, Barricade 50 (positional).
-- For user-defined pieces, value is **computed** from movement spec: `sum(reachable squares from center on empty board) × weight + (royal ? 5000 : 0)`.
-- Move-ordering picks up drops and Dragon attacks naturally.
-
----
-
-## 7. UI components
-
-New:
-- `src/components/designer/BoardSizePicker.tsx`
-- `src/components/designer/PresetPicker.tsx`
-- `src/components/designer/PiecePalette.tsx` (drag source)
-- `src/components/designer/DesignerBoard.tsx` (drop target, reuses cell rendering)
-- `src/components/designer/CustomPieceModal.tsx`
-- `src/components/designer/ReserveCounters.tsx` (barricade/drop counts during play)
-
-Updated:
-- `Board.tsx` — supports non-square dimensions, renders reserves on the side, shows Dragon's two action choices on click, allows clicking an empty square when a reserve drop is selected.
-- `PromotionDialog.tsx` — pulls options from `pieceRegistry` filtered by "promotion target" flag.
-- `PieceGlyph.tsx` — looks up glyph + color tint from registry instead of hardcoded map.
-- `MoveHistory.tsx` — adds notation for drops (`B@d4`), Dragon attacks (`Dxe5*`), teleports (`D~e5`).
-
-Routes:
-- `src/routes/index.tsx` → Designer.
-- `src/routes/play.tsx` → Game (receives the design via router state / `localStorage` slot).
-
----
-
-## 8. Out of scope (will revisit)
-
-- Online multiplayer.
-- Animated piece icon designer (we use static glyphs/emoji, not drawn art).
-- Saving/sharing designs by URL.
-- Balance tester rewrite for arbitrary registries (kept for built-in pieces only in v1).
-
----
-
-## 9. Build order (single PR, but staged commits)
-
-1. Types + registry + non-square board plumbing.
-2. Data-driven move generator; port standard pieces.
-3. Designer page (size picker, presets, drag-and-drop palette).
-4. Built-in custom pieces (King's Hand, Barricade, Archer, Dragon) end-to-end.
-5. User-defined custom piece modal + registry persistence.
-6. AI updates + evaluation auto-scoring.
-7. Polish: notation, promotion dialog, reserves UI, validation gates before Play.
-
-Estimated: large change. I'll ship it in one go and verify with a typecheck + a play-through of a Classic 8×8 and a custom 4×10 with a Dragon + 2 Barricades to make sure both standard and custom paths work.
-
----
-
-Ready to build on your "go". If you want me to drop any of the new pieces or trim phase 7 to keep it smaller, say the word before I start.
+Edited: `src/routes/__root.tsx` (head + manifest + auth listener + user menu), `src/routes/index.tsx` (rebrand + community tile), `src/routes/play.tsx`, `src/routes/sandbox.tsx` (titles), `src/styles.css` (refine token palette toward emerald/gold).

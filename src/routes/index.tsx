@@ -4,16 +4,22 @@ import { Button } from "@/components/ui/button";
 import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
 import { saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
-import { Hammer, Play, Trash2, Sparkles } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
+import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Design Your Own Chess — Pick a Game" },
-      { name: "description", content: "Choose a built-in chess variant or one of your saved custom games, or enter the sandbox to invent your own." },
-      { property: "og:title", content: "Design Your Own Chess" },
-      { property: "og:description", content: "A chess sandbox: pick a game and play, or design your own boards and pieces." },
+      { title: "Kingdom Chess — Design your own variant" },
+      { name: "description", content: "Kingdom Chess: pick a built-in variant or design your own boards and pieces, play vs AI, and discuss strategy." },
+      { property: "og:title", content: "Kingdom Chess" },
+      { property: "og:description", content: "Design your own chess variant. Rule the board." },
+      { property: "og:image", content: "/og-banner.jpg" },
+      { property: "og:url", content: "https://mini-chess-buddy.lovable.app/" },
+      { name: "twitter:image", content: "/og-banner.jpg" },
     ],
+    links: [{ rel: "canonical", href: "https://mini-chess-buddy.lovable.app/" }],
   }),
   component: Home,
 });
@@ -36,17 +42,26 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="max-w-5xl mx-auto px-4 pt-10 pb-6 text-center">
+      <div className="max-w-5xl mx-auto px-4 pt-4 flex justify-end">
+        <UserMenu />
+      </div>
+      <header className="max-w-5xl mx-auto px-4 pt-2 pb-6 text-center">
+        <img src={logoUrl} alt="Kingdom Chess crest" width={128} height={128} className="mx-auto h-28 w-28 mb-2" />
         <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">
-          Design Your <span className="text-primary">Chess</span>
+          Kingdom <span className="text-primary">Chess</span>
         </h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-          Pick a game to play, or jump into the sandbox to invent your own boards and pieces.
+          Design your own variant. Rule the board. Pick a game to play, build your own, or join the community.
         </p>
-        <div className="mt-5 flex items-center justify-center gap-2">
+        <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
           <Link to="/sandbox">
             <Button size="lg" variant="outline">
               <Hammer className="h-4 w-4 mr-2" /> Sandbox mode
+            </Button>
+          </Link>
+          <Link to="/forum">
+            <Button size="lg" variant="outline">
+              <MessagesSquare className="h-4 w-4 mr-2" /> Community
             </Button>
           </Link>
         </div>
