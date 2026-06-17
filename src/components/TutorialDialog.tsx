@@ -61,22 +61,27 @@ export function TutorialDialog({
 
         <div className="px-5 pb-3 min-h-[180px]">
           {slide.pieceId && PIECE_LIBRARY[slide.pieceId] && (
-            <div className="flex items-center gap-3 mb-3 rounded-lg border bg-card/60 p-3">
-              <div className="h-12 w-12 rounded-md bg-background border flex items-center justify-center">
-                <PieceById
-                  id={slide.pieceId}
-                  color="w"
-                  def={PIECE_LIBRARY[slide.pieceId]}
-                  className="h-9 w-9"
-                />
+            <div className="mb-3 rounded-lg border bg-card/60 p-3">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-12 w-12 rounded-md bg-background border flex items-center justify-center">
+                  <PieceById
+                    id={slide.pieceId}
+                    color="w"
+                    def={PIECE_LIBRARY[slide.pieceId]}
+                    className="h-9 w-9"
+                  />
+                </div>
+                <div>
+                  <div className="font-display text-sm font-semibold">
+                    {PIECE_LIBRARY[slide.pieceId].name}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                    Custom piece
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="font-display text-sm font-semibold">
-                  {PIECE_LIBRARY[slide.pieceId].name}
-                </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                  Custom piece
-                </div>
+              <div className="flex justify-center">
+                <MoveDiagram id={slide.pieceId} color="w" maxSize={180} />
               </div>
             </div>
           )}
