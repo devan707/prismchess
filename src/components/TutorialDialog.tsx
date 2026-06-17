@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { PIECE_LIBRARY } from "@/game/pieces";
+import type { GameTutorial } from "@/game/tutorials";
 import { markTutorialSeen } from "@/lib/tutorial-state";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +18,14 @@ interface Props {
   isFirstTime?: boolean;
 }
 
-export function TutorialDialog({ gameId, gameName, tutorial, open, onOpenChange, isFirstTime }: Props) {
+export function TutorialDialog({
+  gameId,
+  gameName,
+  tutorial,
+  open,
+  onOpenChange,
+  isFirstTime,
+}: Props) {
   const [idx, setIdx] = useState(0);
   const slides = tutorial.slides;
   const slide = slides[Math.min(idx, slides.length - 1)];
@@ -53,7 +62,12 @@ export function TutorialDialog({ gameId, gameName, tutorial, open, onOpenChange,
           {slide.pieceId && PIECE_LIBRARY[slide.pieceId] && (
             <div className="flex items-center gap-3 mb-3 rounded-lg border bg-card/60 p-3">
               <div className="h-12 w-12 rounded-md bg-background border flex items-center justify-center">
-                <PieceGlyph pieceId={slide.pieceId} color="w" size={36} />
+                <PieceById
+                  id={slide.pieceId}
+                  color="w"
+                  def={PIECE_LIBRARY[slide.pieceId]}
+                  className="h-9 w-9"
+                />
               </div>
               <div>
                 <div className="font-display text-sm font-semibold">
@@ -70,7 +84,7 @@ export function TutorialDialog({ gameId, gameName, tutorial, open, onOpenChange,
           )}
           {slide.bullets && slide.bullets.length > 0 && (
             <ul className="mt-3 space-y-1.5 text-sm text-foreground/90 list-disc pl-5">
-              {slide.bullets.map((b, i) => (
+              {slide.bullets.map((b: string, i: number) => (
                 <li key={i}>{b}</li>
               ))}
             </ul>
@@ -78,7 +92,7 @@ export function TutorialDialog({ gameId, gameName, tutorial, open, onOpenChange,
         </div>
 
         <div className="flex items-center justify-center gap-1 pb-2" aria-hidden>
-          {slides.map((_, i) => (
+          {slides.map((_slide, i: number) => (
             <span
               key={i}
               className={cn(
