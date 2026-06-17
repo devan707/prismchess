@@ -33,7 +33,11 @@ export function evaluate(state: GameState, toMove: Color): number {
       const centerDist = Math.abs(r - cr) + Math.abs(c - cc);
       v += Math.max(0, ((rows + cols) / 2 - centerDist)) * 2;
       if (def?.special === "pawn") {
-        v += p.color === "w" ? r * 6 : (rows - 1 - r) * 6;
+        if (cols > rows) {
+          v += p.color === "w" ? c * 6 : (cols - 1 - c) * 6;
+        } else {
+          v += p.color === "w" ? r * 6 : (rows - 1 - r) * 6;
+        }
       }
       score += p.color === toMove ? v : -v;
     }
