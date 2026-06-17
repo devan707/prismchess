@@ -132,9 +132,8 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
     return () => { supabase.removeChannel(channel); };
   }, [matchId, meId]);
 
-  // A draw offer from the opponent is "pending" until a response or a subsequent move
+  // A draw offer from either side is "pending" until a response or a subsequent move
   // (a new move auto-declines per chess convention).
-  const lastMoveAt = moves.length > 0 ? Number.POSITIVE_INFINITY : 0; // ply count proxy
   const pendingDrawOffer = useMemo<MatchEvent | null>(() => {
     if (match.status !== "active") return null;
     let lastOffer: MatchEvent | null = null;
@@ -143,13 +142,10 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
       else if (e.kind === "draw_accept" || e.kind === "draw_decline") lastOffer = null;
     }
     if (!lastOffer) return null;
-    // Auto-decline if any move occurred after the offer.
-    const offerTs = new Date(lastOffer.created_at).getTime();
-    const offerPlyAtMoment = (lastOffer.payload as { ply?: number } | null)?.ply ?? null;
-    if (offerPlyAtMoment !== null && moves.length > offerPlyAtMoment) return null;
-    void offerTs; void lastMoveAt;
+    const offerPly = (lastOffer.payload as { ply?: number } | null)?.ply ?? 0;
+    if (moves.length > offerPly) return null;
     return lastOffer;
-  }, [events, match.status, moves.length, lastMoveAt]);
+  }, [events, match.status, moves.length]);
 
   const incomingDrawOffer = pendingDrawOffer && pendingDrawOffer.actor_id !== meId ? pendingDrawOffer : null;
   const myPendingDrawOffer = pendingDrawOffer && pendingDrawOffer.actor_id === meId ? pendingDrawOffer : null;
