@@ -82,9 +82,13 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          is_featured: boolean
+          is_pinned: boolean
           last_activity_at: string
           like_count: number
           reply_count: number
+          shared_design: Json | null
+          shared_design_name: string | null
           title: string
           updated_at: string
         }
@@ -93,9 +97,13 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          is_featured?: boolean
+          is_pinned?: boolean
           last_activity_at?: string
           like_count?: number
           reply_count?: number
+          shared_design?: Json | null
+          shared_design_name?: string | null
           title: string
           updated_at?: string
         }
@@ -104,9 +112,13 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          is_featured?: boolean
+          is_pinned?: boolean
           last_activity_at?: string
           like_count?: number
           reply_count?: number
+          shared_design?: Json | null
+          shared_design_name?: string | null
           title?: string
           updated_at?: string
         }
@@ -133,6 +145,39 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      topic_suggestions: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          shared_design: Json | null
+          shared_design_name: string | null
+          status: string
+          suggester_id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          shared_design?: Json | null
+          shared_design_name?: string | null
+          status?: string
+          suggester_id: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          shared_design?: Json | null
+          shared_design_name?: string | null
+          status?: string
+          suggester_id?: string
+          title?: string
         }
         Relationships: []
       }
