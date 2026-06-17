@@ -12,9 +12,20 @@ const KNIGHT_OFFSETS: Offset[] = [
   { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
   { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
 ];
-// Archer: ranged specialist. Moves one square in any direction (no capture
-// on the move). Attacks by firing diagonally at range 2 or 3 only, arcing
-// over every piece in between. Captures by occupying the target square.
+// Archer: ranged specialist. Moves one square orthogonally OR jumps 1-3
+// squares diagonally (cannot capture by moving). Attacks by firing diagonally
+// at range 2 or 3 only, arcing over every piece in between. Captures by
+// occupying the target square.
+const ARCHER_MOVE_OFFSETS: Offset[] = [
+  // orthogonal range 1
+  { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+  // diagonal range 1
+  { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+  // diagonal range 2 (jumps over pieces)
+  { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
+  // diagonal range 3 (jumps over pieces)
+  { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
+];
 const ARCHER_ATTACK_OFFSETS: Offset[] = [
   // diagonal range 2
   { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
@@ -84,10 +95,10 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     name: "Archer",
     glyph: "🏹",
     emoji: true,
-    movement: { leaps: KING_OFFSETS },
+    movement: { leaps: ARCHER_MOVE_OFFSETS },
     capture: { leaps: ARCHER_ATTACK_OFFSETS },
     builtinCustom: true,
-    description: "Fragile ranged specialist. MOVES one square in any direction (orthogonal or diagonal) onto an empty square only — cannot capture by moving. ATTACKS by firing along diagonals at exactly 2 or 3 squares, arcing over every piece in between (friend or foe). A successful attack captures the target and the Archer occupies that square. Cannot attack adjacent squares, orthogonals, or with knight-jumps.",
+    description: "Fragile ranged specialist. MOVES one square orthogonally OR jumps 1, 2, or 3 squares diagonally to an empty square (leaping over any pieces in between) — cannot capture by moving. ATTACKS by firing along diagonals at exactly 2 or 3 squares, arcing over every piece in between (friend or foe). A successful attack captures the target and the Archer occupies that square. Cannot attack adjacent squares, orthogonals, or with knight-jumps.",
   },
   D: {
     id: "D",
