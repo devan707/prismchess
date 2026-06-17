@@ -240,16 +240,25 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       }
     }
     // Strike: capture an enemy within Chebyshev distance 2, moving onto the square.
-    // Ignores intervening pieces. Standard chess capture (dragon occupies the target).
+    // Cannot jump — straight-line distance-2 strikes are blocked by an intervening piece.
     for (let dr = -2; dr <= 2; dr++) {
       for (let dc = -2; dc <= 2; dc++) {
         if (dr === 0 && dc === 0) continue;
         const to = { r: from.r + dr, c: from.c + dc };
         if (!inBoardBounds(board, to)) continue;
         const t = board[to.r][to.c];
-        if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
-          moves.push({ from, to, piece, captured: t, kind: "normal" });
+        if (!t || t.color === piece.color || isBarricade(t, state.registry)) continue;
+        // Block check: for straight-line distance 2 (same rank/file/diag), the midpoint must be empty.
+        const dist = Math.max(Math.abs(dr), Math.abs(dc));
+        if (dist === 2) {
+          const sameLine = dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc);
+          if (sameLine) {
+            const midR = from.r + dr / 2;
+            const midC = from.c + dc / 2;
+            if (board[midR][midC]) continue; // blocked
+          }
         }
+        moves.push({ from, to, piece, captured: t, kind: "normal" });
       }
     }
     return moves;
