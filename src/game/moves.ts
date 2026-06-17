@@ -360,23 +360,34 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     const isSelfCell = (r: number, c: number) =>
       (r === from.r && c === from.c) || (r === partner.r && c === partner.c);
 
-    // SHIFT ±1 along the perpendicular axis (sideways). Pure repositioning —
-    // both destination cells must be empty (no capture, no trample).
+    // SHIFT ±1 along the perpendicular axis (sideways). One destination cell
+    // is the partner's just-vacated square (always passable); the OTHER is the
+    // "leading" cell and may be empty (reposition) or hold a single enemy that
+    // gets trampled (lateral attack). Friendly pieces, barricades, and
+    // fixtures still block the shift entirely.
     for (const sign of [1, -1]) {
       const dRow = wide ? sign : 0;
       const dCol = wide ? 0 : sign;
       const nF = { r: from.r + dRow, c: from.c + dCol };
       const nP = { r: partner.r + dRow, c: partner.c + dCol };
       if (!inB(nF.r, nF.c) || !inB(nP.r, nP.c)) continue;
-      const cellOk = (r: number, c: number): boolean => {
-        if (isSelfCell(r, c)) return true; // sliding into the cell our partner just vacated
-        return !board[r][c];
-      };
-      if (!cellOk(nF.r, nF.c) || !cellOk(nP.r, nP.c)) continue;
+      const trampled: Piece[] = [];
+      let blocked = false;
+      for (const cell of [nF, nP]) {
+        if (isSelfCell(cell.r, cell.c)) continue;
+        const occ = board[cell.r][cell.c];
+        if (!occ) continue;
+        if (occ.color === piece.color || isBarricade(occ, state.registry) || isFixture(occ, state.registry)) {
+          blocked = true; break;
+        }
+        trampled.push(occ);
+      }
+      if (blocked) continue;
       moves.push({
         from, to: nF, piece,
-        captured: null,
+        captured: trampled[0] ?? null,
         kind: "juggShift",
+        juggTrampled: trampled.length ? trampled : undefined,
       });
     }
 
