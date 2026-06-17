@@ -54,8 +54,8 @@ function AuthPage() {
     });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created! You're signed in.");
-    navigate({ to: "/profile" });
+    toast.success("Account created! Let's pick a name.");
+    navigate({ to: "/onboarding" });
   };
 
   const google = async () => {
