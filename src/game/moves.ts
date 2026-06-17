@@ -107,10 +107,15 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   const moves: Move[] = [];
 
   if (def.special === "pawn") {
+    const wide = boardIsWide(board);
+    const { rows, cols } = rowsCols(board);
     const dir = pawnDir(piece.color);
-    const promoRank = pawnPromoRank(board, piece.color);
+    const promoLine = wide ? (piece.color === "w" ? cols - 1 : 0) : (piece.color === "w" ? rows - 1 : 0);
+    const startLine = wide ? (piece.color === "w" ? 1 : cols - 2) : (piece.color === "w" ? 1 : rows - 2);
+    const onPromoLine = (sq: Square) => (wide ? sq.c : sq.r) === promoLine;
+    const onStartLine = (sq: Square) => (wide ? sq.c : sq.r) === startLine;
     const pushPawn = (to: Square, captured: Piece | null, extra: Partial<Move> = {}) => {
-      if (to.r === promoRank) {
+      if (onPromoLine(to)) {
         for (const promo of promotionOptionsFor(state)) {
           moves.push({ from, to, piece, captured, promotion: promo, kind: extra.kind, epCapture: extra.epCapture });
         }
@@ -118,31 +123,59 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         moves.push({ from, to, piece, captured, ...extra });
       }
     };
-    // forward
-    const f1 = { r: from.r + dir, c: from.c };
-    if (inBoardBounds(board, f1) && !board[f1.r][f1.c]) {
-      pushPawn(f1, null);
-      // double
-      if (from.r === pawnStartRow(board, piece.color)) {
-        const f2 = { r: from.r + 2 * dir, c: from.c };
-        if (inBoardBounds(board, f2) && !board[f2.r][f2.c]) {
-          moves.push({ from, to: f2, piece, captured: null, kind: "double" });
+
+    if (wide) {
+      // forward along columns
+      const f1 = { r: from.r, c: from.c + dir };
+      if (inBoardBounds(board, f1) && !board[f1.r][f1.c]) {
+        pushPawn(f1, null);
+        if (onStartLine(from)) {
+          const f2 = { r: from.r, c: from.c + 2 * dir };
+          if (inBoardBounds(board, f2) && !board[f2.r][f2.c]) {
+            moves.push({ from, to: f2, piece, captured: null, kind: "double" });
+          }
         }
       }
-    }
-    // diagonal captures
-    for (const dc of [-1, 1]) {
-      const to = { r: from.r + dir, c: from.c + dc };
-      if (!inBoardBounds(board, to)) continue;
-      const t = board[to.r][to.c];
-      if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
-        pushPawn(to, t);
-      } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
-        const cap = board[from.r][to.c];
-        if (cap && cap.color !== piece.color && state.registry[cap.id]?.special === "pawn") {
-          moves.push({
-            from, to, piece, captured: cap, kind: "ep", epCapture: { r: from.r, c: to.c },
-          });
+      // diagonal captures along rows
+      for (const dr of [-1, 1]) {
+        const to = { r: from.r + dr, c: from.c + dir };
+        if (!inBoardBounds(board, to)) continue;
+        const t = board[to.r][to.c];
+        if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
+          pushPawn(to, t);
+        } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
+          const capSq = { r: to.r, c: from.c };
+          const cap = board[capSq.r][capSq.c];
+          if (cap && cap.color !== piece.color && state.registry[cap.id]?.special === "pawn") {
+            moves.push({ from, to, piece, captured: cap, kind: "ep", epCapture: capSq });
+          }
+        }
+      }
+    } else {
+      // forward along rows
+      const f1 = { r: from.r + dir, c: from.c };
+      if (inBoardBounds(board, f1) && !board[f1.r][f1.c]) {
+        pushPawn(f1, null);
+        if (onStartLine(from)) {
+          const f2 = { r: from.r + 2 * dir, c: from.c };
+          if (inBoardBounds(board, f2) && !board[f2.r][f2.c]) {
+            moves.push({ from, to: f2, piece, captured: null, kind: "double" });
+          }
+        }
+      }
+      // diagonal captures along columns
+      for (const dc of [-1, 1]) {
+        const to = { r: from.r + dir, c: from.c + dc };
+        if (!inBoardBounds(board, to)) continue;
+        const t = board[to.r][to.c];
+        if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
+          pushPawn(to, t);
+        } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
+          const capSq = { r: from.r, c: to.c };
+          const cap = board[capSq.r][capSq.c];
+          if (cap && cap.color !== piece.color && state.registry[cap.id]?.special === "pawn") {
+            moves.push({ from, to, piece, captured: cap, kind: "ep", epCapture: capSq });
+          }
         }
       }
     }
