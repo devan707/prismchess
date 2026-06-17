@@ -211,8 +211,9 @@ function Sandbox() {
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
             <p className="text-[11px] text-muted-foreground">
-              Coming soon: name a piece, choose an icon, define its movement and capture pattern.
-              Four custom pieces are built-in today: King's Hand, Archer, Dragon, Barricade.
+              Seven custom pieces are built-in: King's Hand, Archer, Dragon, Barricade,
+              Portal (swap with a friendly piece), Necromancer (resurrect a captured ally),
+              and Shapeshifter Pawn (transforms into whatever it captures). User-defined pieces are coming soon.
             </p>
           </div>
         </aside>
