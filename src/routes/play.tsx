@@ -18,7 +18,7 @@ import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 
 export const Route = createFileRoute("/play")({
@@ -89,7 +89,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const {
     state, status, tryMove, tryDrop, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
-    undo, pendingPromotion, promotionOptions, confirmPromotion,
+    undo, takeback, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
@@ -225,6 +225,11 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                   </Button>
                   <Button onClick={undo} size="sm" variant="outline" className="flex-1" disabled={state.history.length === 0 || terminal}>
                     <RotateCcw className="h-4 w-4 mr-1" /> Undo
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={takeback} size="sm" variant="outline" className="flex-1" disabled={state.history.length === 0 || terminal}>
+                    <Undo className="h-4 w-4 mr-1" /> Take back last move
                   </Button>
                 </div>
                 <div className="flex gap-2">

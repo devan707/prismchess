@@ -51,6 +51,16 @@ export function useGame(opts: UseGameOptions) {
     setSelectedDrop(null);
   }, [opts.design]);
 
+  const takeback = useCallback(() => {
+    setState((s) => {
+      if (s.history.length === 0) return s;
+      const truncated = s.history.slice(0, s.history.length - 1);
+      return replayMoves(truncated, initialStateFromDesign(opts.design));
+    });
+    setPendingPromotion(null);
+    setSelectedDrop(null);
+  }, [opts.design]);
+
   const playMove = useCallback((move: Move) => {
     setState((s) => {
       const next = applyMove(s, move);
@@ -158,6 +168,7 @@ export function useGame(opts: UseGameOptions) {
     gameOver,
     reset,
     undo,
+    takeback,
     tryMove,
     tryDrop,
     tryResurrect,
