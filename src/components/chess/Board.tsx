@@ -259,8 +259,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const def = piece ? state.registry[piece.id] : undefined;
           const light = (r + c) % 2 === 1;
           const isSelected = (selected && selected.r === r && selected.c === c) || (selectedPartner && selectedPartner.r === r && selectedPartner.c === c);
-          const isLegal = legalTargets.some((t) => t.r === r && t.c === c);
-          const isCapture = isLegal && !!piece;
+          const juggFoot = juggInfo?.footprint.has(`${r},${c}`) ?? false;
+          const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
+          const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
+          const isLegal = legalTargets.some((t) => t.r === r && t.c === c) || juggFoot;
+          const isCapture = (isLegal && !!piece) || juggTrample;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
           const isInspect = inspectTargets.some((t) => t.r === r && t.c === c);
           const isInspectCapture = isInspect && !!piece;
