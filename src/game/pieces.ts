@@ -101,7 +101,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     immobile: true,
     defaultReserve: 2,
     builtinCustom: true,
-    description: "Off-board reserve. Drop it on any empty square — it stays there forever, blocks all movement, and cannot be captured.",
+    description: "Off-board reserve. Drop it on any empty square — it never moves on its own, but blocks movement and can be captured like any other piece.",
   },
   T: {
     id: "T",
