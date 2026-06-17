@@ -12,14 +12,13 @@ const KNIGHT_OFFSETS: Offset[] = [
   { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
   { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
 ];
-// Archer: ranged attacker. Shoots along the 8 compass lines at range 2 or 3,
-// arcing over every piece in between. Cannot strike adjacent squares.
-const ARCHER_OFFSETS: Offset[] = [
-  // range 2
-  { dr: 2, dc: 0 }, { dr: -2, dc: 0 }, { dr: 0, dc: 2 }, { dr: 0, dc: -2 },
+// Archer: ranged specialist. Moves one square in any direction (no capture
+// on the move). Attacks by firing diagonally at range 2 or 3 only, arcing
+// over every piece in between. Captures by occupying the target square.
+const ARCHER_ATTACK_OFFSETS: Offset[] = [
+  // diagonal range 2
   { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
-  // range 3
-  { dr: 3, dc: 0 }, { dr: -3, dc: 0 }, { dr: 0, dc: 3 }, { dr: 0, dc: -3 },
+  // diagonal range 3
   { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
 ];
 
