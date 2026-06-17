@@ -14,10 +14,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
+import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain } from "lucide-react";
+import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 
 export const Route = createFileRoute("/play")({
