@@ -288,12 +288,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                     const facing: "up" | "down" | "left" | "right" = wide
                       ? (piece.color === "w" ? "right" : "left")
                       : (piece.color === "w" ? "up" : "down");
+                    const animate = slideAnim && slideAnim.to.r === r && slideAnim.to.c === c;
                     return (
                       <div
+                        key={animate ? `anim-${slideAnim.key}` : undefined}
                         draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
                         onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
                         onDragEnd={() => setDragFrom(null)}
                         className="relative z-10 w-full h-full"
+                        style={animate ? {
+                          ["--slide-x" as string]: `${slideAnim.dx}%`,
+                          ["--slide-y" as string]: `${slideAnim.dy}%`,
+                          animation: "piece-slide 160ms ease-out",
+                        } : undefined}
                       >
                         <JuggernautGlyph color={piece.color} orientation={orientation} facing={facing} />
                       </div>
@@ -301,12 +308,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   }
                   // Orphan juggernaut (no partner) — fall through to normal glyph.
                 }
+                const animate = slideAnim && slideAnim.to.r === r && slideAnim.to.c === c;
                 return (
                   <div
+                    key={animate ? `anim-${slideAnim.key}` : undefined}
                     draggable={!disabled && piece.color === state.turn && piece.color === humanColor}
                     onDragStart={() => { setDragFrom(sq); setSelected(sq); }}
                     onDragEnd={() => setDragFrom(null)}
                     className="relative z-10 flex items-center justify-center w-full h-full"
+                    style={animate ? {
+                      ["--slide-x" as string]: `${slideAnim.dx}%`,
+                      ["--slide-y" as string]: `${slideAnim.dy}%`,
+                      animation: "piece-slide 160ms ease-out",
+                    } : undefined}
                   >
                     <PieceGlyph piece={piece} def={def} />
                   </div>
