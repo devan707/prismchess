@@ -79,11 +79,17 @@ function rootSearch(state: GameState, depth: number, useAB: boolean): Move | nul
 export function chooseMove(state: GameState, difficulty: Difficulty): Move | null {
   if (difficulty === "easy") return easyMove(state);
   // Scale depth down for big boards / many pieces to keep responsive.
+  // Portals (swap to any friendly), dragons (teleport to any empty), and
+  // wide-range pieces blow up the branching factor on 12×12 — a full minimax
+  // at depth 2 there can lock the main thread for many seconds. Clamp hard.
   const area = state.rows * state.cols;
   if (difficulty === "medium") {
+    if (area > 100) return easyMove(state);
     const depth = area > 64 ? 2 : 3;
     return rootSearch(state, depth, true);
   }
+  // hard
+  if (area > 100) return rootSearch(state, 1, true);
   const depth = area > 64 ? 3 : 4;
   return rootSearch(state, depth, true);
 }
