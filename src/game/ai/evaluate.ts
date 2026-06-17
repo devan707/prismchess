@@ -46,6 +46,9 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
     return d <= 1 || d === 7;
   };
   const out = new Set<string>();
+  // (a) Single king-step reach.
+  for (const [dr, dc] of DIRS_8) out.add(`${dr},${dc}`);
+  // (b) 3-step infiltration reach.
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       if (!turnOK(i, j)) continue;

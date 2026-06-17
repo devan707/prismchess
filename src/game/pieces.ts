@@ -165,7 +165,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "assassin",
     builtinCustom: true,
-    description: "Three-step infiltrator. Every turn the Assassin moves EXACTLY 3 king-steps in a row (each step orthogonal or diagonal). The first 2 landing squares must be empty — he cannot jump. The 3rd step is the only one that can capture, and may land on an empty square or an enemy. He cannot revisit any square already on his path, his three steps cannot all go the same direction (no straight line of 3), and each consecutive turn between steps must be ≤ 45° (the next step's direction must be the same as, or adjacent to, the previous one on the 8-direction compass). So NW → N → N is fine, but N → E (a 90° turn) is not.",
+    description: "Stealth infiltrator. Each turn picks ONE of two options: (1) a basic king-step — move or capture exactly 1 square in any of the 8 directions, or (2) a 3-step infiltration — exactly 3 king-steps where the first 2 landings must be empty (no jumping), capture is only allowed on the 3rd step, no square may be revisited, the 3 steps cannot all go the same direction (no straight line of 3), and each consecutive turn between steps must be ≤ 45°. So NW → N → N is fine; N → E (a 90° turn) is not.",
   },
   W: {
     id: "W",
