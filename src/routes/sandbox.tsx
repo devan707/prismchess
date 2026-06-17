@@ -443,7 +443,7 @@ function Sandbox() {
               Portal (swap with a friendly piece), Necromancer (resurrect a captured ally),
               Shapeshifter Pawn (transforms into whatever it captures), Juggernaut
               (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front),
-              Assassin (always takes exactly 3 king-steps per turn — no jumping, no revisits, no straight line of 3; captures only on the final step),
+              Assassin (always takes exactly 3 king-steps per turn — no jumping, no revisits, no straight line of 3, never a turn greater than 45°; captures only on the final step),
               and Wizard (rook moves that hop across opposite-colored squares — bound to its starting color).
             </p>
           </div>

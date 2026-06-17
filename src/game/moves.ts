@@ -403,50 +403,59 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "assassin") {
-    // New Assassin: ALWAYS takes exactly 3 king-steps (orthogonal or diagonal)
-    // per turn. Path squares (including the start) must all be distinct
-    // (no revisiting any square already on the path). The first two
-    // intermediate landing squares MUST be empty (no jumping, no early
-    // captures, no friendlies). The 3rd/final square may be empty OR hold
-    // an enemy — capture only happens on the final step. The three step
-    // directions cannot ALL be the same (no straight line of three).
+    // Assassin: ALWAYS takes exactly 3 king-steps (orthogonal or diagonal) per
+    // turn. Rules:
+    //   • All 4 path squares (start + 3 landings) must be distinct.
+    //   • The first 2 landing squares must be empty (no jumping, no early
+    //     captures, no friendlies/barricades).
+    //   • The 3rd/final square may be empty or hold an enemy — capture
+    //     happens only on the final step.
+    //   • The 3 step directions cannot ALL be the same (no straight line of 3).
+    //   • Between consecutive steps the turn must be ≤ 45° — i.e. each new
+    //     step direction is the same as, or adjacent to, the previous one on
+    //     the 8-direction compass.
     const { rows, cols } = rowsCols(board);
     const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
-    const dirs: Offset[] = [
-      { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
-      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    // Compass order (clockwise from N) — adjacent indices are 45° apart.
+    const DIRS_8: Offset[] = [
+      { dr: -1, dc:  0 }, // 0: N
+      { dr: -1, dc:  1 }, // 1: NE
+      { dr:  0, dc:  1 }, // 2: E
+      { dr:  1, dc:  1 }, // 3: SE
+      { dr:  1, dc:  0 }, // 4: S
+      { dr:  1, dc: -1 }, // 5: SW
+      { dr:  0, dc: -1 }, // 6: W
+      { dr: -1, dc: -1 }, // 7: NW
     ];
+    const turnOK = (prevIdx: number, nextIdx: number) => {
+      const d = Math.abs(prevIdx - nextIdx);
+      return d <= 1 || d === 7; // 7 ↔ 0 wraparound = also 45°
+    };
     const finals = new Map<string, Piece | null>();
     const visited = new Set<string>();
     visited.add(`${from.r},${from.c}`);
-    const dirHistory: Offset[] = [];
+    const dirIdxHistory: number[] = [];
 
     const walk = (r: number, c: number, depth: number) => {
       if (depth === 3) return;
-      for (const d of dirs) {
+      for (let i = 0; i < 8; i++) {
+        if (dirIdxHistory.length > 0 &&
+            !turnOK(dirIdxHistory[dirIdxHistory.length - 1], i)) continue;
+        const d = DIRS_8[i];
         const nr = r + d.dr;
         const nc = c + d.dc;
         if (!inB(nr, nc)) continue;
         const key = `${nr},${nc}`;
-        if (visited.has(key)) continue; // can't revisit any square on the path
+        if (visited.has(key)) continue;
         const occ = board[nr][nc];
         const isFinal = depth === 2;
         if (!isFinal) {
-          // Intermediate squares must be EMPTY (no jumping, no early capture).
           if (occ) continue;
         } else {
-          // Final square: empty or enemy, but never friendly / barricade.
           if (isBarricade(occ, state.registry)) continue;
           if (occ && occ.color === piece.color) continue;
-          // Straight-line rule: all 3 steps cannot share the same direction.
-          if (
-            dirHistory.length === 2 &&
-            dirHistory[0].dr === d.dr && dirHistory[0].dc === d.dc &&
-            dirHistory[1].dr === d.dr && dirHistory[1].dc === d.dc
-          ) continue;
-          // Record the best capture-or-empty landing at this final square.
-          // (If multiple paths reach the same square, prefer a capturing one;
-          // a move with `captured` set is what the engine needs.)
+          if (dirIdxHistory.length === 2 &&
+              dirIdxHistory[0] === i && dirIdxHistory[1] === i) continue;
           const prev = finals.get(key);
           if (prev === undefined || (prev === null && occ)) {
             finals.set(key, occ ?? null);
@@ -454,9 +463,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
           continue;
         }
         visited.add(key);
-        dirHistory.push(d);
+        dirIdxHistory.push(i);
         walk(nr, nc, depth + 1);
-        dirHistory.pop();
+        dirIdxHistory.pop();
         visited.delete(key);
       }
     };
@@ -473,6 +482,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
     return moves;
   }
+
 
 
 

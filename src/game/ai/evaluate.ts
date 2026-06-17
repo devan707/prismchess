@@ -28,6 +28,45 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   X: 0.5,  // Barricade
 };
 
+/**
+ * Precomputed Assassin reach: every (Δrow, Δcol) end-square reachable in
+ * exactly 3 king-steps under the engine's rules (no jumping, no revisits,
+ * not all 3 steps the same direction, every consecutive turn ≤ 45°).
+ * Used as a heuristic in evaluate(); the real legal-move generator lives
+ * in moves.ts.
+ */
+const ASSASSIN_REACH: Array<[number, number]> = (() => {
+  const DIRS_8: Array<[number, number]> = [
+    [-1, 0], [-1, 1], [0, 1], [1, 1],
+    [1, 0], [1, -1], [0, -1], [-1, -1],
+  ];
+  const turnOK = (a: number, b: number) => {
+    const d = Math.abs(a - b);
+    return d <= 1 || d === 7;
+  };
+  const out = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      if (!turnOK(i, j)) continue;
+      for (let k = 0; k < 8; k++) {
+        if (!turnOK(j, k)) continue;
+        if (i === j && j === k) continue;
+        const [dr1, dc1] = DIRS_8[i];
+        const [dr2, dc2] = DIRS_8[j];
+        const [dr3, dc3] = DIRS_8[k];
+        const p1 = `${dr1},${dc1}`;
+        const p2 = `${dr1 + dr2},${dc1 + dc2}`;
+        const p3 = `${dr1 + dr2 + dr3},${dc1 + dc2 + dc3}`;
+        const path = new Set(["0,0", p1, p2, p3]);
+        if (path.size !== 4) continue;
+        out.add(p3);
+      }
+    }
+  }
+  return Array.from(out, (s) => s.split(",").map(Number) as [number, number]);
+})();
+
+
 const PAWN_UNIT = 100;
 
 export function valueFor(id: PieceId, def: PieceDef | undefined): number {
@@ -212,39 +251,27 @@ function dynamicBonus(state: GameState, color: Color): number {
           break;
         }
         case "assassin": {
-          // 3-step king-walker: reach is Chebyshev distance ≤ 3 (minus the
-          // 8 straight-line endpoints). Score nearby enemies, weighted by
-          // value and how far inside their own half they're sitting.
+          // 3-step king-walker with ≤45° turn-rate constraint. Score nearby
+          // enemies sitting on actually-reachable end squares, weighted by
+          // value and how deep in their own half they're sitting.
           let threatVal = 0;
-          for (let dr = -3; dr <= 3; dr++) {
-            for (let dc = -3; dc <= 3; dc++) {
-              if (dr === 0 && dc === 0) continue;
-              const cheb = Math.max(Math.abs(dr), Math.abs(dc));
-              if (cheb > 3) continue;
-              // Skip the 8 straight-line distance-3 endpoints (unreachable).
-              if (cheb === 3) {
-                const straight =
-                  (dr === 0 || dc === 0) || (Math.abs(dr) === Math.abs(dc));
-                const onAxis = dr === 0 || dc === 0;
-                const onDiag = Math.abs(dr) === Math.abs(dc);
-                if (straight && (onAxis || onDiag)) continue;
-              }
-              const nr = r + dr, nc = c + dc;
-              if (!inB(board, nr, nc)) continue;
-              const t = board[nr][nc];
-              if (!t || t.color !== opp) continue;
-              const v = valueFor(t.id, state.registry[t.id]);
-              const backRow = opp === "w" ? 0 : rows - 1;
-              const distFromBack = Math.abs(nr - backRow);
-              const backWeight = 1 + Math.max(0, (rows / 2 - distFromBack)) * 0.05;
-              // Closer threats are stronger (more flexible path options).
-              const distBoost = cheb === 1 ? 0.14 : cheb === 2 ? 0.11 : 0.07;
-              threatVal += v * distBoost * backWeight;
-            }
+          for (const [dr, dc] of ASSASSIN_REACH) {
+            const nr = r + dr, nc = c + dc;
+            if (!inB(board, nr, nc)) continue;
+            const t = board[nr][nc];
+            if (!t || t.color !== opp) continue;
+            const v = valueFor(t.id, state.registry[t.id]);
+            const backRow = opp === "w" ? 0 : rows - 1;
+            const distFromBack = Math.abs(nr - backRow);
+            const backWeight = 1 + Math.max(0, (rows / 2 - distFromBack)) * 0.05;
+            const cheb = Math.max(Math.abs(dr), Math.abs(dc));
+            const distBoost = cheb === 1 ? 0.14 : cheb === 2 ? 0.11 : 0.07;
+            threatVal += v * distBoost * backWeight;
           }
           bonus += threatVal;
           break;
         }
+
 
         default:
           break;
