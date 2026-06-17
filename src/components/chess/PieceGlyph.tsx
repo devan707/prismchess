@@ -21,15 +21,36 @@ export function PieceGlyph({ piece, def, className }: Props) {
     ? "brightness(0) saturate(100%) invert(1) drop-shadow(0 0 1.5px rgba(0,0,0,0.9)) drop-shadow(0 0 2.5px rgba(0,0,0,0.7)) drop-shadow(0 0 4px rgba(0,0,0,0.4))"
     : "brightness(0) drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 0 2.5px rgba(255,255,255,0.7)) drop-shadow(0 0 4px rgba(255,255,255,0.4))";
 
+  // Undead overlay: faint green glow + tinted halo behind the silhouette so
+  // the piece is unmistakably "raised by a Necromancer".
+  const undead = !!piece.undead;
+
   return (
     <span
       className={`relative inline-flex items-center justify-center ${className ?? ""}`}
       style={{ lineHeight: 1, userSelect: "none" }}
     >
+      {undead && (
+        <span
+          aria-hidden
+          className="absolute inset-0 pointer-events-none rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(74,222,128,0.55) 0%, rgba(74,222,128,0.18) 45%, transparent 70%)",
+            filter: "blur(2px)",
+          }}
+        />
+      )}
       {isNecro ? (
         <NecromancerGlyph color={piece.color} />
       ) : (
-        <span className="relative" style={{ filter }}>
+        <span
+          className="relative"
+          style={{
+            filter: undead
+              ? `${filter} drop-shadow(0 0 4px rgba(74,222,128,0.95)) drop-shadow(0 0 8px rgba(34,197,94,0.7))`
+              : filter,
+          }}
+        >
           {glyph}
         </span>
       )}

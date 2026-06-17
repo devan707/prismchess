@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
-import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
+import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
@@ -87,7 +87,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
-    state, status, tryMove, tryDrop, tryResurrect, legalFor, legalDropSquares,
+    state, status, tryMove, tryDrop, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
     undo, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
@@ -98,7 +98,6 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
     try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
   });
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
-  const [resurrectChoice, setResurrectChoice] = useState<PieceId | null>(null);
 
   // History navigation: viewIndex = number of moves to show (0..history.length).
   // When equal to history.length the live state is shown.
@@ -116,7 +115,6 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
   const handleSelectionChange = useCallback((sq: Square | null) => {
     setSelectedSquare(sq);
-    setResurrectChoice(null);
   }, []);
   useEffect(() => {
     try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
@@ -124,25 +122,6 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
   const selectedPiece = selectedSquare ? displayedState.board[selectedSquare.r][selectedSquare.c] : null;
   const selectedDef = selectedPiece ? displayedState.registry[selectedPiece.id] : null;
-  const isHumanNecromancer = !!(
-    selectedPiece &&
-    selectedPiece.color === humanColor &&
-    state.registry[selectedPiece.id]?.special === "necromancer"
-  );
-  // Friendly fallen = pieces of humanColor that the opponent captured. Filter out
-  // pieces the necromancer cannot resurrect (juggernauts and immobile barricades).
-  const humansFallenAll = state.captured[humanColor === "w" ? "b" : "w"];
-  const humansFallen = humansFallenAll.filter((p) => {
-    const d = state.registry[p.id];
-    if (!d) return false;
-    if (d.special === "juggernaut") return false;
-    if (d.immobile) return false;
-    return true;
-  });
-  // Show the resurrection prompt whenever a necromancer is selected (so the
-  // user can SEE the graveyard is the next click target). Clicks only do work
-  // when there's actually a fallen piece available.
-  const resurrectMode = !viewingPast && isHumanNecromancer;
 
 
 
@@ -316,29 +295,9 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           state={displayedState}
           humanColor={humanColor}
           flipped={flipped}
-          legalFor={(from) => {
-            const sqs = legalFor(from);
-            if (!from) return sqs;
-            const p = displayedState.board[from.r]?.[from.c];
-            if (!p || state.registry[p.id]?.special !== "necromancer") return sqs;
-            // For a necromancer: only show resurrect (empty adjacent) squares
-            // once the user has picked a fallen piece. Diagonal move/capture
-            // squares are always shown.
-            if (resurrectChoice) return sqs;
-            const diagOnly = new Set([
-              `${from.r+1},${from.c+1}`, `${from.r+1},${from.c-1}`,
-              `${from.r-1},${from.c+1}`, `${from.r-1},${from.c-1}`,
-            ]);
-            return sqs.filter((s) => diagOnly.has(`${s.r},${s.c}`));
-          }}
+          legalFor={legalFor}
           onMove={(f, t) => {
             if (viewingPast) return false;
-            if (resurrectMode && resurrectChoice) {
-              if (tryResurrect(f, t, resurrectChoice)) {
-                setResurrectChoice(null);
-                return true;
-              }
-            }
             return tryMove(f, t);
           }}
           dropPiece={selectedDrop}
@@ -374,13 +333,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           </div>
         )}
 
-        <Graveyard
-          state={displayedState}
-          humanColor={humanColor}
-          resurrectMode={resurrectMode}
-          resurrectChoice={resurrectChoice}
-          onPickResurrect={setResurrectChoice}
-        />
+        <Graveyard state={displayedState} humanColor={humanColor} />
+
 
 
 

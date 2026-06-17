@@ -274,46 +274,44 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "necromancer") {
-    // Normal diagonal moves come from the generic spec below; add resurrection actions.
-    if (def.movement || def.capture) {
-      const moveSpec = def.movement ?? {};
-      const captureSpec = def.capture ?? moveSpec;
-      const moveTargets = emitFromSpec(board, state.registry, from, piece, moveSpec, "move");
-      const captureTargets = emitFromSpec(board, state.registry, from, piece, captureSpec, "capture");
-      for (const t of moveTargets) moves.push({ from, to: t, piece, captured: null });
-      for (const t of captureTargets) {
-        const occ = board[t.r][t.c];
-        if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
-          moves.push({ from, to: t, piece, captured: occ });
-        }
-      }
+    // Non-combat: moves exactly 1 square diagonally onto an EMPTY square.
+    // Cannot capture, cannot attack, cannot jump.
+    const diagOffs: Offset[] = [
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ];
+    for (const o of diagOffs) {
+      const to = { r: from.r + o.dr, c: from.c + o.dc };
+      if (!inBoardBounds(board, to)) continue;
+      if (board[to.r][to.c]) continue; // cannot capture, cannot land on any piece
+      moves.push({ from, to, piece, captured: null });
     }
-    // Friendly captured pieces live in state.captured[opposite color].
-    const friendlyCaptured = state.captured[piece.color === "w" ? "b" : "w"];
-    if (friendlyCaptured.length > 0) {
-      const uniqueIds = Array.from(new Set(
-        friendlyCaptured
-          .filter((p) => {
-            const d = state.registry[p.id];
-            // Juggernauts and barricades cannot be resurrected.
-            if (!d) return false;
-            if (d.special === "juggernaut") return false;
-            if (d.immobile) return false;
-            return true;
-          })
-          .map((p) => p.id),
-      ));
-      for (const o of [
-        { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
-        { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
-      ]) {
-        const to = { r: from.r + o.dr, c: from.c + o.dc };
-        if (!inBoardBounds(board, to)) continue;
-        if (board[to.r][to.c]) continue;
-        for (const id of uniqueIds) {
-          moves.push({ from, to, piece, captured: null, kind: "resurrect", resurrectPieceId: id });
-        }
-      }
+    // Resurrection: for any corpse in the 8 adjacent squares that is currently
+    // empty, raise the piece there. The Necromancer itself does NOT move.
+    const corpses = state.corpses ?? [];
+    const seenSq = new Set<string>();
+    for (const corp of corpses) {
+      const dr = corp.square.r - from.r;
+      const dc = corp.square.c - from.c;
+      if (dr === 0 && dc === 0) continue;
+      if (Math.abs(dr) > 1 || Math.abs(dc) > 1) continue;
+      if (board[corp.square.r][corp.square.c]) continue; // square must be empty
+      const cdef = state.registry[corp.pieceId];
+      if (!cdef) continue;
+      // Juggernauts and Barricades cannot be resurrected.
+      if (cdef.special === "juggernaut") continue;
+      if (cdef.immobile) continue;
+      const key = `${corp.square.r},${corp.square.c},${corp.pieceId},${corp.originalOwner}`;
+      if (seenSq.has(key)) continue;
+      seenSq.add(key);
+      moves.push({
+        from,
+        to: corp.square,
+        piece,
+        captured: null,
+        kind: "necroRaise",
+        resurrectPieceId: corp.pieceId,
+        resurrectOriginalOwner: corp.originalOwner,
+      });
     }
     return moves;
   }
@@ -542,8 +540,18 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     return b;
   }
   if (move.kind === "resurrect" && move.resurrectPieceId) {
-    // Necromancer stays; new piece appears at `to`.
+    // Legacy path (graveyard-based resurrect). Necromancer stays.
     b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
+    return b;
+  }
+  if (move.kind === "necroRaise" && move.resurrectPieceId) {
+    // Necromancer stays at `from`. New piece appears on the corpse square.
+    // Enemy corpse → undead under the necromancer's control. Friendly → restored.
+    const isEnemyCorpse =
+      !!move.resurrectOriginalOwner && move.resurrectOriginalOwner !== move.piece.color;
+    b[move.to.r][move.to.c] = isEnemyCorpse
+      ? { id: move.resurrectPieceId, color: move.piece.color, undead: true }
+      : { id: move.resurrectPieceId, color: move.piece.color };
     return b;
   }
   if (move.kind === "juggShift" || move.kind === "juggCharge" || move.kind === "juggExit") {
@@ -649,7 +657,7 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           // portal swaps land on friendly squares (never an enemy king square anyway).
           if (m.kind === "portalSwap") continue;
           // resurrect places a friendly piece on an empty square — not an attack.
-          if (m.kind === "resurrect") continue;
+          if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
           // juggernaut shift/charge are repositioning; trampling captures the cell directly.
           // A charge that lands on `sq` only attacks if `sq` is on the destination row/col,
           // but here `to` IS the destination — so it's a real capture path.
@@ -704,11 +712,46 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     }
     captured = { w, b };
   }
+  // Corpse tracking: diff pre/post boards. Any enemy piece (relative to the
+  // mover) that disappeared from a square becomes a corpse on that square.
+  // The mover's own pieces moving around are skipped.
+  const prevCorpses = state.corpses ?? [];
+  const corpses = [...prevCorpses];
+  const mover = state.turn;
+  for (let r = 0; r < state.board.length; r++) {
+    const row = state.board[r];
+    for (let c = 0; c < row.length; c++) {
+      const pre = row[c];
+      if (!pre) continue;
+      if (pre.color === mover) continue;
+      const post = board[r][c];
+      const sameOccupant =
+        !!post && post.id === pre.id && post.color === pre.color && !post.undead;
+      if (sameOccupant) continue;
+      corpses.push({ square: { r, c }, pieceId: pre.id, originalOwner: pre.color });
+    }
+  }
+  // necroRaise consumes one matching corpse at `to`.
+  let nextCorpses = corpses;
+  if (move.kind === "necroRaise" && move.resurrectPieceId) {
+    const idx = nextCorpses.findIndex(
+      (cp) =>
+        cp.square.r === move.to.r &&
+        cp.square.c === move.to.c &&
+        cp.pieceId === move.resurrectPieceId &&
+        cp.originalOwner === move.resurrectOriginalOwner,
+    );
+    if (idx >= 0) {
+      nextCorpses = nextCorpses.slice();
+      nextCorpses.splice(idx, 1);
+    }
+  }
   return {
     ...state,
     board,
     reserves,
     captured,
+    corpses: nextCorpses,
     enPassant: move.kind === "double" && move.from
       ? (move.from.r !== move.to.r
           ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }

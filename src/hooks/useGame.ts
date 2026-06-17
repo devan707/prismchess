@@ -66,9 +66,11 @@ export function useGame(opts: UseGameOptions) {
     (from: Square, to: Square, promotion?: PieceId) => {
       if (state.turn !== opts.humanColor || gameOver) return false;
       const legal = legalMovesFrom(state, from);
-      // Resurrect moves must be played via tryResurrect (so the user picks which
-      // fallen piece to bring back); never auto-select one here.
-      const candidates = legal.filter((m) => m.to.r === to.r && m.to.c === to.c && m.kind !== "resurrect");
+      // Allow normal moves AND the new necroRaise (click corpse square while
+      // necromancer is selected). The legacy `resurrect` kind is still skipped.
+      const candidates = legal.filter(
+        (m) => m.to.r === to.r && m.to.c === to.c && m.kind !== "resurrect",
+      );
       if (candidates.length === 0) return false;
       const promos = candidates.filter((m) => m.promotion);
       if (promos.length > 0 && !promotion) {

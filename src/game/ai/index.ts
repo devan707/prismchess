@@ -17,7 +17,7 @@ function recaptureLoss(state: GameState, m: Move): number {
   // Only the most common case matters: a normal move/capture that leaves a
   // single one of our pieces on m.to. Skip special multi-square moves.
   if (m.kind === "juggCharge" || m.kind === "juggExit" || m.kind === "juggShift") return 0;
-  if (m.kind === "resurrect" || m.kind === "portalSwap" || m.kind === "drop") return 0;
+  if (m.kind === "resurrect" || m.kind === "necroRaise" || m.kind === "portalSwap" || m.kind === "drop") return 0;
   const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
   const movingValue = valueFor(movingId, state.registry[movingId]);
   const next = applyMoveToState(state, m);
@@ -46,7 +46,13 @@ function moveScore(state: GameState, m: Move): number {
   if (m.captured) s += valueFor(m.captured.id, state.registry[m.captured.id]);
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) - 100;
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
-  if (m.kind === "resurrect" && m.resurrectPieceId) s += valueFor(m.resurrectPieceId, state.registry[m.resurrectPieceId]) * 0.6;
+  if ((m.kind === "resurrect" || m.kind === "necroRaise") && m.resurrectPieceId) {
+    const v = valueFor(m.resurrectPieceId, state.registry[m.resurrectPieceId]);
+    // Stealing an enemy corpse is worth more than recovering our own.
+    const ownBonus =
+      m.kind === "necroRaise" && m.resurrectOriginalOwner && m.resurrectOriginalOwner !== m.piece.color ? 1.25 : 1.0;
+    s += v * 0.7 * ownBonus;
+  }
   if (m.juggTrampled) {
     for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]);
   }

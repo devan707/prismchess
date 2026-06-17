@@ -9,6 +9,17 @@ export type PieceId = string;
 export interface Piece {
   id: PieceId;
   color: Color;
+  /** Resurrected enemy under our control. Same movement, ghostly look. */
+  undead?: boolean;
+}
+
+/** Persistent record of a piece that died on a specific square. Used by
+ *  the Necromancer for Spirit View + Resurrection. Corpses do NOT block
+ *  movement and are not game objects — purely metadata. */
+export interface Corpse {
+  square: Square;
+  pieceId: PieceId;
+  originalOwner: Color;
 }
 
 export type Board = (Piece | null)[][];
@@ -64,7 +75,7 @@ export interface PieceDef {
 
 export type MoveKind =
   | "normal" | "double" | "ep" | "drop"
-  | "dragonAttack" | "portalSwap" | "resurrect"
+  | "dragonAttack" | "portalSwap" | "resurrect" | "necroRaise"
   | "juggShift" | "juggCharge" | "juggExit";
 
 export interface Move {
@@ -82,6 +93,9 @@ export interface Move {
   dropPieceId?: PieceId;
   /** Resurrect target piece id (necromancer). */
   resurrectPieceId?: PieceId;
+  /** Original owner of the corpse being raised (for necroRaise). If it
+   *  differs from the necromancer's color the result is an undead piece. */
+  resurrectOriginalOwner?: Color;
   /** Shapeshifter capture: piece id to transform into (= captured.id). */
   shapeshiftTo?: PieceId;
   /** Juggernaut: enemy pieces trampled during a charge. */
@@ -95,6 +109,8 @@ export interface GameState {
   turn: Color;
   history: Move[];
   captured: { w: Piece[]; b: Piece[] };
+  /** Corpses left on the board (for Necromancer Spirit View + Resurrection). */
+  corpses: Corpse[];
   reserves: { w: Reserves; b: Reserves };
   enPassant: Square | null;
   /** Snapshot of the registry used to play this game. */

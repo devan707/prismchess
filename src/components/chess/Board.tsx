@@ -35,6 +35,32 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
   const checkSquares = checkColor ? findRoyals(state, checkColor) : [];
 
+  // Spirit View: when the human's Necromancer is selected, expose a map of
+  // corpses keyed by "r,c" → most-recent corpse to render as a ghost overlay.
+  const selectedPiece = selected ? state.board[selected.r][selected.c] : null;
+  const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+  const necromancerSelected =
+    !!selectedPiece &&
+    selectedPiece.color === humanColor &&
+    selectedDef?.special === "necromancer";
+  const ghostMap = new Map<string, { id: string; color: "w" | "b"; originalOwner: "w" | "b" }>();
+  if (necromancerSelected) {
+    for (const corp of state.corpses ?? []) {
+      const key = `${corp.square.r},${corp.square.c}`;
+      // Skip corpses on squares that are currently occupied (no place to raise).
+      if (state.board[corp.square.r][corp.square.c]) continue;
+      const cdef = state.registry[corp.pieceId];
+      if (!cdef) continue;
+      if (cdef.special === "juggernaut" || cdef.immobile) continue;
+      // Latest corpse wins for a given square.
+      ghostMap.set(key, {
+        id: corp.pieceId,
+        color: humanColor, // raised piece will belong to us (undead if enemy)
+        originalOwner: corp.originalOwner,
+      });
+    }
+  }
+
   const rowIndices = Array.from({ length: rows }, (_, i) => i);
   const colIndices = Array.from({ length: cols }, (_, i) => i);
   const displayRows = (humanColor === "w" ? rowIndices.slice().reverse() : rowIndices.slice());
@@ -183,6 +209,22 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                     className="relative z-10 flex items-center justify-center w-full h-full"
                   >
                     <PieceGlyph piece={piece} def={def} />
+                  </div>
+                );
+              })()}
+              {/* Spirit View ghost — only when no piece occupies the square. */}
+              {!piece && necromancerSelected && ghostMap.has(`${r},${c}`) && (() => {
+                const g = ghostMap.get(`${r},${c}`)!;
+                const gdef = state.registry[g.id];
+                const isEnemy = g.originalOwner !== humanColor;
+                return (
+                  <div
+                    className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none"
+                    style={{ opacity: 0.45 }}
+                    aria-hidden
+                    title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " (will rise as Undead)" : ""}`}
+                  >
+                    <PieceGlyph piece={{ id: g.id, color: g.color, undead: isEnemy }} def={gdef} />
                   </div>
                 );
               })()}
