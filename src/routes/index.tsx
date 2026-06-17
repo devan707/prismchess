@@ -69,6 +69,11 @@ function Home() {
               <MessagesSquare className="h-4 w-4 mr-2" /> Community
             </Button>
           </Link>
+          <Link to="/history">
+            <Button size="lg" variant="outline">
+              <History className="h-4 w-4 mr-2" /> History
+            </Button>
+          </Link>
         </div>
       </header>
 
