@@ -14,6 +14,22 @@ const BOTH_DOT = "oklch(0.78 0.17 75 / 0.95)";
 
 type Marker = "m" | "a" | "b";
 
+/** A worked example: friendly blocker(s), an enemy target, and the numbered path. */
+interface Scenario {
+  rows: number;
+  cols: number;
+  /** The piece's own square in the scenario. */
+  self: { r: number; c: number };
+  /** Friendly blockers (rendered as same-color piece glyphs, no markers). */
+  friends: Array<{ r: number; c: number; id: PieceId }>;
+  /** Enemy targets (rendered as opposite-color glyphs with a capture ring). */
+  enemies: Array<{ r: number; c: number; id: PieceId }>;
+  /** Ordered path squares 1..N — each is rendered with its step number. */
+  path: Array<{ r: number; c: number }>;
+  /** One-line caption shown under the scenario. */
+  caption: string;
+}
+
 interface Diagram {
   rows: number;
   cols: number;
@@ -22,7 +38,10 @@ interface Diagram {
   markers: Array<{ r: number; c: number; type: Marker }>;
   /** Optional one-line note (used for pieces that can't be drawn — Portal, Dragon, Barricade). */
   note?: string;
+  /** Optional worked example with friendlies/enemies, for path-dependent pieces. */
+  scenario?: Scenario;
 }
+
 
 function ray(
   out: Array<{ r: number; c: number; type: Marker }>,
