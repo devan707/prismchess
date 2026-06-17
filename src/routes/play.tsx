@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Board } from "@/components/chess/Board";
 import { useGame } from "@/hooks/useGame";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
@@ -13,9 +13,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
-import type { Color, Design, Difficulty } from "@/game/types";
+import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen } from "lucide-react";
+import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X } from "lucide-react";
+
 
 export const Route = createFileRoute("/play")({
   head: () => ({
@@ -89,6 +90,18 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
+  const [tipsOn, setTipsOn] = useState<boolean>(() => {
+    try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
+  });
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const handleSelectionChange = useCallback((sq: Square | null) => setSelectedSquare(sq), []);
+  useEffect(() => {
+    try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
+  }, [tipsOn]);
+
+  const selectedPiece = selectedSquare ? state.board[selectedSquare.r][selectedSquare.c] : null;
+  const selectedDef = selectedPiece ? state.registry[selectedPiece.id] : null;
+
 
   const check = status.kind === "playing" ? status.check : false;
   const winner = resignedBy
@@ -124,6 +137,16 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         </Link>
         <div className="text-sm font-display truncate">{statusLabel}</div>
         <div className="flex items-center gap-1">
+          <Button
+            variant={tipsOn ? "secondary" : "ghost"}
+            size="icon"
+            aria-label={tipsOn ? "Hide piece tips" : "Show piece tips"}
+            aria-pressed={tipsOn}
+            onClick={() => setTipsOn((v) => !v)}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Move history">
@@ -256,7 +279,32 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           dropTargets={dropTargets}
           onDrop={(id, to) => tryDrop(id, to)}
           disabled={terminal}
+          onSelectionChange={handleSelectionChange}
         />
+
+        {tipsOn && selectedDef && selectedPiece && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card px-3 py-2 text-sm flex items-start gap-2 shadow-sm">
+            <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+            <div className="flex-1 min-w-0">
+              <div className="font-display font-semibold text-foreground">
+                {selectedPiece.color === "w" ? "White" : "Black"} {selectedDef.name}
+              </div>
+              <p className="text-xs text-muted-foreground leading-snug mt-0.5">
+                {selectedDef.description}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 -mr-1 -mt-1 shrink-0"
+              aria-label="Hide piece tips"
+              onClick={() => setTipsOn(false)}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+
 
         {terminal && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm p-4">

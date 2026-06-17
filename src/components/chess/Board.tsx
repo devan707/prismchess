@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { GameState, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { findRoyals } from "@/game/board";
@@ -15,11 +15,16 @@ interface BoardProps {
   dropTargets?: Square[];
   onDrop?: (pieceId: PieceId, to: Square) => boolean;
   disabled?: boolean;
+  /** Notified whenever the on-board selection changes (or clears). */
+  onSelectionChange?: (sq: Square | null) => void;
 }
 
-export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled }: BoardProps) {
+export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
+
+  useEffect(() => { onSelectionChange?.(selected); }, [selected, onSelectionChange]);
+
 
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
@@ -46,11 +51,12 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
       if (selected.r === sq.r && selected.c === sq.c) { setSelected(null); return; }
       const ok = onMove(selected, sq);
       if (ok) { setSelected(null); return; }
-      if (p && p.color === state.turn) { setSelected(sq); return; }
+      if (p) { setSelected(sq); return; }
       setSelected(null);
     } else {
-      if (p && p.color === state.turn) setSelected(sq);
+      if (p) setSelected(sq);
     }
+
   };
 
   // Aspect ratio: cols / rows
