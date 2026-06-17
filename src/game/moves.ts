@@ -274,46 +274,44 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
   if (def.special === "necromancer") {
-    // Normal diagonal moves come from the generic spec below; add resurrection actions.
-    if (def.movement || def.capture) {
-      const moveSpec = def.movement ?? {};
-      const captureSpec = def.capture ?? moveSpec;
-      const moveTargets = emitFromSpec(board, state.registry, from, piece, moveSpec, "move");
-      const captureTargets = emitFromSpec(board, state.registry, from, piece, captureSpec, "capture");
-      for (const t of moveTargets) moves.push({ from, to: t, piece, captured: null });
-      for (const t of captureTargets) {
-        const occ = board[t.r][t.c];
-        if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
-          moves.push({ from, to: t, piece, captured: occ });
-        }
-      }
+    // Non-combat: moves exactly 1 square diagonally onto an EMPTY square.
+    // Cannot capture, cannot attack, cannot jump.
+    const diagOffs: Offset[] = [
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ];
+    for (const o of diagOffs) {
+      const to = { r: from.r + o.dr, c: from.c + o.dc };
+      if (!inBoardBounds(board, to)) continue;
+      if (board[to.r][to.c]) continue; // cannot capture, cannot land on any piece
+      moves.push({ from, to, piece, captured: null });
     }
-    // Friendly captured pieces live in state.captured[opposite color].
-    const friendlyCaptured = state.captured[piece.color === "w" ? "b" : "w"];
-    if (friendlyCaptured.length > 0) {
-      const uniqueIds = Array.from(new Set(
-        friendlyCaptured
-          .filter((p) => {
-            const d = state.registry[p.id];
-            // Juggernauts and barricades cannot be resurrected.
-            if (!d) return false;
-            if (d.special === "juggernaut") return false;
-            if (d.immobile) return false;
-            return true;
-          })
-          .map((p) => p.id),
-      ));
-      for (const o of [
-        { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
-        { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
-      ]) {
-        const to = { r: from.r + o.dr, c: from.c + o.dc };
-        if (!inBoardBounds(board, to)) continue;
-        if (board[to.r][to.c]) continue;
-        for (const id of uniqueIds) {
-          moves.push({ from, to, piece, captured: null, kind: "resurrect", resurrectPieceId: id });
-        }
-      }
+    // Resurrection: for any corpse in the 8 adjacent squares that is currently
+    // empty, raise the piece there. The Necromancer itself does NOT move.
+    const corpses = state.corpses ?? [];
+    const seenSq = new Set<string>();
+    for (const corp of corpses) {
+      const dr = corp.square.r - from.r;
+      const dc = corp.square.c - from.c;
+      if (dr === 0 && dc === 0) continue;
+      if (Math.abs(dr) > 1 || Math.abs(dc) > 1) continue;
+      if (board[corp.square.r][corp.square.c]) continue; // square must be empty
+      const cdef = state.registry[corp.pieceId];
+      if (!cdef) continue;
+      // Juggernauts and Barricades cannot be resurrected.
+      if (cdef.special === "juggernaut") continue;
+      if (cdef.immobile) continue;
+      const key = `${corp.square.r},${corp.square.c},${corp.pieceId},${corp.originalOwner}`;
+      if (seenSq.has(key)) continue;
+      seenSq.add(key);
+      moves.push({
+        from,
+        to: corp.square,
+        piece,
+        captured: null,
+        kind: "necroRaise",
+        resurrectPieceId: corp.pieceId,
+        resurrectOriginalOwner: corp.originalOwner,
+      });
     }
     return moves;
   }
