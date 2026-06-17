@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Board } from "@/components/chess/Board";
 import { useGame } from "@/hooks/useGame";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
@@ -13,9 +13,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
-import type { Color, Design, Difficulty } from "@/game/types";
+import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen } from "lucide-react";
+import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X } from "lucide-react";
+
 
 export const Route = createFileRoute("/play")({
   head: () => ({
