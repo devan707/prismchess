@@ -89,7 +89,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const {
     state, status, tryMove, tryDrop, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
-    undo, pendingPromotion, promotionOptions, confirmPromotion,
+    undo, takeback, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
