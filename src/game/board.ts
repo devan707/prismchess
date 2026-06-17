@@ -1,4 +1,4 @@
-import { type Board, type GameState, type Piece, type Square, type Variant, VARIANTS, DEFAULT_VARIANT_ID } from "./types";
+import { type Board, type CastlingRights, type GameState, type Piece, type Square, type Variant, VARIANTS, DEFAULT_VARIANT_ID } from "./types";
 
 export function emptyBoard(size: number): Board {
   return Array.from({ length: size }, () =>
@@ -18,6 +18,22 @@ export function initialBoard(variant: Variant): Board {
   return b;
 }
 
+export function initialCastling(variant: Variant): CastlingRights {
+  const wRooks: Record<number, boolean> = {};
+  const bRooks: Record<number, boolean> = {};
+  const hasKing = variant.backRank.includes("K");
+  variant.backRank.forEach((p, c) => {
+    if (p === "R") {
+      wRooks[c] = true;
+      bRooks[c] = true;
+    }
+  });
+  return {
+    w: { king: hasKing, rooks: wRooks },
+    b: { king: hasKing, rooks: bRooks },
+  };
+}
+
 export function initialState(variantId: string = DEFAULT_VARIANT_ID): GameState {
   const variant = VARIANTS[variantId] ?? VARIANTS[DEFAULT_VARIANT_ID];
   return {
@@ -25,6 +41,8 @@ export function initialState(variantId: string = DEFAULT_VARIANT_ID): GameState 
     turn: "w",
     history: [],
     captured: { w: [], b: [] },
+    castling: initialCastling(variant),
+    enPassant: null,
   };
 }
 
@@ -32,8 +50,11 @@ export function cloneBoard(b: Board): Board {
   return b.map((row) => row.slice());
 }
 
-export function boardSize(board: Board): number {
-  return board.length;
+export function cloneCastling(c: CastlingRights): CastlingRights {
+  return {
+    w: { king: c.w.king, rooks: { ...c.w.rooks } },
+    b: { king: c.b.king, rooks: { ...c.b.rooks } },
+  };
 }
 
 export function inBoardBounds(board: Board, s: Square): boolean {
@@ -63,4 +84,8 @@ export function findKing(board: Board, color: "w" | "b"): Square | null {
     }
   }
   return null;
+}
+
+export function backRankFor(board: Board, color: "w" | "b"): number {
+  return color === "w" ? 0 : board.length - 1;
 }

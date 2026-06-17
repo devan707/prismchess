@@ -6,7 +6,6 @@ export interface Piece {
   color: Color;
 }
 
-// Board is row-major: board[row][col]. row 0 = White back rank.
 export type Board = (Piece | null)[][];
 
 export interface Square {
@@ -16,12 +15,30 @@ export interface Square {
 
 export type PromotionPiece = "Q" | "R" | "N" | "B";
 
+export type MoveKind = "castle" | "ep" | "double";
+
 export interface Move {
   from: Square;
   to: Square;
   piece: Piece;
   captured?: Piece | null;
   promotion?: PromotionPiece;
+  kind?: MoveKind;
+  // Castling: rook movement
+  rookFrom?: Square;
+  rookTo?: Square;
+  // En passant: square of the captured pawn (differs from `to`)
+  epCapture?: Square;
+}
+
+export interface CastlingSide {
+  king: boolean;
+  rooks: Record<number, boolean>; // by original column
+}
+
+export interface CastlingRights {
+  w: CastlingSide;
+  b: CastlingSide;
 }
 
 export interface GameState {
@@ -29,6 +46,8 @@ export interface GameState {
   turn: Color;
   history: Move[];
   captured: { w: Piece[]; b: Piece[] };
+  castling: CastlingRights;
+  enPassant: Square | null; // the square a pawn just skipped over, capturable next ply
 }
 
 export type Difficulty = "easy" | "medium" | "hard";
