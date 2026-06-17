@@ -1,210 +1,267 @@
-import type { Board, CastlingRights, Color, GameState, Move, PromotionPiece, Square } from "./types";
-import { backRankFor, cloneBoard, findKing, inBoardBounds } from "./board";
+import type { Board, Color, GameState, Move, MovementSpec, Piece, PieceDef, PieceId, Square } from "./types";
+import { cloneBoard, findRoyals, inBoardBounds } from "./board";
 
-const ROOK_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-const BISHOP_DIRS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
-const QUEEN_DIRS = [...ROOK_DIRS, ...BISHOP_DIRS];
-const KING_DIRS = [...ROOK_DIRS, ...BISHOP_DIRS];
-const KNIGHT_DELTAS = [
-  [2, 1], [2, -1], [-2, 1], [-2, -1],
-  [1, 2], [1, -2], [-1, 2], [-1, -2],
-];
-
-export interface MoveCtx {
-  enPassant: Square | null;
-  castling: CastlingRights;
+function rowsCols(board: Board): { rows: number; cols: number } {
+  return { rows: board.length, cols: board[0]?.length ?? 0 };
 }
 
-export function ctxFromState(s: GameState): MoveCtx {
-  return { enPassant: s.enPassant, castling: s.castling };
+function isEnemy(p: Piece | null, color: Color): boolean {
+  return !!p && p.color !== color;
+}
+function isFriendly(p: Piece | null, color: Color): boolean {
+  return !!p && p.color === color;
 }
 
-function pawnDir(color: Color): number {
-  return color === "w" ? 1 : -1;
+function isBarricade(p: Piece | null, registry: Record<PieceId, PieceDef>): boolean {
+  return !!p && !!registry[p.id]?.immobile;
 }
 
+function emitFromSpec(
+  board: Board,
+  registry: Record<PieceId, PieceDef>,
+  from: Square,
+  piece: Piece,
+  spec: MovementSpec,
+  mode: "move" | "capture" | "both",
+): Square[] {
+  const out: Square[] = [];
+  const { rows, cols } = rowsCols(board);
+  const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
+
+  const accept = (target: Square, occ: Piece | null) => {
+    if (isBarricade(occ, registry)) return false;
+    if (occ === null) return mode === "move" || mode === "both";
+    if (isFriendly(occ, piece.color)) return false;
+    // enemy
+    return mode === "capture" || mode === "both";
+  };
+
+  if (spec.leaps) {
+    for (const o of spec.leaps) {
+      const r = from.r + o.dr;
+      const c = from.c + o.dc;
+      if (!inB(r, c)) continue;
+      const t = board[r][c];
+      if (accept({ r, c }, t)) out.push({ r, c });
+    }
+  }
+  if (spec.slides) {
+    for (const d of spec.slides) {
+      const max = d.max && d.max > 0 ? d.max : Math.max(rows, cols);
+      let r = from.r + d.dr;
+      let c = from.c + d.dc;
+      let steps = 0;
+      while (inB(r, c) && steps < max) {
+        const t = board[r][c];
+        if (isBarricade(t, registry)) break;
+        if (!t) {
+          if (mode !== "capture") out.push({ r, c });
+        } else {
+          if (isFriendly(t, piece.color)) break;
+          if (mode !== "move") out.push({ r, c });
+          break;
+        }
+        if (!spec.slidersJump && t) break;
+        r += d.dr;
+        c += d.dc;
+        steps++;
+      }
+    }
+  }
+  return out;
+}
+
+function pawnDir(color: Color): number { return color === "w" ? 1 : -1; }
 function pawnStartRow(board: Board, color: Color): number {
   return color === "w" ? 1 : board.length - 2;
 }
-
-function promotionRank(board: Board, color: Color): number {
+function pawnPromoRank(board: Board, color: Color): number {
   return color === "w" ? board.length - 1 : 0;
 }
 
-function promotionOptions(board: Board, _color: Color): PromotionPiece[] {
-  const set = new Set<PromotionPiece>(["R", "N", "B"]);
-  for (let r = 0; r < board.length; r++) {
-    for (let c = 0; c < board.length; c++) {
-      const p = board[r][c];
-      if (p && p.type === "Q") { set.add("Q"); break; }
-    }
+function promotionOptionsFor(state: GameState): PieceId[] {
+  const out: PieceId[] = [];
+  for (const id of Object.keys(state.registry)) {
+    const def = state.registry[id];
+    if (def.canBePromoted) out.push(id);
   }
-  return Array.from(set);
+  // Prefer Q,R,B,N order
+  const order = ["Q", "R", "B", "N"];
+  out.sort((a, b) => {
+    const ai = order.indexOf(a); const bi = order.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1; if (bi === -1) return -1;
+    return ai - bi;
+  });
+  return out;
 }
 
-export function pseudoLegalMovesFrom(board: Board, from: Square, ctx?: MoveCtx): Move[] {
-  const p = board[from.r][from.c];
-  if (!p) return [];
+/** Pseudo-legal moves for the piece at `from`. */
+export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
+  const board = state.board;
+  const piece = board[from.r][from.c];
+  if (!piece) return [];
+  const def = state.registry[piece.id];
+  if (!def) return [];
+  if (def.immobile) return []; // barricade never moves
+
   const moves: Move[] = [];
-  const push = (to: Square, extra: Partial<Move> = {}) => {
-    const target = board[to.r][to.c];
-    if (target && target.color === p.color) return;
-    if (p.type === "P" && to.r === promotionRank(board, p.color)) {
-      for (const promo of promotionOptions(board, p.color)) {
-        moves.push({ from, to, piece: p, captured: target ?? null, promotion: promo, ...extra });
-      }
-    } else {
-      moves.push({ from, to, piece: p, captured: target ?? null, ...extra });
-    }
-  };
 
-  const slide = (dirs: number[][]) => {
-    for (const [dr, dc] of dirs) {
-      let r = from.r + dr;
-      let c = from.c + dc;
-      while (inBoardBounds(board, { r, c })) {
-        const t = board[r][c];
-        if (!t) {
-          push({ r, c });
-        } else {
-          if (t.color !== p.color) push({ r, c });
-          break;
+  if (def.special === "pawn") {
+    const dir = pawnDir(piece.color);
+    const promoRank = pawnPromoRank(board, piece.color);
+    const pushPawn = (to: Square, captured: Piece | null, extra: Partial<Move> = {}) => {
+      if (to.r === promoRank) {
+        for (const promo of promotionOptionsFor(state)) {
+          moves.push({ from, to, piece, captured, promotion: promo, kind: extra.kind, epCapture: extra.epCapture });
         }
-        r += dr;
-        c += dc;
+      } else {
+        moves.push({ from, to, piece, captured, ...extra });
       }
-    }
-  };
-
-  if (p.type === "K") {
-    for (const [dr, dc] of KING_DIRS) {
-      const to = { r: from.r + dr, c: from.c + dc };
-      if (inBoardBounds(board, to)) push(to);
-    }
-    // Castling (only with full context)
-    if (ctx && ctx.castling[p.color].king) {
-      const backRank = backRankFor(board, p.color);
-      if (from.r === backRank) {
-        const opp: Color = p.color === "w" ? "b" : "w";
-        const kingSafe = !isSquareAttacked(board, from, opp);
-        if (kingSafe) {
-          const rooks = ctx.castling[p.color].rooks;
-          for (const colStr of Object.keys(rooks)) {
-            const rookCol = Number(colStr);
-            if (!rooks[rookCol]) continue;
-            // The rook must still be on its original square
-            const rookSq = { r: backRank, c: rookCol };
-            const rookPiece = board[rookSq.r][rookSq.c];
-            if (!rookPiece || rookPiece.type !== "R" || rookPiece.color !== p.color) continue;
-            const dir = Math.sign(rookCol - from.c);
-            const dist = Math.abs(rookCol - from.c);
-            if (dist < 2) continue; // king must move 2 toward rook
-            const kingDest = { r: backRank, c: from.c + 2 * dir };
-            const rookDest = { r: backRank, c: kingDest.c - dir };
-            if (!inBoardBounds(board, kingDest)) continue;
-            // All squares strictly between king and rook empty
-            let empty = true;
-            for (let c = from.c + dir; c !== rookCol; c += dir) {
-              if (board[backRank][c]) { empty = false; break; }
-            }
-            if (!empty) continue;
-            // King's path squares (intermediate + dest) not attacked
-            const passSq = { r: backRank, c: from.c + dir };
-            if (isSquareAttacked(board, passSq, opp)) continue;
-            if (isSquareAttacked(board, kingDest, opp)) continue;
-            moves.push({
-              from,
-              to: kingDest,
-              piece: p,
-              captured: null,
-              kind: "castle",
-              rookFrom: rookSq,
-              rookTo: rookDest,
-            });
-          }
-        }
-      }
-    }
-  } else if (p.type === "N") {
-    for (const [dr, dc] of KNIGHT_DELTAS) {
-      const to = { r: from.r + dr, c: from.c + dc };
-      if (inBoardBounds(board, to)) push(to);
-    }
-  } else if (p.type === "R") {
-    slide(ROOK_DIRS);
-  } else if (p.type === "B") {
-    slide(BISHOP_DIRS);
-  } else if (p.type === "Q") {
-    slide(QUEEN_DIRS);
-  } else if (p.type === "P") {
-    const dir = pawnDir(p.color);
+    };
+    // forward
     const f1 = { r: from.r + dir, c: from.c };
     if (inBoardBounds(board, f1) && !board[f1.r][f1.c]) {
-      push(f1);
-      // Double push from starting row
-      if (from.r === pawnStartRow(board, p.color)) {
+      pushPawn(f1, null);
+      // double
+      if (from.r === pawnStartRow(board, piece.color)) {
         const f2 = { r: from.r + 2 * dir, c: from.c };
         if (inBoardBounds(board, f2) && !board[f2.r][f2.c]) {
-          moves.push({ from, to: f2, piece: p, captured: null, kind: "double" });
+          moves.push({ from, to: f2, piece, captured: null, kind: "double" });
         }
       }
     }
+    // diagonal captures
     for (const dc of [-1, 1]) {
       const to = { r: from.r + dir, c: from.c + dc };
       if (!inBoardBounds(board, to)) continue;
       const t = board[to.r][to.c];
-      if (t && t.color !== p.color) {
-        push(to);
-      } else if (!t && ctx && ctx.enPassant && ctx.enPassant.r === to.r && ctx.enPassant.c === to.c) {
-        // En passant — captured pawn sits on (from.r, to.c)
-        const capSq = { r: from.r, c: to.c };
-        const capPiece = board[capSq.r][capSq.c];
-        if (capPiece && capPiece.type === "P" && capPiece.color !== p.color) {
+      if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
+        pushPawn(to, t);
+      } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
+        const cap = board[from.r][to.c];
+        if (cap && cap.color !== piece.color && state.registry[cap.id]?.special === "pawn") {
           moves.push({
-            from,
-            to,
-            piece: p,
-            captured: capPiece,
-            kind: "ep",
-            epCapture: capSq,
+            from, to, piece, captured: cap, kind: "ep", epCapture: { r: from.r, c: to.c },
           });
         }
       }
     }
+    return moves;
   }
+
+  if (def.special === "dragon") {
+    // Teleport: to any empty (non-barricade) square != from
+    const { rows, cols } = rowsCols(board);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (r === from.r && c === from.c) continue;
+        if (board[r][c]) continue;
+        moves.push({ from, to: { r, c }, piece, captured: null, kind: "normal" });
+      }
+    }
+    // Adjacent attack-in-place
+    for (const o of [
+      { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ]) {
+      const to = { r: from.r + o.dr, c: from.c + o.dc };
+      if (!inBoardBounds(board, to)) continue;
+      const t = board[to.r][to.c];
+      if (t && t.color !== piece.color && !isBarricade(t, state.registry)) {
+        moves.push({ from, to, piece, captured: t, kind: "dragonAttack" });
+      }
+    }
+    return moves;
+  }
+
+  // Generic data-driven piece
+  if (def.movement || def.capture) {
+    const moveSpec = def.movement ?? {};
+    const captureSpec = def.capture ?? moveSpec;
+    const moveTargets = emitFromSpec(board, state.registry, from, piece, moveSpec, "move");
+    const captureTargets = emitFromSpec(board, state.registry, from, piece, captureSpec, "capture");
+    for (const t of moveTargets) {
+      moves.push({ from, to: t, piece, captured: null });
+    }
+    for (const t of captureTargets) {
+      const occ = board[t.r][t.c];
+      if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
+        moves.push({ from, to: t, piece, captured: occ });
+      }
+    }
+  }
+
   return moves;
+}
+
+/** All drops a side can play right now. */
+export function dropMoves(state: GameState, color: Color): Move[] {
+  const out: Move[] = [];
+  const reserves = state.reserves[color];
+  if (!reserves) return out;
+  const { rows, cols } = rowsCols(state.board);
+  for (const id of Object.keys(reserves)) {
+    const count = reserves[id];
+    if (!count) continue;
+    const def = state.registry[id];
+    if (!def) continue;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (state.board[r][c]) continue;
+        out.push({
+          from: null,
+          to: { r, c },
+          piece: { id, color },
+          captured: null,
+          kind: "drop",
+          dropPieceId: id,
+        });
+      }
+    }
+  }
+  return out;
 }
 
 export function applyMoveToBoard(board: Board, move: Move): Board {
   const b = cloneBoard(board);
-  b[move.from.r][move.from.c] = null;
-  let piece = move.piece;
+  if (move.kind === "drop") {
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    return b;
+  }
+  if (move.kind === "dragonAttack") {
+    // Dragon stays; enemy removed.
+    b[move.to.r][move.to.c] = null;
+    return b;
+  }
+  if (move.from) {
+    b[move.from.r][move.from.c] = null;
+  }
+  let piece: Piece = move.piece;
   if (move.promotion) {
-    piece = { type: move.promotion, color: move.piece.color };
+    piece = { id: move.promotion, color: move.piece.color };
   }
   b[move.to.r][move.to.c] = piece;
-  if (move.kind === "castle" && move.rookFrom && move.rookTo) {
-    const rook = b[move.rookFrom.r][move.rookFrom.c];
-    b[move.rookFrom.r][move.rookFrom.c] = null;
-    b[move.rookTo.r][move.rookTo.c] = rook;
-  }
   if (move.kind === "ep" && move.epCapture) {
     b[move.epCapture.r][move.epCapture.c] = null;
   }
   return b;
 }
 
-export function isSquareAttacked(board: Board, sq: Square, byColor: Color): boolean {
-  const n = board.length;
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
+/** Is `sq` attacked by any piece of `byColor`? Ignores drops & King's Hand (since it can't deliver check to a king relative to royalty — it CAN deliver check actually). */
+export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): boolean {
+  const board = state.board;
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[0].length; c++) {
       const p = board[r][c];
       if (!p || p.color !== byColor) continue;
-      // No ctx — castling/EP/double don't matter for attack detection
-      const moves = pseudoLegalMovesFrom(board, { r, c });
+      // Use a scratch state for pseudo move gen (no EP capturing on empty square unrelated)
+      const moves = pseudoMovesFrom(state, { r, c });
       for (const m of moves) {
-        if (m.to.r === sq.r && m.to.c === sq.c) {
-          if (p.type === "P" && m.to.c === c) continue;
+        if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
+          // dragon teleport attacks empty squares; doesn't capture there. Filter:
+          if (m.kind === "normal" && state.registry[p.id]?.special === "dragon") continue;
+          // dragonAttack does capture.
           return true;
         }
       }
@@ -213,30 +270,58 @@ export function isSquareAttacked(board: Board, sq: Square, byColor: Color): bool
   return false;
 }
 
-export function inCheck(board: Board, color: Color): boolean {
-  const k = findKing(board, color);
-  if (!k) return false;
-  return isSquareAttacked(board, k, color === "w" ? "b" : "w");
+export function inCheck(state: GameState, color: Color): boolean {
+  const royals = findRoyals(state, color);
+  if (royals.length === 0) return false;
+  const opp: Color = color === "w" ? "b" : "w";
+  return royals.some((sq) => isSquareAttacked(state, sq, opp));
 }
 
-export function legalMovesFrom(board: Board, from: Square, turn: Color, ctx?: MoveCtx): Move[] {
-  const p = board[from.r][from.c];
-  if (!p || p.color !== turn) return [];
-  return pseudoLegalMovesFrom(board, from, ctx).filter((m) => {
-    const nb = applyMoveToBoard(board, m);
-    return !inCheck(nb, turn);
+/** Apply a move to a full GameState (for "would this leave me in check" tests). */
+function applyMoveToState(state: GameState, move: Move): GameState {
+  const board = applyMoveToBoard(state.board, move);
+  const reserves = {
+    w: { ...state.reserves.w },
+    b: { ...state.reserves.b },
+  };
+  if (move.kind === "drop" && move.dropPieceId) {
+    reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
+  }
+  return {
+    ...state,
+    board,
+    reserves,
+    enPassant: move.kind === "double" && move.from
+      ? { r: (move.from.r + move.to.r) / 2, c: move.to.c }
+      : null,
+    turn: state.turn === "w" ? "b" : "w",
+  };
+}
+
+export function legalMovesFrom(state: GameState, from: Square): Move[] {
+  const p = state.board[from.r][from.c];
+  if (!p || p.color !== state.turn) return [];
+  return pseudoMovesFrom(state, from).filter((m) => {
+    const next = applyMoveToState(state, m);
+    return !inCheck({ ...next, turn: state.turn }, state.turn);
   });
 }
 
-export function allLegalMoves(board: Board, turn: Color, ctx?: MoveCtx): Move[] {
+export function allLegalMoves(state: GameState): Move[] {
   const out: Move[] = [];
-  const n = board.length;
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      const p = board[r][c];
-      if (!p || p.color !== turn) continue;
-      out.push(...legalMovesFrom(board, { r, c }, turn, ctx));
+  for (let r = 0; r < state.board.length; r++) {
+    for (let c = 0; c < state.board[0].length; c++) {
+      const p = state.board[r][c];
+      if (!p || p.color !== state.turn) continue;
+      out.push(...legalMovesFrom(state, { r, c }));
     }
+  }
+  // Drops
+  for (const m of dropMoves(state, state.turn)) {
+    const next = applyMoveToState(state, m);
+    if (!inCheck({ ...next, turn: state.turn }, state.turn)) out.push(m);
   }
   return out;
 }
+
+export { applyMoveToState };
