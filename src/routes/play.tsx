@@ -14,7 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
-import type { Color, Design, Difficulty, Square } from "@/game/types";
+import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X } from "lucide-react";
 
