@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { loadDesign } from "@/game/design";
+import { loadDesign, loadCurrentMeta, type CurrentGameMeta } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
@@ -22,7 +22,10 @@ import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { recordSoloGame } from "@/lib/history.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter } from "lucide-react";
+import { TutorialDialog } from "@/components/TutorialDialog";
+import { hasSeenTutorial } from "@/lib/tutorial-state";
+import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
+import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 
