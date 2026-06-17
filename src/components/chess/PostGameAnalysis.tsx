@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, RotateCcw, Send, Sparkles } from "lucide-react";
+import { Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, RotateCcw, Send, Sparkles, ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Board } from "@/components/chess/Board";
 import { analyzeGame, fmtMove } from "@/lib/api/analyze-game.functions";
 import { loadPlaybook, savePlaybook, resetPlaybook, type Playbook } from "@/game/ai/playbook";
