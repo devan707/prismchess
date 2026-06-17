@@ -26,6 +26,7 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   J: 8,    // Juggernaut
   D: 8,    // Dragon
   X: 0.5,  // Barricade
+  Y: 0,    // Prism — indestructible fixture, no material value
 };
 
 /**
