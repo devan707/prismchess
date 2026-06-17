@@ -316,6 +316,9 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
           onChoose={(p) => { confirmPromotion(p); cancelPromotion(); }}
         />
       )}
+      {amPlayer && (match.status === "active" || match.status === "finished") && (
+        <MatchChatPanel matchId={matchId} meId={meId} />
+      )}
     </div>
   );
 }
