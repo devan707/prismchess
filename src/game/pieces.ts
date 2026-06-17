@@ -69,11 +69,11 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
   H: {
     id: "H",
     name: "King's Hand",
-    glyph: "👑",
+    glyph: "✋",
     emoji: true,
     movement: { leaps: KING_OFFSETS },
     builtinCustom: true,
-    description: "Moves like a king but is NOT royal — capturing it doesn't end the game, and it can step into attacked squares.",
+    description: "The king's right hand. Moves one square in any direction like a king, but is NOT royal — capturing it doesn't end the game, and it can step into attacked squares.",
   },
   A: {
     id: "A",
