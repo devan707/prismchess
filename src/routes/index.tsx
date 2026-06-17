@@ -109,7 +109,7 @@ function Home() {
             {BUILTIN_GAMES.map((g) => (
               <button
                 key={g.id}
-                onClick={() => play(g.build())}
+                onClick={() => playBuiltin(g)}
                 className="group text-left rounded-xl border bg-card p-4 hover:border-primary hover:shadow-md transition"
               >
                 <div className="flex items-center justify-between mb-1">
