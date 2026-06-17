@@ -122,7 +122,7 @@ export function DesignerBoard({ design, registry, onChange, mirror, selectedSqua
                   <PieceGlyph
                     piece={{ id: placement.pieceId, color: placement.color }}
                     def={def}
-                    className="text-[clamp(1.6rem,7vw,3.5rem)] drop-shadow"
+                    className="text-[clamp(1.6rem,7vw,3.5rem)]"
                   />
                 </span>
               )}

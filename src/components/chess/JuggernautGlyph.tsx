@@ -15,10 +15,10 @@ interface Props {
  */
 export function JuggernautGlyph({ color, orientation, facing }: Props) {
   const horizontal = orientation === "horizontal";
-  const body = color === "w" ? "oklch(0.86 0.03 85)" : "oklch(0.22 0.02 220)";
-  const trim = color === "w" ? "oklch(0.55 0.05 85)" : "oklch(0.08 0.01 220)";
-  const accent = color === "w" ? "oklch(0.45 0.06 30)" : "oklch(0.78 0.12 30)";
-  const stroke = color === "w" ? "oklch(0.3 0.02 220 / 0.7)" : "oklch(0 0 0 / 0.6)";
+  const body = color === "w" ? "oklch(0.97 0 0)" : "oklch(0.15 0 0)";
+  const trim = color === "w" ? "oklch(0.4 0 0)" : "oklch(0.72 0 0)";
+  const accent = color === "w" ? "oklch(0.4 0.1 30)" : "oklch(0.8 0.12 30)";
+  const stroke = color === "w" ? "oklch(0.15 0 0 / 0.85)" : "oklch(0.95 0 0 / 0.85)";
 
   // Wrapper spans 2 cells along the orientation axis.
   const wrapperStyle: React.CSSProperties = horizontal

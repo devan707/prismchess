@@ -179,7 +179,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                     onDragEnd={() => setDragFrom(null)}
                     className="relative z-10 flex items-center justify-center w-full h-full"
                   >
-                    <PieceGlyph piece={piece} def={def} className="text-[clamp(1.8rem,8vw,4rem)] drop-shadow" />
+                    <PieceGlyph piece={piece} def={def} className="text-[clamp(1.8rem,8vw,4rem)]" />
                   </div>
                 );
               })()}
