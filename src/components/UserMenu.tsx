@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LogIn, User as UserIcon, LogOut, MessagesSquare, Users, Mail } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { cancelMyOpenChallenges } from "@/lib/push.functions";
+import { NotificationsToggle } from "@/components/NotificationsToggle";
 
 export function UserMenu() {
   const [email, setEmail] = useState<string | null>(null);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const cancelOpenFn = useServerFn(cancelMyOpenChallenges);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
@@ -30,6 +34,13 @@ export function UserMenu() {
   }
 
   const signOut = async () => {
+    // Drop any open (unjoined) challenges this user hosts so the lobby
+    // doesn't show stale invites the host can no longer accept on.
+    try {
+      await cancelOpenFn({});
+    } catch {
+      /* non-fatal */
+    }
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
@@ -58,6 +69,10 @@ export function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/forum" })}>
           <MessagesSquare className="h-4 w-4 mr-2" /> Community
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
+          <NotificationsToggle variant="menuitem" />
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut}>
