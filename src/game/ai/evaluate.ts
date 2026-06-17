@@ -17,7 +17,7 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   N: 3,
   P: 1,
   S: 2,    // Shapeshifter Pawn
-  A: 6,    // Archer
+  A: 4,    // Archer — fragile diagonal-only ranged specialist
   T: 5,    // Portal
   H: 4,    // King's Hand
   Z: 6,    // Assassin
@@ -242,14 +242,15 @@ function dynamicBonus(state: GameState, color: Color): number {
       if (p.id === "A") {
         let multiThreat = 0;
         let adjacentEnemies = 0;
-        // 8-direction line scan at range 2 and 3.
-        for (const [dr, dc] of ALL_8) {
+        // Diagonal-only line scan at range 2 and 3 (Archer's actual attack pattern).
+        const DIAG_4: Array<[number, number]> = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+        for (const [dr, dc] of DIAG_4) {
           for (const k of [2, 3]) {
             const nr = r + dr * k, nc = c + dc * k;
             if (!inB(board, nr, nc)) continue;
             const t = board[nr][nc];
             if (t && t.color === opp) {
-              multiThreat += valueFor(t.id, state.registry[t.id]) * 0.12;
+              multiThreat += valueFor(t.id, state.registry[t.id]) * 0.14;
             }
           }
         }

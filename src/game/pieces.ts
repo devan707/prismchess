@@ -12,14 +12,13 @@ const KNIGHT_OFFSETS: Offset[] = [
   { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
   { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
 ];
-// Archer: ranged attacker. Shoots along the 8 compass lines at range 2 or 3,
-// arcing over every piece in between. Cannot strike adjacent squares.
-const ARCHER_OFFSETS: Offset[] = [
-  // range 2
-  { dr: 2, dc: 0 }, { dr: -2, dc: 0 }, { dr: 0, dc: 2 }, { dr: 0, dc: -2 },
+// Archer: ranged specialist. Moves one square in any direction (no capture
+// on the move). Attacks by firing diagonally at range 2 or 3 only, arcing
+// over every piece in between. Captures by occupying the target square.
+const ARCHER_ATTACK_OFFSETS: Offset[] = [
+  // diagonal range 2
   { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
-  // range 3
-  { dr: 3, dc: 0 }, { dr: -3, dc: 0 }, { dr: 0, dc: 3 }, { dr: 0, dc: -3 },
+  // diagonal range 3
   { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
 ];
 
@@ -85,9 +84,10 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     name: "Archer",
     glyph: "🏹",
     emoji: true,
-    movement: { leaps: ARCHER_OFFSETS },
+    movement: { leaps: KING_OFFSETS },
+    capture: { leaps: ARCHER_ATTACK_OFFSETS },
     builtinCustom: true,
-    description: "Ranged archer. Shoots along any of the 8 directions (orthogonal or diagonal) at range 2 or 3, arcing over every piece in between — friend or foe. Captures by occupying the target square. Cannot attack adjacent squares.",
+    description: "Fragile ranged specialist. MOVES one square in any direction (orthogonal or diagonal) onto an empty square only — cannot capture by moving. ATTACKS by firing along diagonals at exactly 2 or 3 squares, arcing over every piece in between (friend or foe). A successful attack captures the target and the Archer occupies that square. Cannot attack adjacent squares, orthogonals, or with knight-jumps.",
   },
   D: {
     id: "D",
