@@ -313,6 +313,18 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               {isLast && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-last)" }} />
               )}
+              {prismAura.has(`${r},${c}`) && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  aria-hidden
+                  title="Prism aura — pieces here flip color"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(255,59,59,0.18), rgba(255,159,28,0.18), rgba(255,225,77,0.18), rgba(74,222,128,0.18), rgba(56,189,248,0.18), rgba(167,139,250,0.18))",
+                    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.25)",
+                  }}
+                />
+              )}
               {/* Juggernaut charge path — faint sweep so players see the lane. */}
               {juggPath && !juggFoot && (
                 <div className="absolute inset-0 pointer-events-none"
