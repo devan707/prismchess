@@ -115,9 +115,61 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
           if (row.move?.captured) sfx.capture(); else sfx.move();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `match_id=eq.${matchId}` },
+        (payload) => {
+          const row = payload.new as MatchEvent;
+          setEvents((prev) => (prev.some((e) => e.id === row.id) ? prev : [...prev, row]));
+          if (row.actor_id && row.actor_id !== meId) {
+            if (row.kind === "draw_offer") toast.message("Opponent offered a draw");
+            else if (row.kind === "draw_accept") toast.success("Draw accepted");
+            else if (row.kind === "draw_decline") toast.message("Draw declined");
+          }
+        },
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [matchId]);
+  }, [matchId, meId]);
+
+  // A draw offer from the opponent is "pending" until a response or a subsequent move
+  // (a new move auto-declines per chess convention).
+  const lastMoveAt = moves.length > 0 ? Number.POSITIVE_INFINITY : 0; // ply count proxy
+  const pendingDrawOffer = useMemo<MatchEvent | null>(() => {
+    if (match.status !== "active") return null;
+    let lastOffer: MatchEvent | null = null;
+    for (const e of events) {
+      if (e.kind === "draw_offer") lastOffer = e;
+      else if (e.kind === "draw_accept" || e.kind === "draw_decline") lastOffer = null;
+    }
+    if (!lastOffer) return null;
+    // Auto-decline if any move occurred after the offer.
+    const offerTs = new Date(lastOffer.created_at).getTime();
+    const offerPlyAtMoment = (lastOffer.payload as { ply?: number } | null)?.ply ?? null;
+    if (offerPlyAtMoment !== null && moves.length > offerPlyAtMoment) return null;
+    void offerTs; void lastMoveAt;
+    return lastOffer;
+  }, [events, match.status, moves.length, lastMoveAt]);
+
+  const incomingDrawOffer = pendingDrawOffer && pendingDrawOffer.actor_id !== meId ? pendingDrawOffer : null;
+  const myPendingDrawOffer = pendingDrawOffer && pendingDrawOffer.actor_id === meId ? pendingDrawOffer : null;
+
+  const sendDrawOffer = useCallback(async () => {
+    try {
+      await offerDrawFn({ data: { matchId } });
+      toast.success("Draw offer sent");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send offer");
+    }
+  }, [offerDrawFn, matchId]);
+
+  const respondToDraw = useCallback(async (accept: boolean) => {
+    try {
+      await respondDrawFn({ data: { matchId, accept } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to respond");
+    }
+  }, [respondDrawFn, matchId]);
 
   const playMoveOptimistic = useCallback(
     (m: Move) => {
