@@ -1,5 +1,5 @@
 import type { Difficulty, GameState, Move } from "../types";
-import { allLegalMoves, applyMoveToBoard, inCheck } from "../moves";
+import { allLegalMoves, applyMoveToBoard, ctxFromState, inCheck } from "../moves";
 import { evaluate } from "./evaluate";
 
 function pickRandom<T>(arr: T[]): T {
