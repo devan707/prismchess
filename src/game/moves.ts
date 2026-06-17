@@ -106,7 +106,8 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
 
   const moves: Move[] = [];
 
-  if (def.special === "pawn") {
+  if (def.special === "pawn" || def.special === "shapeshifter") {
+    const isShifter = def.special === "shapeshifter";
     const wide = boardIsWide(board);
     const { rows, cols } = rowsCols(board);
     const dir = pawnDir(piece.color);
@@ -115,6 +116,16 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     const onPromoLine = (sq: Square) => (wide ? sq.c : sq.r) === promoLine;
     const onStartLine = (sq: Square) => (wide ? sq.c : sq.r) === startLine;
     const pushPawn = (to: Square, captured: Piece | null, extra: Partial<Move> = {}) => {
+      // Shapeshifter: capturing transforms into the captured piece (no promotion);
+      // a non-capturing push to the promotion line just stays a shapeshifter.
+      if (isShifter) {
+        if (captured) {
+          moves.push({ from, to, piece, captured, ...extra, shapeshiftTo: captured.id });
+        } else {
+          moves.push({ from, to, piece, captured, ...extra });
+        }
+        return;
+      }
       if (onPromoLine(to)) {
         for (const promo of promotionOptionsFor(state)) {
           moves.push({ from, to, piece, captured, promotion: promo, kind: extra.kind, epCapture: extra.epCapture });
@@ -207,6 +218,56 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     return moves;
   }
 
+  if (def.special === "portal") {
+    // Swap with any friendly piece on the board (other than self).
+    const { rows, cols } = rowsCols(board);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (r === from.r && c === from.c) continue;
+        const t = board[r][c];
+        if (!t || t.color !== piece.color) continue;
+        if (isBarricade(t, state.registry)) continue;
+        moves.push({ from, to: { r, c }, piece, captured: null, kind: "portalSwap" });
+      }
+    }
+    return moves;
+  }
+
+  if (def.special === "necromancer") {
+    // Normal diagonal moves come from the generic spec below; add resurrection actions.
+    if (def.movement || def.capture) {
+      const moveSpec = def.movement ?? {};
+      const captureSpec = def.capture ?? moveSpec;
+      const moveTargets = emitFromSpec(board, state.registry, from, piece, moveSpec, "move");
+      const captureTargets = emitFromSpec(board, state.registry, from, piece, captureSpec, "capture");
+      for (const t of moveTargets) moves.push({ from, to: t, piece, captured: null });
+      for (const t of captureTargets) {
+        const occ = board[t.r][t.c];
+        if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
+          moves.push({ from, to: t, piece, captured: occ });
+        }
+      }
+    }
+    // Friendly captured pieces live in state.captured[opposite color].
+    const friendlyCaptured = state.captured[piece.color === "w" ? "b" : "w"];
+    if (friendlyCaptured.length > 0) {
+      const uniqueIds = Array.from(new Set(friendlyCaptured.map((p) => p.id)));
+      for (const o of [
+        { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+        { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+      ]) {
+        const to = { r: from.r + o.dr, c: from.c + o.dc };
+        if (!inBoardBounds(board, to)) continue;
+        if (board[to.r][to.c]) continue;
+        for (const id of uniqueIds) {
+          moves.push({ from, to, piece, captured: null, kind: "resurrect", resurrectPieceId: id });
+        }
+      }
+    }
+    return moves;
+  }
+
+
   // Generic data-driven piece
   if (def.movement || def.capture) {
     const moveSpec = def.movement ?? {};
@@ -266,11 +327,24 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.to.r][move.to.c] = null;
     return b;
   }
+  if (move.kind === "portalSwap" && move.from) {
+    const friendly = b[move.to.r][move.to.c];
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    b[move.from.r][move.from.c] = friendly;
+    return b;
+  }
+  if (move.kind === "resurrect" && move.resurrectPieceId) {
+    // Necromancer stays; new piece appears at `to`.
+    b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
+    return b;
+  }
   if (move.from) {
     b[move.from.r][move.from.c] = null;
   }
   let piece: Piece = move.piece;
-  if (move.promotion) {
+  if (move.shapeshiftTo) {
+    piece = { id: move.shapeshiftTo, color: move.piece.color };
+  } else if (move.promotion) {
     piece = { id: move.promotion, color: move.piece.color };
   }
   b[move.to.r][move.to.c] = piece;
@@ -293,6 +367,10 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
         if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
           // dragon teleport attacks empty squares; doesn't capture there. Filter:
           if (m.kind === "normal" && state.registry[p.id]?.special === "dragon") continue;
+          // portal swaps land on friendly squares (never an enemy king square anyway).
+          if (m.kind === "portalSwap") continue;
+          // resurrect places a friendly piece on an empty square — not an attack.
+          if (m.kind === "resurrect") continue;
           // dragonAttack does capture.
           return true;
         }
@@ -319,10 +397,25 @@ function applyMoveToState(state: GameState, move: Move): GameState {
   if (move.kind === "drop" && move.dropPieceId) {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
+  let captured = state.captured;
+  if (move.captured || move.kind === "resurrect") {
+    const w = [...state.captured.w];
+    const b = [...state.captured.b];
+    if (move.captured) {
+      (state.turn === "w" ? w : b).push(move.captured as Piece);
+    }
+    if (move.kind === "resurrect" && move.resurrectPieceId) {
+      const friendly = state.turn === "w" ? b : w;
+      const idx = friendly.findIndex((p) => p.id === move.resurrectPieceId);
+      if (idx >= 0) friendly.splice(idx, 1);
+    }
+    captured = { w, b };
+  }
   return {
     ...state,
     board,
     reserves,
+    captured,
     enPassant: move.kind === "double" && move.from
       ? (move.from.r !== move.to.r
           ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }

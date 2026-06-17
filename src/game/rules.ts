@@ -1,4 +1,4 @@
-import type { Design, GameState, Move, Piece } from "./types";
+import type { Design, GameState, Move } from "./types";
 import { emptyBoard, findRoyals } from "./board";
 import { allLegalMoves, applyMoveToState, inCheck } from "./moves";
 import { buildRegistry } from "./pieces";
@@ -32,14 +32,9 @@ export function initialStateFromDesign(design: Design): GameState {
 
 export function applyMove(state: GameState, move: Move): GameState {
   const next = applyMoveToState(state, move);
-  const captured = { w: [...state.captured.w], b: [...state.captured.b] };
-  if (move.captured) {
-    captured[state.turn].push(move.captured as Piece);
-  }
   return {
     ...next,
     history: [...state.history, move],
-    captured,
   };
 }
 

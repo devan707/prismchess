@@ -3,6 +3,7 @@ import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
 const BASE_VALUES: Record<string, number> = {
   K: 20000, Q: 900, R: 500, B: 330, N: 320, P: 100,
   H: 280, A: 350, D: 850, X: 50,
+  T: 350, M: 600, S: 140,
 };
 
 function valueFor(id: PieceId, def: PieceDef | undefined): number {
@@ -32,7 +33,7 @@ export function evaluate(state: GameState, toMove: Color): number {
       let v = valueFor(p.id, def);
       const centerDist = Math.abs(r - cr) + Math.abs(c - cc);
       v += Math.max(0, ((rows + cols) / 2 - centerDist)) * 2;
-      if (def?.special === "pawn") {
+      if (def?.special === "pawn" || def?.special === "shapeshifter") {
         if (cols > rows) {
           v += p.color === "w" ? c * 6 : (cols - 1 - c) * 6;
         } else {
