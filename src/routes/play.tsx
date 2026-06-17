@@ -399,7 +399,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
       {terminal && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-auto touch-action-none"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-auto touch-none"
           onTouchMove={(e) => e.preventDefault()}
         >
           <div className="bg-card border rounded-xl shadow-2xl p-6 text-center max-w-xs space-y-3">
