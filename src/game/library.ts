@@ -72,12 +72,20 @@ export const BUILTIN_GAMES: GameType[] = [
     build: () => presetDesign(8, 8, "menagerie"),
   },
   {
+    id: "grand-menagerie-12",
+    name: "Grand Menagerie",
+    description: "12×12 showcase of every custom piece — juggernauts on the wings, shapeshifter pawns up front.",
+    rows: 12, cols: 12, builtin: true,
+    build: () => presetDesign(12, 12, "grand-menagerie"),
+  },
+  {
     id: "lone-king-8",
     name: "Pawns & King",
     description: "Solo king behind a wall of pawns. Calm canvas to learn on.",
     rows: 8, cols: 8, builtin: true,
     build: () => presetDesign(8, 8, "lone-king"),
   },
+
 ];
 
 export interface SavedGame {
