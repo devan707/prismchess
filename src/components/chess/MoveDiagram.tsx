@@ -1,6 +1,16 @@
 import { PIECE_LIBRARY } from "@/game/pieces";
 import { PieceById } from "./PieceGlyph";
+import { JuggernautGlyph } from "./JuggernautGlyph";
 import type { PieceId } from "@/game/types";
+
+// Fixed marker colors (oklch so they render correctly regardless of theme tokens).
+const MOVE_FILL = "oklch(0.72 0.17 150 / 0.7)";
+const MOVE_GLOW = "oklch(0.72 0.17 150 / 0.5)";
+const CAPTURE_BORDER = "oklch(0.65 0.22 25 / 0.9)";
+const CAPTURE_FILL = "oklch(0.65 0.22 25 / 0.22)";
+const BOTH_BORDER = "oklch(0.78 0.17 75 / 0.9)";
+const BOTH_FILL = "oklch(0.78 0.17 75 / 0.2)";
+const BOTH_DOT = "oklch(0.78 0.17 75 / 0.95)";
 
 type Marker = "m" | "a" | "b";
 
@@ -211,8 +221,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
                 style={{
                   width: "45%",
                   height: "45%",
-                  background: "hsl(var(--primary) / 0.55)",
-                  boxShadow: "0 0 6px hsl(var(--primary) / 0.4)",
+                  background: MOVE_FILL,
+                  boxShadow: `0 0 6px ${MOVE_GLOW}`,
                 }}
               />
             );
@@ -221,8 +231,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
               <span
                 className="absolute inset-1 rounded-sm animate-pulse"
                 style={{
-                  border: "2px solid hsl(0 84% 60% / 0.85)",
-                  background: "hsl(0 84% 60% / 0.2)",
+                  border: `2px solid ${CAPTURE_BORDER}`,
+                  background: CAPTURE_FILL,
                 }}
               />
             );
@@ -232,8 +242,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
                 <span
                   className="absolute inset-1 rounded-sm"
                   style={{
-                    border: "2px solid hsl(38 92% 55% / 0.85)",
-                    background: "hsl(38 92% 55% / 0.18)",
+                    border: `2px solid ${BOTH_BORDER}`,
+                    background: BOTH_FILL,
                   }}
                 />
                 <span
@@ -241,20 +251,36 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
                   style={{
                     width: "30%",
                     height: "30%",
-                    background: "hsl(38 92% 55% / 0.9)",
+                    background: BOTH_DOT,
                   }}
                 />
               </>
             );
           }
+
+          // Juggernaut special: render the proper top-down titan glyph spanning
+          // both occupied cells (anchored on the FRONT cell, extending downward).
+          let centerNode: React.ReactNode = null;
+          if (kind === "center") {
+            if (id === "J") {
+              const isFront = diag.center[1] && r === diag.center[1].r && c === diag.center[1].c;
+              centerNode = isFront ? (
+                <JuggernautGlyph color={color} orientation="vertical" facing="up" />
+              ) : null;
+            } else {
+              centerNode = (
+                <PieceById id={id} color={color} def={def} className="h-[80%] w-[80%]" />
+              );
+            }
+          }
+
           return (
             <div
               key={`${r}-${c}`}
               className={`relative ${checker} rounded-[2px] flex items-center justify-center`}
+              style={{ overflow: "visible" }}
             >
-              {kind === "center" && (
-                <PieceById id={id} color={color} def={def} className="h-[80%] w-[80%]" />
-              )}
+              {centerNode}
               {overlay}
             </div>
           );
@@ -265,7 +291,7 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
         <span className="flex items-center gap-1">
           <span
             className="inline-block rounded-full"
-            style={{ width: 8, height: 8, background: "hsl(var(--primary) / 0.7)" }}
+            style={{ width: 8, height: 8, background: MOVE_FILL }}
           />
           Move
         </span>
@@ -275,8 +301,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
             style={{
               width: 9,
               height: 9,
-              border: "2px solid hsl(0 84% 60% / 0.85)",
-              background: "hsl(0 84% 60% / 0.2)",
+              border: `2px solid ${CAPTURE_BORDER}`,
+              background: CAPTURE_FILL,
             }}
           />
           Capture
@@ -287,8 +313,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
             style={{
               width: 9,
               height: 9,
-              border: "2px solid hsl(38 92% 55% / 0.85)",
-              background: "hsl(38 92% 55% / 0.18)",
+              border: `2px solid ${BOTH_BORDER}`,
+              background: BOTH_FILL,
             }}
           />
           Either
