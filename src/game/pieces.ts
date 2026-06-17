@@ -126,7 +126,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ] },
     builtinCustom: true,
-    description: "Moves and captures one square diagonally. Instead of moving, may resurrect one of your captured pieces onto any empty adjacent square (uses your full turn).",
+    description: "Moves and captures one square diagonally. To resurrect: select the Necromancer, click one of your fallen pieces in the graveyard, then click an empty square adjacent to the Necromancer — that piece returns to life there (uses your full turn). Juggernauts and Barricades cannot be resurrected.",
   },
   S: {
     id: "S",
