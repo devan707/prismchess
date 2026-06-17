@@ -725,7 +725,26 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   return pseudoMovesFrom(state, from).filter((m) => {
     // Front-arc immunity: a juggernaut cannot be captured from the front.
     if (m.captured && m.captured.id === "J" && m.from) {
-      if (attackerInJuggFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+      if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+    }
+    // Front-arc immunity: a barricade cannot be captured from the front.
+    if (m.captured && state.registry[m.captured.id]?.immobile && m.from) {
+      if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+    }
+    // Juggernaut charges that would trample a front-protected barricade are also blocked.
+    if (m.juggTrampled && m.from) {
+      for (const tp of m.juggTrampled) {
+        if (state.registry[tp.id]?.immobile) {
+          // Determine that trampled barricade's square along the charge path.
+          // Simple approximation: if attacker direction matches barricade's color forward, that's its front.
+          const dir = m.piece.color === "w" ? 1 : -1;
+          const bDir = tp.color === "w" ? 1 : -1;
+          if (m.piece.color !== tp.color && dir === -bDir) {
+            // Head-on charge attacks the barricade's front → illegal.
+            return false;
+          }
+        }
+      }
     }
     // Juggernaut charge trampling also obeys front-arc immunity for any enemy J in path.
     if (m.juggTrampled && m.juggTrampled.some((p) => p.id === "J") && m.from) {
