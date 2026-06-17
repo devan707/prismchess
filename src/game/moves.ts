@@ -257,6 +257,8 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const t = board[r][c];
         if (!t || t.color !== piece.color) continue;
         if (isBarricade(t, state.registry)) continue;
+        // Juggernauts are too massive to teleport — they cannot be swapped by a portal.
+        if (state.registry[t.id]?.special === "juggernaut") continue;
         moves.push({ from, to: { r, c }, piece, captured: null, kind: "portalSwap" });
       }
     }
