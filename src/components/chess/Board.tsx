@@ -217,9 +217,8 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   </div>
                 );
               })()}
-              {/* Spirit View overlay — render for EVERY corpse, whether the
-                  square is empty (full ghost, raisable if adjacent) or buried
-                  under another piece (small skull badge). */}
+              {/* Spirit View overlay — render ghost over every corpse square,
+                   including occupied ones, so pieces underneath remain visible. */}
               {necromancerSelected && ghostMap.has(`${r},${c}`) && (() => {
                 const g = ghostMap.get(`${r},${c}`)!;
                 const gdef = state.registry[g.id];
@@ -227,29 +226,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 const adjacent = selected
                   ? Math.max(Math.abs(selected.r - r), Math.abs(selected.c - c)) === 1
                   : false;
-                if (g.occupied) {
-                  // Corpse is buried — show a small violet skull marker so
-                  // the player knows it's there but can't raise yet.
-                  return (
-                    <div
-                      className="absolute top-0.5 right-0.5 z-20 pointer-events-none flex items-center justify-center rounded-full"
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        background: "rgba(168,85,247,0.85)",
-                        boxShadow: "0 0 6px rgba(168,85,247,0.7)",
-                        fontSize: "0.7rem",
-                        lineHeight: 1,
-                      }}
-                      aria-hidden
-                      title={`${gdef?.name ?? g.id} corpse — buried, clear this square to raise${isEnemy ? " (as Undead)" : ""}`}
-                    >
-                      💀
-                    </div>
-                  );
-                }
-                // Empty square — show full translucent ghost. Adjacent corpses
-                // (raisable right now) get a brighter ring.
+                const canRaise = adjacent && !g.occupied;
                 return (
                   <>
                     <div
@@ -258,16 +235,16 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                       style={{
                         background:
                           "radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(168,85,247,0.15) 55%, transparent 75%)",
-                        boxShadow: adjacent
+                        boxShadow: canRaise
                           ? "inset 0 0 0 2px rgba(168,85,247,0.9), 0 0 14px rgba(168,85,247,0.6)"
                           : undefined,
                       }}
                     />
                     <div
-                      className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none"
-                      style={{ opacity: adjacent ? 0.9 : 0.65 }}
+                      className="absolute inset-0 z-[30] flex items-center justify-center pointer-events-none"
+                      style={{ opacity: 0.5 }}
                       aria-hidden
-                      title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " — will rise as Undead" : ""}`}
+                      title={`Ghost ${gdef?.name ?? g.id}${isEnemy ? " — will rise as Undead" : ""}${g.occupied ? " — square occupied, clear to raise" : ""}`}
                     >
                       <PieceGlyph piece={{ id: g.id, color: g.color, undead: isEnemy }} def={gdef} />
                     </div>
