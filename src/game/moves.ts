@@ -396,10 +396,10 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       const t1 = board[nF.r][nF.c];
       const t2 = board[nP.r][nP.c];
       const blocks = (t: Piece | null) =>
-        !!t && (t.color === piece.color || isBarricade(t, state.registry));
+        !!t && (t.color === piece.color || isBarricade(t, state.registry) || isFixture(t, state.registry));
       if (blocks(t1) || blocks(t2)) break;
-      if (t1 && t1.color !== piece.color) trampled.push(t1);
-      if (t2 && t2.color !== piece.color) trampled.push(t2);
+      if (t1 && t1.color !== piece.color && !isFixture(t1, state.registry)) trampled.push(t1);
+      if (t2 && t2.color !== piece.color && !isFixture(t2, state.registry)) trampled.push(t2);
       curF = nF; curP = nP;
       moves.push({
         from, to: { ...curF }, piece,
