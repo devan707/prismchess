@@ -10,7 +10,9 @@ import { Board } from "@/components/chess/Board";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
 import { ReservesPanel } from "@/components/designer/ReservesPanel";
-import { Home, Flag, RefreshCw, Clock, Copy, Handshake } from "lucide-react";
+import { Home, Flag, RefreshCw, Clock, Copy, Handshake, UserPlus } from "lucide-react";
+import { MatchChatPanel } from "@/components/MatchChatPanel";
+import { sendFriendRequest } from "@/lib/social.functions";
 import {
   getMatch, resign, claimTimeout,
 } from "@/lib/multiplayer.functions";
