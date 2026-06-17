@@ -32,7 +32,39 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const legalTargets = legalFor(selected ?? dragFrom);
   const inspectPiece = selected ? state.board[selected.r][selected.c] : null;
   const inspectSelected = !!inspectPiece && inspectPiece.color !== humanColor;
-  const inspectTargets = inspectSelected && selected ? pseudoMovesFrom(state, selected).filter((m) => !!m.captured).map((m) => m.to) : [];
+  // "Attack coverage": every square this enemy piece could capture IF an enemy were there.
+  // We probe each square by dropping a phantom victim and asking pseudoMovesFrom for a capture.
+  const inspectTargets: Square[] = (() => {
+    if (!inspectSelected || !selected || !inspectPiece) return [];
+    const attackerColor = inspectPiece.color;
+    const victimColor: "w" | "b" = attackerColor === "w" ? "b" : "w";
+    const out: Square[] = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (r === selected.r && c === selected.c) continue;
+        const existing = state.board[r][c];
+        // If a friendly piece sits there, the attacker can't capture it; still
+        // counts as "covered" for the player's planning purposes — probe with
+        // a temporary swap to a phantom enemy.
+        const probeBoard = state.board.map((row, ri) =>
+          ri === r ? row.map((cell, ci) => (ci === c ? { id: "P", color: victimColor } as typeof cell : cell)) : row,
+        );
+        const probeState = { ...state, board: probeBoard } as typeof state;
+        const moves = pseudoMovesFrom(probeState, selected);
+        const hits = moves.some((m) => {
+          if (m.to.r !== r || m.to.c !== c) return false;
+          if (!m.captured) return false;
+          if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") return false;
+          if (m.kind === "juggShift" || m.kind === "juggExit") return false;
+          return true;
+        });
+        if (hits) out.push({ r, c });
+        // suppress unused warning
+        void existing;
+      }
+    }
+    return out;
+  })();
   const last = state.history[state.history.length - 1];
 
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
