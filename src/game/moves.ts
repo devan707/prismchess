@@ -555,15 +555,18 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
     const targetPool = state.turn === "w" ? w : b;
-    if (move.captured) {
+    // For juggCharge, `captured` is also the first entry in juggTrampled — don't double-count.
+    if (move.captured && move.kind !== "juggCharge") {
       targetPool.push(move.captured as Piece);
-      // Capturing one square of a Juggernaut destroys the whole pair.
-      if (move.captured.id === "J" && move.kind !== "juggCharge") {
+      if (move.captured.id === "J") {
         targetPool.push({ id: "J", color: move.captured.color });
       }
     }
     if (move.juggTrampled) {
-      for (const p of move.juggTrampled) targetPool.push(p);
+      for (const p of move.juggTrampled) {
+        targetPool.push(p);
+        if (p.id === "J") targetPool.push({ id: "J", color: p.color });
+      }
     }
     if (move.kind === "resurrect" && move.resurrectPieceId) {
       const friendly = state.turn === "w" ? b : w;
