@@ -1,136 +1,121 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { BoardSizePicker } from "@/components/designer/BoardSizePicker";
-import { PresetPicker } from "@/components/designer/PresetPicker";
-import { PiecePalette } from "@/components/designer/PiecePalette";
-import { DesignerBoard } from "@/components/designer/DesignerBoard";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { buildDefaultDesign, PRESETS, saveDesign, validateDesign } from "@/game/design";
-import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
-import type { Color, Design, PieceId, Placement } from "@/game/types";
-import { Play, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { BUILTIN_GAMES, deleteSavedGame, loadSavedGames, type SavedGame } from "@/game/library";
+import { saveDesign } from "@/game/design";
+import type { Design } from "@/game/types";
+import { Hammer, Play, Trash2, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Design Your Own Chess — Boards, Pieces, Rules" },
-      { name: "description", content: "Build your own chess game. Pick the board size (3–12, rectangular OK), drop in pieces, add Dragons, Archers, King's Hands and Barricades, then play against AI." },
+      { title: "Design Your Own Chess — Pick a Game" },
+      { name: "description", content: "Choose a built-in chess variant or one of your saved custom games, or enter the sandbox to invent your own." },
       { property: "og:title", content: "Design Your Own Chess" },
-      { property: "og:description", content: "A sandbox chess game. You design the board and pieces; the AI plays anything you can imagine." },
+      { property: "og:description", content: "A chess sandbox: pick a game and play, or design your own boards and pieces." },
     ],
   }),
-  component: Designer,
+  component: Home,
 });
 
-function Designer() {
+function Home() {
   const navigate = useNavigate();
-  const [design, setDesign] = useState<Design>(() => buildDefaultDesign(8, 8, "classic"));
-  const [paletteColor, setPaletteColor] = useState<Color>("w");
-  const [mirror, setMirror] = useState(true);
+  const [saved, setSaved] = useState<SavedGame[]>([]);
 
-  const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
+  useEffect(() => { setSaved(loadSavedGames()); }, []);
 
-  const allPieceDefs = useMemo(() => {
-    return [
-      ...STANDARD_PIECE_IDS.map((id) => PIECE_LIBRARY[id]),
-      ...BUILTIN_CUSTOM_IDS.map((id) => PIECE_LIBRARY[id]),
-      ...design.customPieces,
-    ];
-  }, [design.customPieces]);
-
-  const setSize = (rows: number, cols: number) => {
-    setDesign((d) => {
-      const placements = d.placements.filter((p) => p.r < rows && p.c < cols);
-      return { ...d, rows, cols, placements };
-    });
-  };
-
-  const applyPreset = (id: string) => {
-    const preset = PRESETS.find((p) => p.id === id);
-    if (!preset) return;
-    setDesign((d) => ({ ...d, placements: preset.build(d.rows, d.cols) }));
-  };
-
-  const setPlacements = (placements: Placement[]) => setDesign((d) => ({ ...d, placements }));
-
-  const setReserve = (pieceId: PieceId, color: Color, count: number) => {
-    setDesign((d) => ({
-      ...d,
-      reserves: { ...d.reserves, [color]: { ...d.reserves[color], [pieceId]: count } },
-    }));
-  };
-
-  const startGame = () => {
-    const err = validateDesign(design, registry);
-    if (err) { toast.error(err); return; }
+  const play = (design: Design) => {
     saveDesign(design);
     navigate({ to: "/play" });
   };
 
-  const validationError = validateDesign(design, registry);
+  const removeSaved = (id: string) => {
+    deleteSavedGame(id);
+    setSaved(loadSavedGames());
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="max-w-7xl mx-auto px-4 pt-6 pb-4 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-            Design Your <span className="text-primary">Chess</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-            Pick a board size, drop in pieces from the palette, then play your invented game against the AI.
-          </p>
+      <header className="max-w-5xl mx-auto px-4 pt-10 pb-6 text-center">
+        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">
+          Design Your <span className="text-primary">Chess</span>
+        </h1>
+        <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+          Pick a game to play, or jump into the sandbox to invent your own boards and pieces.
+        </p>
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <Link to="/sandbox">
+            <Button size="lg" variant="outline">
+              <Hammer className="h-4 w-4 mr-2" /> Sandbox mode
+            </Button>
+          </Link>
         </div>
-        <Button onClick={startGame} size="lg" disabled={!!validationError}>
-          <Play className="h-4 w-4 mr-2" /> Play
-        </Button>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 pb-12 grid gap-4 lg:grid-cols-[260px_1fr_300px]">
-        <aside className="space-y-3">
-          <BoardSizePicker rows={design.rows} cols={design.cols} onChange={setSize} />
-          <PresetPicker onApply={applyPreset} />
-        </aside>
-
-        <section className="flex flex-col items-center gap-3">
-          <div className="w-full flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">
-              {design.rows} × {design.cols} · {design.placements.length} pieces placed
-            </span>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} />
-              Mirror to Black
-            </label>
+      <main className="max-w-5xl mx-auto px-4 pb-16 space-y-10">
+        <section>
+          <h2 className="font-display text-xl font-semibold mb-3">Built-in games</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {BUILTIN_GAMES.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => play(g.build())}
+                className="group text-left rounded-xl border bg-card p-4 hover:border-primary hover:shadow-md transition"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-display font-semibold">{g.name}</h3>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {g.rows}×{g.cols}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{g.description}</p>
+                <span className="inline-flex items-center text-xs font-medium text-primary group-hover:gap-2 gap-1 transition-all">
+                  <Play className="h-3 w-3" /> Play
+                </span>
+              </button>
+            ))}
           </div>
-          <DesignerBoard
-            design={design}
-            registry={registry}
-            onChange={setPlacements}
-            mirror={mirror}
-          />
-          {validationError && (
-            <div className="text-xs text-destructive flex items-center gap-1">
-              <Sparkles className="h-3 w-3" /> {validationError}
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-xl font-semibold">Your saved games</h2>
+            <Link to="/sandbox">
+              <Button size="sm" variant="ghost">
+                <Sparkles className="h-4 w-4 mr-1" /> Design a new one
+              </Button>
+            </Link>
+          </div>
+          {saved.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">
+              No saved games yet. Head into the sandbox to design one and save it.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {saved.map((g) => (
+                <div key={g.id} className="rounded-xl border bg-card p-4 flex flex-col">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-display font-semibold truncate">{g.name}</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {g.design.rows}×{g.design.cols}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Saved {new Date(g.createdAt).toLocaleDateString()}
+                  </p>
+                  <div className="mt-auto flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={() => play(g.design)}>
+                      <Play className="h-3 w-3 mr-1" /> Play
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>
-
-        <aside className="space-y-3">
-          <PiecePalette
-            pieces={allPieceDefs}
-            color={paletteColor}
-            onColorChange={setPaletteColor}
-            reserves={design.reserves}
-            onReserveChange={setReserve}
-          />
-          <div className="rounded-lg border bg-card p-3 space-y-2">
-            <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
-            <p className="text-[11px] text-muted-foreground">
-              Coming soon: name a piece, choose an icon, define its movement and capture pattern.
-              For now, four custom pieces are built-in: King's Hand, Archer, Dragon, Barricade.
-            </p>
-          </div>
-        </aside>
       </main>
     </div>
   );
