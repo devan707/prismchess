@@ -45,12 +45,6 @@ function Sandbox() {
     setSelectedSquare(null);
   };
 
-  const applyPreset = (id: string) => {
-    const preset = PRESETS.find((p) => p.id === id);
-    if (!preset) return;
-    setDesign((d) => ({ ...d, placements: preset.build(d.rows, d.cols) }));
-    setSelectedSquare(null);
-  };
 
   const applyPreset = (id: string) => {
     const preset = PRESETS.find((p) => p.id === id);
