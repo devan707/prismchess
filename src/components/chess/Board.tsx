@@ -158,7 +158,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const piece = state.board[r][c];
           const def = piece ? state.registry[piece.id] : undefined;
           const light = (r + c) % 2 === 1;
-          const isSelected = selected && selected.r === r && selected.c === c;
+          const isSelected = (selected && selected.r === r && selected.c === c) || (selectedPartner && selectedPartner.r === r && selectedPartner.c === c);
           const isLegal = legalTargets.some((t) => t.r === r && t.c === c);
           const isCapture = isLegal && !!piece;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
