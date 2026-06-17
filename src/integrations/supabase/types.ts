@@ -124,6 +124,151 @@ export type Database = {
         }
         Relationships: []
       }
+      match_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          kind: string
+          match_id: string
+          payload: Json
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          match_id: string
+          payload?: Json
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          match_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_events_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_moves: {
+        Row: {
+          actor_id: string
+          id: string
+          match_id: string
+          move: Json
+          played_at: string
+          ply: number
+          time_left_ms: number
+        }
+        Insert: {
+          actor_id: string
+          id?: string
+          match_id: string
+          move: Json
+          played_at?: string
+          ply: number
+          time_left_ms: number
+        }
+        Update: {
+          actor_id?: string
+          id?: string
+          match_id?: string
+          move?: Json
+          played_at?: string
+          ply?: number
+          time_left_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_moves_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matches: {
+        Row: {
+          black_time_ms: number
+          created_at: string
+          design: Json
+          design_name: string
+          finished_at: string | null
+          guest_id: string | null
+          host_color: string
+          host_id: string
+          id: string
+          last_clock_update_at: string | null
+          rated: boolean
+          result: string | null
+          result_reason: string | null
+          share_token: string
+          started_at: string | null
+          status: string
+          time_control: string
+          turn: string
+          updated_at: string
+          visibility: string
+          white_time_ms: number
+        }
+        Insert: {
+          black_time_ms: number
+          created_at?: string
+          design: Json
+          design_name?: string
+          finished_at?: string | null
+          guest_id?: string | null
+          host_color?: string
+          host_id: string
+          id?: string
+          last_clock_update_at?: string | null
+          rated?: boolean
+          result?: string | null
+          result_reason?: string | null
+          share_token?: string
+          started_at?: string | null
+          status?: string
+          time_control: string
+          turn?: string
+          updated_at?: string
+          visibility?: string
+          white_time_ms: number
+        }
+        Update: {
+          black_time_ms?: number
+          created_at?: string
+          design?: Json
+          design_name?: string
+          finished_at?: string | null
+          guest_id?: string | null
+          host_color?: string
+          host_id?: string
+          id?: string
+          last_clock_update_at?: string | null
+          rated?: boolean
+          result?: string | null
+          result_reason?: string | null
+          share_token?: string
+          started_at?: string | null
+          status?: string
+          time_control?: string
+          turn?: string
+          updated_at?: string
+          visibility?: string
+          white_time_ms?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -145,6 +290,33 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      ratings: {
+        Row: {
+          design_family: string
+          games_played: number
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          design_family?: string
+          games_played?: number
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          design_family?: string
+          games_played?: number
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -212,6 +384,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_match_participant: {
+        Args: { _match_id: string; _user_id: string }
         Returns: boolean
       }
     }
