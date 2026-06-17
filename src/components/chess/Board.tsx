@@ -218,7 +218,20 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     }
     const p = state.board[sq.r][sq.c];
     if (selected) {
+      // Juggernaut: clicking either half of a legal-destination footprint
+      // commits the move (routed through the move's lead-cell `to`).
+      if (juggInfo) {
+        const lead = juggInfo.leadOf.get(`${sq.r},${sq.c}`);
+        if (lead) {
+          const ok = onMove(selected, lead);
+          if (ok) { setSelected(null); return; }
+        }
+      }
       if (selected.r === sq.r && selected.c === sq.c) { setSelected(null); return; }
+      // Clicking the partner half of the selected juggernaut keeps it selected.
+      if (selectedPartner && selectedPartner.r === sq.r && selectedPartner.c === sq.c) {
+        setSelected(sq); return;
+      }
       const ok = onMove(selected, sq);
       if (ok) { setSelected(null); return; }
       if (p) { setSelected(sq); return; }
