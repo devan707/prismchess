@@ -217,12 +217,14 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
   }
   if (royals.w !== 1) return "White must have exactly one royal piece (King).";
   if (royals.b !== 1) return "Black must have exactly one royal piece (King).";
-  // No pawns on their own promotion rank
+  // No pawns on their own promotion line
   for (const p of d.placements) {
     const def = registry[p.pieceId];
     if (def?.special === "pawn") {
-      const promoRank = p.color === "w" ? d.rows - 1 : 0;
-      if (p.r === promoRank) return "A pawn cannot start on its own promotion rank.";
+      const wide = d.cols > d.rows;
+      const promoLine = p.color === "w" ? (wide ? d.cols - 1 : d.rows - 1) : 0;
+      const coord = wide ? p.c : p.r;
+      if (coord === promoLine) return "A pawn cannot start on its promotion line.";
     }
   }
   return null;
