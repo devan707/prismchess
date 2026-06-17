@@ -4,6 +4,7 @@ import { Board } from "@/components/chess/Board";
 import { useGame } from "@/hooks/useGame";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
+import { Graveyard } from "@/components/chess/Graveyard";
 import { ReservesPanel } from "@/components/designer/ReservesPanel";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
