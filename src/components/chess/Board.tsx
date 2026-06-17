@@ -67,6 +67,22 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   })();
   const last = state.history[state.history.length - 1];
 
+  // If a juggernaut is selected, also highlight its partner square as "selected".
+  const selectedPartner: Square | null = (() => {
+    if (!selected) return null;
+    const p = state.board[selected.r][selected.c];
+    if (!p || state.registry[p.id]?.special !== "juggernaut") return null;
+    const wide = cols > rows;
+    const perp = wide ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }] : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
+    for (const o of perp) {
+      const nr = selected.r + o.dr, nc = selected.c + o.dc;
+      if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+      const t = state.board[nr][nc];
+      if (t && t.color === p.color && state.registry[t.id]?.special === "juggernaut") return { r: nr, c: nc };
+    }
+    return null;
+  })();
+
   const checkColor = inCheck(state, state.turn) ? state.turn : null;
   const checkSquares = checkColor ? findRoyals(state, checkColor) : [];
 
@@ -142,7 +158,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const piece = state.board[r][c];
           const def = piece ? state.registry[piece.id] : undefined;
           const light = (r + c) % 2 === 1;
-          const isSelected = selected && selected.r === r && selected.c === c;
+          const isSelected = (selected && selected.r === r && selected.c === c) || (selectedPartner && selectedPartner.r === r && selectedPartner.c === c);
           const isLegal = legalTargets.some((t) => t.r === r && t.c === c);
           const isCapture = isLegal && !!piece;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
