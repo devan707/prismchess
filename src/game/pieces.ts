@@ -165,7 +165,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "assassin",
     builtinCustom: true,
-    description: "Infiltrator. Slides up to 2 unobstructed squares diagonally, then takes exactly 1 more step in any of the 8 directions. Captures on the final square only.",
+    description: "Three-step infiltrator. Every turn the Assassin moves EXACTLY 3 king-steps in a row (each step orthogonal or diagonal). The first 2 landing squares must be empty — he cannot jump. The 3rd step is the only one that can capture, and may land on an empty square or an enemy. He cannot revisit any square already on his path, and his three steps cannot all go the same direction (no straight line of 3). So patterns like forward-forward-left or diag-diag-back are fine, but forward-forward-forward is not.",
   },
   W: {
     id: "W",
