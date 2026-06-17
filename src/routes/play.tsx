@@ -288,13 +288,33 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           humanColor={humanColor}
           flipped={flipped}
           legalFor={legalFor}
-          onMove={(f, t) => tryMove(f, t)}
+          onMove={(f, t) => {
+            // If a human necromancer is selected and a fallen piece has been
+            // picked, route the move through the resurrect path so the right
+            // piece comes back. Falls back to a normal move otherwise.
+            if (resurrectMode && resurrectChoice) {
+              if (tryResurrect(f, t, resurrectChoice)) {
+                setResurrectChoice(null);
+                return true;
+              }
+            }
+            return tryMove(f, t);
+          }}
           dropPiece={selectedDrop}
           dropTargets={dropTargets}
           onDrop={(id, to) => tryDrop(id, to)}
           disabled={terminal}
           onSelectionChange={handleSelectionChange}
         />
+
+        <Graveyard
+          state={state}
+          humanColor={humanColor}
+          resurrectMode={resurrectMode}
+          resurrectChoice={resurrectChoice}
+          onPickResurrect={setResurrectChoice}
+        />
+
 
         {tipsOn && (
           <div
