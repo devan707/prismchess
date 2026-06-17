@@ -26,18 +26,13 @@ export function useGame(opts: UseGameOptions) {
 
   const undo = useCallback(() => {
     setState((s) => {
-      // Undo until it's the human's turn again (or start)
-      let moves = s.history.slice();
-      do {
-        moves = moves.slice(0, -1);
-      } while (moves.length > 0 && (moves.length % 2 === 0 ? "w" : "b") !== opts.humanColor && opts.humanColor === "w");
-      // Simpler: undo 2 plies if possible (one for AI, one for human), else 1
+      // Undo 2 plies (AI + human) when possible, otherwise 1.
       const targetUndo = s.history.length >= 2 ? 2 : s.history.length;
       const truncated = s.history.slice(0, s.history.length - targetUndo);
       return replayMoves(truncated, initialState());
     });
     setPendingPromotion(null);
-  }, [opts.humanColor]);
+  }, []);
 
   const playMove = useCallback(
     (move: Move) => {
