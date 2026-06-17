@@ -1,6 +1,6 @@
 import type { Design, PieceDef, PieceId, Placement, Square } from "@/game/types";
 import { PIECE_LIBRARY } from "@/game/pieces";
-import { juggPartnerCandidates, prismPartnerCandidates } from "@/game/design";
+import { juggPartnerCandidates } from "@/game/design";
 import { PieceGlyph } from "@/components/chess/PieceGlyph";
 
 interface Props {
