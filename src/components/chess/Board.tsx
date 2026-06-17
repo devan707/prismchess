@@ -210,6 +210,26 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const displayCols = (humanColor === "w" ? colIndices : colIndices.slice().reverse());
   if (flipped) { displayRows.reverse(); displayCols.reverse(); }
 
+  // Prism aura: all king-distance-1 neighbors of every Prism on the board.
+  // Pieces that enter or remain in these squares get color-flipped.
+  const prismAura = new Set<string>();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = state.board[r][c];
+      if (!p || state.registry[p.id]?.special !== "prism") continue;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+          const o = state.board[nr][nc];
+          if (o && state.registry[o.id]?.special === "prism") continue;
+          prismAura.add(`${nr},${nc}`);
+        }
+      }
+    }
+  }
+
   const handleSquareClick = (sq: Square) => {
     if (disabled) return;
     if (dropPiece && dropTargets?.some((t) => t.r === sq.r && t.c === sq.c)) {
@@ -292,6 +312,18 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
             >
               {isLast && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-last)" }} />
+              )}
+              {prismAura.has(`${r},${c}`) && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  aria-hidden
+                  title="Prism aura — pieces here flip color"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(255,59,59,0.18), rgba(255,159,28,0.18), rgba(255,225,77,0.18), rgba(74,222,128,0.18), rgba(56,189,248,0.18), rgba(167,139,250,0.18))",
+                    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.25)",
+                  }}
+                />
               )}
               {/* Juggernaut charge path — faint sweep so players see the lane. */}
               {juggPath && !juggFoot && (

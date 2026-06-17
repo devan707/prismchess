@@ -439,12 +439,13 @@ function Sandbox() {
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
             <p className="text-[11px] text-muted-foreground">
-              Ten custom pieces are built-in: King's Hand, Archer, Dragon, Barricade,
-              Portal (swap with a friendly piece), Necromancer (resurrect a captured ally),
-              Shapeshifter Pawn (transforms into whatever it captures), Juggernaut
-              (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front),
+              Eleven custom pieces are built-in: King's Hand, Archer, Dragon, Barricade
+              (drop only directly in front of one of your own pieces), Portal (swap with a friendly piece),
+              Necromancer (resurrect a captured ally), Shapeshifter Pawn (transforms into whatever it captures),
+              Juggernaut (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front),
               Assassin (always takes exactly 3 king-steps per turn — no jumping, no revisits, no straight line of 3, never a turn greater than 45°; captures only on the final step),
-              and Wizard (rook moves that hop across opposite-colored squares — bound to its starting color).
+              Wizard (rook moves that hop across opposite-colored squares — bound to its starting color),
+              and Prism (indestructible rainbow fixture — any non-royal piece that enters or stays in its 8-square aura flips color; kings are immune).
             </p>
           </div>
         </aside>
