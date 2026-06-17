@@ -42,6 +42,29 @@ function recaptureLoss(state: GameState, m: Move): number {
   return defended ? movingValue * 0.25 : movingValue * 0.9;
 }
 
+/**
+ * How many of the recent plies were quiet moves chaining back from `sq` for
+ * `color`. Used to discourage the AI from shuffling the same piece
+ * (Dragon/Necromancer/Wizard) back and forth across turns.
+ */
+function recentShuffleCount(state: GameState, sq: Square, color: Color, window = 6): number {
+  const h = state.history;
+  if (!h || h.length === 0) return 0;
+  const start = Math.max(0, h.length - window);
+  let count = 0;
+  let chasingSq: Square | null = sq;
+  for (let i = h.length - 1; i >= start && chasingSq; i--) {
+    const m = h[i];
+    if (m.piece.color !== color) continue;
+    if (m.captured) break;
+    if (m.to.r === chasingSq.r && m.to.c === chasingSq.c) {
+      count += 1;
+      chasingSq = m.from;
+    }
+  }
+  return count;
+}
+
 function moveScore(state: GameState, m: Move): number {
   let s = 0;
   const pb = loadPlaybook();
@@ -50,7 +73,6 @@ function moveScore(state: GameState, m: Move): number {
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
   if ((m.kind === "resurrect" || m.kind === "necroRaise") && m.resurrectPieceId) {
     const v = valueFor(m.resurrectPieceId, state.registry[m.resurrectPieceId]);
-    // Stealing an enemy corpse is worth more than recovering our own.
     const ownBonus =
       m.kind === "necroRaise" && m.resurrectOriginalOwner && m.resurrectOriginalOwner !== m.piece.color ? 1.25 : 1.0;
     s += v * 0.7 * ownBonus;
@@ -60,6 +82,14 @@ function moveScore(state: GameState, m: Move): number {
   }
   if (m.kind === "juggExit") s -= 900;
   if (m.kind === "juggCharge") s += 20;
+  if (!m.captured && m.from) {
+    const sp = state.registry[m.piece.id]?.special;
+    const shuffles = recentShuffleCount(state, m.from, m.piece.color);
+    if (shuffles > 0) {
+      const weight = sp === "dragon" || sp === "portal" || sp === "necromancer" || sp === "wizard" ? 110 : 55;
+      s -= shuffles * weight;
+    }
+  }
   s -= recaptureLoss(state, m);
   return s;
 }
