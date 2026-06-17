@@ -96,11 +96,7 @@ function GameView({ humanColor, difficulty, variantId, flipped, muted, setHumanC
       <header className="max-w-6xl mx-auto px-4 pt-8 pb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">Mini Chess <span className="text-primary">{variant.size}×{variant.size}</span></h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {variantId === "6x6"
-              ? "Rook, bishop, king, queen, bishop, rook — a 6×6 chess variant."
-              : "Rook, king, bishop, knight, rook, and pawns — a compact 5×5 chess variant."}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{variant.description}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => setMuted(!muted)} aria-label="Toggle sound">
@@ -136,9 +132,18 @@ function GameView({ humanColor, difficulty, variantId, flipped, muted, setHumanC
               <Select value={variantId} onValueChange={(v) => setVariantId(v)}>
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.values(VARIANTS).map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                  ))}
+                  {[5, 6].map((sz) => {
+                    const group = Object.values(VARIANTS).filter((v) => v.size === sz);
+                    if (group.length === 0) return null;
+                    return (
+                      <div key={sz}>
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">{sz}×{sz} board</div>
+                        {group.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
