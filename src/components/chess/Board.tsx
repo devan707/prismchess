@@ -3,7 +3,7 @@ import type { GameState, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
-import { inCheck, pseudoMovesFrom } from "@/game/moves";
+import { inCheck, pseudoMovesFrom, legalMovesFrom } from "@/game/moves";
 
 interface BoardProps {
   state: GameState;
