@@ -85,10 +85,10 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
       key: moveCount,
     };
     function displayRowsIndex(r: number) {
-      return humanColor === "w" ? (rows - 1 - r) : r;
+      return (humanColor === "w") !== flipped ? (rows - 1 - r) : r;
     }
     function displayColsIndex(c: number) {
-      return humanColor === "w" ? c : (cols - 1 - c);
+      return (humanColor === "w") !== flipped ? c : (cols - 1 - c);
     }
   })();
 
