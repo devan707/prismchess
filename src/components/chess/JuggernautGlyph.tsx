@@ -31,6 +31,8 @@ export function JuggernautGlyph({ color, orientation, facing }: Props) {
   } else {
     rotation = facing === "left" ? 90 : -90;
   }
+  // User requested both colors rotated 180° from current orientation.
+  rotation += 180;
 
   // White piece = inverted silhouette (cream body with dark trim).
   const invertFilter = color === "w" ? "invert(1) hue-rotate(180deg)" : "none";
