@@ -305,7 +305,21 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           state={displayedState}
           humanColor={humanColor}
           flipped={flipped}
-          legalFor={legalFor}
+          legalFor={(from) => {
+            const sqs = legalFor(from);
+            if (!from) return sqs;
+            const p = displayedState.board[from.r]?.[from.c];
+            if (!p || state.registry[p.id]?.special !== "necromancer") return sqs;
+            // For a necromancer: only show resurrect (empty adjacent) squares
+            // once the user has picked a fallen piece. Diagonal move/capture
+            // squares are always shown.
+            if (resurrectChoice) return sqs;
+            const diagOnly = new Set([
+              `${from.r+1},${from.c+1}`, `${from.r+1},${from.c-1}`,
+              `${from.r-1},${from.c+1}`, `${from.r-1},${from.c-1}`,
+            ]);
+            return sqs.filter((s) => diagOnly.has(`${s.r},${s.c}`));
+          }}
           onMove={(f, t) => {
             if (viewingPast) return false;
             if (resurrectMode && resurrectChoice) {

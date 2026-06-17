@@ -106,7 +106,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     immobile: true,
     defaultReserve: 2,
     builtinCustom: true,
-    description: "Off-board reserve. Drop it on any empty square — it never moves on its own, but blocks movement and can be captured like any other piece.",
+    description: "Off-board reserve. Drop it on any empty square — it never moves. Blocks movement and gives check coverage. Immune to capture from its front arc; only captured from the sides or rear. Too heavy to be teleported by a Portal.",
   },
   T: {
     id: "T",
@@ -126,7 +126,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ] },
     builtinCustom: true,
-    description: "Moves and captures one square diagonally. Instead of moving, may resurrect one of your captured pieces onto any empty adjacent square (uses your full turn).",
+    description: "Moves and captures one square diagonally. To resurrect: select the Necromancer, click one of your fallen pieces in the graveyard, then click an empty square adjacent to the Necromancer — that piece returns to life there (uses your full turn). Juggernauts and Barricades cannot be resurrected.",
   },
   S: {
     id: "S",
@@ -153,7 +153,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "assassin",
     builtinCustom: true,
-    description: "Infiltrator. Slides up to 3 unobstructed squares diagonally, then takes exactly 1 more step in any of the 8 directions. Captures on the final square only.",
+    description: "Infiltrator. Slides up to 2 unobstructed squares diagonally, then takes exactly 1 more step in any of the 8 directions. Captures on the final square only.",
   },
   W: {
     id: "W",

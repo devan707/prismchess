@@ -104,13 +104,15 @@ function findJuggPartner(
   }
   return null;
 }
-/** True if `attacker` lies in the juggernaut's front arc (strictly ahead along facing). */
-function attackerInJuggFrontArc(jugSq: Square, attacker: Square, juggColor: Color, wide: boolean): boolean {
-  const dir = juggColor === "w" ? 1 : -1;
-  const jf = wide ? jugSq.c : jugSq.r;
+/** True if `attacker` lies in the target's front arc (strictly ahead along facing).
+ *  Shared by juggernauts and barricades. */
+function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Color, wide: boolean): boolean {
+  const dir = targetColor === "w" ? 1 : -1;
+  const tf = wide ? targetSq.c : targetSq.r;
   const af = wide ? attacker.c : attacker.r;
-  return (af - jf) * dir > 0;
+  return (af - tf) * dir > 0;
 }
+const attackerInJuggFrontArc = attackerInFrontArc;
 
 function promotionOptionsFor(state: GameState): PieceId[] {
   const out: PieceId[] = [];
@@ -261,7 +263,8 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         if (r === from.r && c === from.c) continue;
         const t = board[r][c];
         if (!t || t.color !== piece.color) continue;
-        if (isBarricade(t, state.registry)) continue;
+        // Immobile pieces (barricades) cannot be teleported.
+        if (state.registry[t.id]?.immobile) continue;
         // Juggernauts are too massive to teleport — they cannot be swapped by a portal.
         if (state.registry[t.id]?.special === "juggernaut") continue;
         moves.push({ from, to: { r, c }, piece, captured: null, kind: "portalSwap" });
@@ -288,7 +291,18 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     // Friendly captured pieces live in state.captured[opposite color].
     const friendlyCaptured = state.captured[piece.color === "w" ? "b" : "w"];
     if (friendlyCaptured.length > 0) {
-      const uniqueIds = Array.from(new Set(friendlyCaptured.map((p) => p.id)));
+      const uniqueIds = Array.from(new Set(
+        friendlyCaptured
+          .filter((p) => {
+            const d = state.registry[p.id];
+            // Juggernauts and barricades cannot be resurrected.
+            if (!d) return false;
+            if (d.special === "juggernaut") return false;
+            if (d.immobile) return false;
+            return true;
+          })
+          .map((p) => p.id),
+      ));
       for (const o of [
         { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
         { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
@@ -379,12 +393,12 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
     ];
     const seen = new Set<string>();
-    // Diagonal "stop" squares = 0..3 unobstructed steps. 0 steps means no diagonal portion (still allowed).
+    // Diagonal "stop" squares = 0..2 unobstructed steps. 0 steps means no diagonal portion (still allowed).
     type Stop = { r: number; c: number };
     const stops: Stop[] = [{ r: from.r, c: from.c }];
     for (const d of diagDirs) {
       let r = from.r, c = from.c;
-      for (let k = 1; k <= 3; k++) {
+      for (let k = 1; k <= 2; k++) {
         r += d.dr; c += d.dc;
         if (!inB(r, c)) break;
         const occ = board[r][c];
@@ -711,7 +725,26 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   return pseudoMovesFrom(state, from).filter((m) => {
     // Front-arc immunity: a juggernaut cannot be captured from the front.
     if (m.captured && m.captured.id === "J" && m.from) {
-      if (attackerInJuggFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+      if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+    }
+    // Front-arc immunity: a barricade cannot be captured from the front.
+    if (m.captured && state.registry[m.captured.id]?.immobile && m.from) {
+      if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
+    }
+    // Juggernaut charges that would trample a front-protected barricade are also blocked.
+    if (m.juggTrampled && m.from) {
+      for (const tp of m.juggTrampled) {
+        if (state.registry[tp.id]?.immobile) {
+          // Determine that trampled barricade's square along the charge path.
+          // Simple approximation: if attacker direction matches barricade's color forward, that's its front.
+          const dir = m.piece.color === "w" ? 1 : -1;
+          const bDir = tp.color === "w" ? 1 : -1;
+          if (m.piece.color !== tp.color && dir === -bDir) {
+            // Head-on charge attacks the barricade's front → illegal.
+            return false;
+          }
+        }
+      }
     }
     // Juggernaut charge trampling also obeys front-arc immunity for any enemy J in path.
     if (m.juggTrampled && m.juggTrampled.some((p) => p.id === "J") && m.from) {
