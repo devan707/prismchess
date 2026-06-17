@@ -551,11 +551,19 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
   let captured = state.captured;
-  if (move.captured || move.kind === "resurrect") {
+  if (move.captured || move.kind === "resurrect" || move.juggTrampled) {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
+    const targetPool = state.turn === "w" ? w : b;
     if (move.captured) {
-      (state.turn === "w" ? w : b).push(move.captured as Piece);
+      targetPool.push(move.captured as Piece);
+      // Capturing one square of a Juggernaut destroys the whole pair.
+      if (move.captured.id === "J" && move.kind !== "juggCharge") {
+        targetPool.push({ id: "J", color: move.captured.color });
+      }
+    }
+    if (move.juggTrampled) {
+      for (const p of move.juggTrampled) targetPool.push(p);
     }
     if (move.kind === "resurrect" && move.resurrectPieceId) {
       const friendly = state.turn === "w" ? b : w;
