@@ -1,6 +1,16 @@
 import { PIECE_LIBRARY } from "@/game/pieces";
 import { PieceById } from "./PieceGlyph";
+import { JuggernautGlyph } from "./JuggernautGlyph";
 import type { PieceId } from "@/game/types";
+
+// Fixed marker colors (oklch so they render correctly regardless of theme tokens).
+const MOVE_FILL = "oklch(0.72 0.17 150 / 0.7)";
+const MOVE_GLOW = "oklch(0.72 0.17 150 / 0.5)";
+const CAPTURE_BORDER = "oklch(0.65 0.22 25 / 0.9)";
+const CAPTURE_FILL = "oklch(0.65 0.22 25 / 0.22)";
+const BOTH_BORDER = "oklch(0.78 0.17 75 / 0.9)";
+const BOTH_FILL = "oklch(0.78 0.17 75 / 0.2)";
+const BOTH_DOT = "oklch(0.78 0.17 75 / 0.95)";
 
 type Marker = "m" | "a" | "b";
 
