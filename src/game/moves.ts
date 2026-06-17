@@ -66,6 +66,7 @@ function emitFromSpec(
       while (inB(r, c) && steps < max) {
         const t = board[r][c];
         if (isBarricade(t, registry)) break;
+        if (isFixture(t, registry)) break;
         if (!t) {
           if (mode !== "capture") out.push({ r, c });
         } else {
