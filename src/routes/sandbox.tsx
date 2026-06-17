@@ -6,7 +6,7 @@ import { PiecePalette } from "@/components/designer/PiecePalette";
 import { DesignerBoard } from "@/components/designer/DesignerBoard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildDefaultDesign, PRESETS, saveDesign, validateDesign } from "@/game/design";
+import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveDesign, validateDesign } from "@/game/design";
 import { saveSavedGame } from "@/game/library";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
 import type { Color, Design, PieceId, Placement, Square } from "@/game/types";
