@@ -20,6 +20,22 @@ export const getMyProfile = createServerFn({ method: "GET" })
     return data;
   });
 
+export const getMyRole = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    const roles = (data ?? []).map((r) => r.role as string);
+    return {
+      isAdmin: roles.includes("admin"),
+      isModerator: roles.includes("moderator"),
+      roles,
+    };
+  });
+
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>

@@ -19,7 +19,8 @@ import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
-import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter } from "lucide-react";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/play")({
@@ -315,6 +316,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
               </div>
             </SheetContent>
           </Sheet>
+          <ShareGameButton design={design} />
         </div>
       </header>
 
@@ -467,5 +469,84 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
         onChoose={(p) => confirmPromotion(p)}
       />
     </div>
+  );
+}
+
+function ShareGameButton({ design }: { design: Design }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const gameName = `${design.rows}×${design.cols} ${design.placements.length}-piece variant`;
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/` : "https://kingdom-chess.lovable.app/";
+  const shareText = `I'm playing ${gameName} on Kingdom Chess — design your own variant and play vs AI.`;
+
+  const stashDesign = () => {
+    try {
+      localStorage.setItem(
+        "forum:pendingShare",
+        JSON.stringify({ design, name: gameName }),
+      );
+    } catch {}
+  };
+
+  const nativeShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Kingdom Chess", text: shareText, url: shareUrl });
+        setOpen(false);
+      } else {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+        toast.success("Share text copied to clipboard");
+      }
+    } catch {}
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Couldn't copy");
+    }
+  };
+
+  const shareToCommunity = () => {
+    stashDesign();
+    setOpen(false);
+    navigate({ to: "/forum/suggest" });
+  };
+
+  const tweet = () => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Share game">
+          <Share2 className="h-4 w-4" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-80">
+        <SheetHeader>
+          <SheetTitle>Share this game</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4 space-y-2 text-sm">
+          <p className="text-muted-foreground text-xs">{gameName}</p>
+          <Button onClick={nativeShare} className="w-full justify-start" variant="outline">
+            <Share2 className="h-4 w-4 mr-2" /> Share via…
+          </Button>
+          <Button onClick={shareToCommunity} className="w-full justify-start">
+            <MessagesSquare className="h-4 w-4 mr-2" /> Post to community
+          </Button>
+          <Button onClick={tweet} className="w-full justify-start" variant="outline">
+            <Twitter className="h-4 w-4 mr-2" /> Share on X
+          </Button>
+          <Button onClick={copyLink} className="w-full justify-start" variant="outline">
+            <Copy className="h-4 w-4 mr-2" /> Copy link
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

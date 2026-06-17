@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listTopics, toggleLike } from "@/lib/forum.functions";
+import { getMyRole } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, MessageSquare, PlusCircle } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/forum")({
@@ -20,11 +21,17 @@ type Topic = Awaited<ReturnType<typeof listTopics>>[number];
 
 function ForumPage() {
   const fetchTopics = useServerFn(listTopics);
+  const fetchRole = useServerFn(getMyRole);
   const like = useServerFn(toggleLike);
   const [topics, setTopics] = useState<Topic[] | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const load = () => fetchTopics({}).then(setTopics).catch((e) => toast.error(e.message));
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    load();
+    fetchRole({}).then((r) => setIsAdmin(r.isAdmin || r.isModerator)).catch(() => {});
+    // eslint-disable-next-line
+  }, []);
 
   const onLike = async (t: Topic) => {
     setTopics((prev) =>
@@ -42,9 +49,15 @@ function ForumPage() {
         <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4 mr-1" /> Home
         </Link>
-        <Link to="/forum/new">
-          <Button size="sm"><PlusCircle className="h-4 w-4 mr-1" /> New topic</Button>
-        </Link>
+        {isAdmin ? (
+          <Link to="/forum/new">
+            <Button size="sm"><PlusCircle className="h-4 w-4 mr-1" /> New topic</Button>
+          </Link>
+        ) : (
+          <Link to="/forum/suggest">
+            <Button size="sm" variant="outline"><Lightbulb className="h-4 w-4 mr-1" /> Suggest a topic</Button>
+          </Link>
+        )}
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
         <h1 className="font-display text-3xl font-bold">Community</h1>
@@ -54,14 +67,30 @@ function ForumPage() {
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : topics.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">
-            No topics yet. Be the first to start one!
+            No topics yet.
           </div>
         ) : (
           <ul className="space-y-2">
             {topics.map((t) => (
-              <li key={t.id} className="rounded-xl border bg-card p-4 hover:border-primary transition">
+              <li
+                key={t.id}
+                className={`rounded-xl border bg-card p-4 hover:border-primary transition ${t.is_featured ? "border-primary/60 bg-primary/5" : ""}`}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <Link to="/forum/$topicId" params={{ topicId: t.id }} className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {t.is_pinned && <Pin className="h-3 w-3 text-muted-foreground" aria-label="Pinned" />}
+                      {t.is_featured && (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">
+                          <Star className="h-3 w-3" /> Featured
+                        </span>
+                      )}
+                      {t.shared_design_name && (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-accent/30 text-accent-foreground">
+                          <Gamepad2 className="h-3 w-3" /> Custom game
+                        </span>
+                      )}
+                    </div>
                     <h2 className="font-display font-semibold truncate">{t.title}</h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       by {t.author?.display_name ?? t.author?.username ?? "unknown"} · {new Date(t.last_activity_at).toLocaleDateString()}

@@ -16,6 +16,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/forum'
+import { Route as AuthenticatedForumSuggestRouteImport } from './routes/_authenticated/forum.suggest'
 import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
 import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
 
@@ -53,6 +54,12 @@ const AuthenticatedForumRoute = AuthenticatedForumRouteImport.update({
   path: '/forum',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedForumSuggestRoute =
+  AuthenticatedForumSuggestRouteImport.update({
+    id: '/suggest',
+    path: '/suggest',
+    getParentRoute: () => AuthenticatedForumRoute,
+  } as any)
 const AuthenticatedForumNewRoute = AuthenticatedForumNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -74,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
+  '/forum/suggest': typeof AuthenticatedForumSuggestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,6 +92,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
+  '/forum/suggest': typeof AuthenticatedForumSuggestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,6 +105,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
+  '/_authenticated/forum/suggest': typeof AuthenticatedForumSuggestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/forum/$topicId'
     | '/forum/new'
+    | '/forum/suggest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/forum/$topicId'
     | '/forum/new'
+    | '/forum/suggest'
   id:
     | '__root__'
     | '/'
@@ -129,6 +141,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
+    | '/_authenticated/forum/suggest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -190,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedForumRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/forum/suggest': {
+      id: '/_authenticated/forum/suggest'
+      path: '/suggest'
+      fullPath: '/forum/suggest'
+      preLoaderRoute: typeof AuthenticatedForumSuggestRouteImport
+      parentRoute: typeof AuthenticatedForumRoute
+    }
     '/_authenticated/forum/new': {
       id: '/_authenticated/forum/new'
       path: '/new'
@@ -210,11 +230,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedForumRouteChildren {
   AuthenticatedForumTopicIdRoute: typeof AuthenticatedForumTopicIdRoute
   AuthenticatedForumNewRoute: typeof AuthenticatedForumNewRoute
+  AuthenticatedForumSuggestRoute: typeof AuthenticatedForumSuggestRoute
 }
 
 const AuthenticatedForumRouteChildren: AuthenticatedForumRouteChildren = {
   AuthenticatedForumTopicIdRoute: AuthenticatedForumTopicIdRoute,
   AuthenticatedForumNewRoute: AuthenticatedForumNewRoute,
+  AuthenticatedForumSuggestRoute: AuthenticatedForumSuggestRoute,
 }
 
 const AuthenticatedForumRouteWithChildren =
@@ -243,13 +265,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
