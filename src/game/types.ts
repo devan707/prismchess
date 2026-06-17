@@ -62,7 +62,10 @@ export interface PieceDef {
   builtinCustom?: boolean;
 }
 
-export type MoveKind = "normal" | "double" | "ep" | "drop" | "dragonAttack" | "portalSwap" | "resurrect";
+export type MoveKind =
+  | "normal" | "double" | "ep" | "drop"
+  | "dragonAttack" | "portalSwap" | "resurrect"
+  | "juggShift" | "juggCharge" | "juggExit";
 
 export interface Move {
   /** Null only for drops. */
