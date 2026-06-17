@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { loadDesign } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
-import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
+import type { Color, Design, Difficulty, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
@@ -87,7 +87,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
-    state, status, tryMove, tryDrop, tryResurrect, legalFor, legalDropSquares,
+    state, status, tryMove, tryDrop, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
     undo, pendingPromotion, promotionOptions, confirmPromotion,
   } = game;
