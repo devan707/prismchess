@@ -221,8 +221,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
                 style={{
                   width: "45%",
                   height: "45%",
-                  background: "hsl(var(--primary) / 0.55)",
-                  boxShadow: "0 0 6px hsl(var(--primary) / 0.4)",
+                  background: MOVE_FILL,
+                  boxShadow: `0 0 6px ${MOVE_GLOW}`,
                 }}
               />
             );
@@ -231,8 +231,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
               <span
                 className="absolute inset-1 rounded-sm animate-pulse"
                 style={{
-                  border: "2px solid hsl(0 84% 60% / 0.85)",
-                  background: "hsl(0 84% 60% / 0.2)",
+                  border: `2px solid ${CAPTURE_BORDER}`,
+                  background: CAPTURE_FILL,
                 }}
               />
             );
@@ -242,8 +242,8 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
                 <span
                   className="absolute inset-1 rounded-sm"
                   style={{
-                    border: "2px solid hsl(38 92% 55% / 0.85)",
-                    background: "hsl(38 92% 55% / 0.18)",
+                    border: `2px solid ${BOTH_BORDER}`,
+                    background: BOTH_FILL,
                   }}
                 />
                 <span
@@ -251,20 +251,36 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
                   style={{
                     width: "30%",
                     height: "30%",
-                    background: "hsl(38 92% 55% / 0.9)",
+                    background: BOTH_DOT,
                   }}
                 />
               </>
             );
           }
+
+          // Juggernaut special: render the proper top-down titan glyph spanning
+          // both occupied cells (anchored on the FRONT cell, extending downward).
+          let centerNode: React.ReactNode = null;
+          if (kind === "center") {
+            if (id === "J") {
+              const isFront = diag.center[1] && r === diag.center[1].r && c === diag.center[1].c;
+              centerNode = isFront ? (
+                <JuggernautGlyph color={color} orientation="vertical" facing="down" />
+              ) : null;
+            } else {
+              centerNode = (
+                <PieceById id={id} color={color} def={def} className="h-[80%] w-[80%]" />
+              );
+            }
+          }
+
           return (
             <div
               key={`${r}-${c}`}
               className={`relative ${checker} rounded-[2px] flex items-center justify-center`}
+              style={{ overflow: "visible" }}
             >
-              {kind === "center" && (
-                <PieceById id={id} color={color} def={def} className="h-[80%] w-[80%]" />
-              )}
+              {centerNode}
               {overlay}
             </div>
           );
