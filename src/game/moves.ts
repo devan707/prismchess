@@ -299,6 +299,15 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       if (!cdef) continue;
       if (cdef.special === "juggernaut" || cdef.special === "portal") continue;
       if (cdef.immobile) continue;
+      // Raise must consume a matching piece from the graveyard. The
+      // graveyard pool that holds the corpse is the OPPOSITE color of its
+      // original owner (i.e. captured BY the opponent of the victim).
+      const captorColor: "w" | "b" = corp.originalOwner === "w" ? "b" : "w";
+      const pool = state.captured[captorColor] ?? [];
+      const hasInGraveyard = pool.some(
+        (p) => p.id === corp.pieceId && p.color === corp.originalOwner,
+      );
+      if (!hasInGraveyard) continue;
       raiseSquares.add(`${corp.square.r},${corp.square.c}`);
       moves.push({
         from,
@@ -788,7 +797,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
   let captured = state.captured;
-  if (move.captured || move.kind === "resurrect" || move.juggTrampled) {
+  if (move.captured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
     const targetPool = state.turn === "w" ? w : b;
@@ -810,41 +819,62 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       const idx = friendly.findIndex((p) => p.id === move.resurrectPieceId);
       if (idx >= 0) friendly.splice(idx, 1);
     }
+    // necroRaise consumes one matching piece from the graveyard (the pool
+    // belonging to the opposite color of the victim's original owner).
+    if (move.kind === "necroRaise" && move.resurrectPieceId) {
+      const owner = move.resurrectOriginalOwner;
+      if (owner) {
+        const pool = owner === "w" ? b : w; // captor pool
+        const idx = pool.findIndex((p) => p.id === move.resurrectPieceId && p.color === owner);
+        if (idx >= 0) pool.splice(idx, 1);
+      }
+    }
     captured = { w, b };
   }
-  // Corpse tracking: diff pre/post boards. Any enemy piece (relative to the
-  // mover) that disappeared from a square becomes a corpse on that square.
-  // The mover's own pieces moving around are skipped.
+  // Corpse tracking: only pieces ACTUALLY captured by this move become
+  // corpses. (Earlier diff-based tracking incorrectly added "corpses" for
+  // pieces that merely moved away from a square.)
   const prevCorpses = state.corpses ?? [];
-  const corpses = [...prevCorpses];
-  const mover = state.turn;
-  for (let r = 0; r < state.board.length; r++) {
-    const row = state.board[r];
-    for (let c = 0; c < row.length; c++) {
-      const pre = row[c];
-      if (!pre) continue;
-      if (pre.color === mover) continue;
-      const post = board[r][c];
-      const sameOccupant =
-        !!post && post.id === pre.id && post.color === pre.color && !post.undead;
-      if (sameOccupant) continue;
-      corpses.push({ square: { r, c }, pieceId: pre.id, originalOwner: pre.color });
+  let nextCorpses = [...prevCorpses];
+  if (move.captured && move.kind !== "necroRaise") {
+    const sq = move.epCapture ?? move.to;
+    nextCorpses.push({ square: sq, pieceId: move.captured.id, originalOwner: move.captured.color });
+    // Juggernaut partner also dies on a side/rear capture (see line ~724).
+    if (move.captured.id === "J") {
+      const part = findJuggPartner(state.board, sq, move.captured.color, state.registry);
+      if (part) {
+        nextCorpses.push({ square: part, pieceId: "J", originalOwner: move.captured.color });
+      }
     }
   }
-  // necroRaise consumes one matching corpse at `to`.
-  let nextCorpses = corpses;
-  if (move.kind === "necroRaise" && move.resurrectPieceId) {
-    const idx = nextCorpses.findIndex(
-      (cp) =>
-        cp.square.r === move.to.r &&
-        cp.square.c === move.to.c &&
-        cp.pieceId === move.resurrectPieceId &&
-        cp.originalOwner === move.resurrectOriginalOwner,
-    );
-    if (idx >= 0) {
-      nextCorpses = nextCorpses.slice();
-      nextCorpses.splice(idx, 1);
+  // Juggernaut trample: record a corpse on each trampled square along the
+  // charge lane (both lead and partner rows/cols).
+  if (move.juggTrampled && move.juggTrampled.length && move.from && (move.kind === "juggCharge" || move.kind === "juggExit")) {
+    const wide = boardIsWide(state.board);
+    const partner = findJuggPartner(state.board, move.from, move.piece.color, state.registry);
+    const stepDr = wide ? 0 : (move.piece.color === "w" ? 1 : -1);
+    const stepDc = wide ? (move.piece.color === "w" ? 1 : -1) : 0;
+    const lanes = partner ? [move.from, partner] : [move.from];
+    const { rows, cols } = rowsCols(state.board);
+    for (const start of lanes) {
+      let cur = { r: start.r + stepDr, c: start.c + stepDc };
+      while (cur.r >= 0 && cur.r < rows && cur.c >= 0 && cur.c < cols) {
+        const pre = state.board[cur.r][cur.c];
+        if (pre && pre.color !== move.piece.color) {
+          nextCorpses.push({ square: { r: cur.r, c: cur.c }, pieceId: pre.id, originalOwner: pre.color });
+        }
+        // Stop the lane at the lead's destination row/col (juggExit walks off).
+        if (move.kind === "juggCharge" && (cur.r === move.to.r && wide === false) || (wide && cur.c === move.to.c)) break;
+        cur = { r: cur.r + stepDr, c: cur.c + stepDc };
+      }
     }
+  }
+  // necroRaise: the target square is no longer a corpse square — clear ALL
+  // corpses there so it cannot be raised from again.
+  if (move.kind === "necroRaise") {
+    nextCorpses = nextCorpses.filter(
+      (cp) => !(cp.square.r === move.to.r && cp.square.c === move.to.c),
+    );
   }
   return {
     ...state,
