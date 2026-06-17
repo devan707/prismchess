@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
-import { PieceGlyph } from "@/components/chess/PieceGlyph";
-import type { GameTutorial } from "@/game/tutorials";
+import { PieceById } from "@/components/chess/PieceGlyph";
 import { PIECE_LIBRARY } from "@/game/pieces";
 import { markTutorialSeen } from "@/lib/tutorial-state";
 import { cn } from "@/lib/utils";
