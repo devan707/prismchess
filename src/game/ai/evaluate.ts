@@ -1,4 +1,6 @@
 import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
+import { isSquareAttacked } from "../moves";
+
 
 /**
  * Centralised piece values. The user-tunable values are expressed in "pawns"
@@ -280,5 +282,44 @@ export function evaluate(state: GameState, toMove: Color): number {
   // Dynamic, piece-specific tactical bonuses.
   score += dynamicBonus(state, toMove);
   score -= dynamicBonus(state, toMove === "w" ? "b" : "w");
+  // Hanging-piece penalty: if a piece is attacked and not adequately defended,
+  // count most of its value as already lost. This stops shallow searches from
+  // happily moving a Wizard next to a pawn that an Assassin can recapture.
+  score += hangingTerm(state, toMove);
+  score -= hangingTerm(state, toMove === "w" ? "b" : "w");
   return score;
+}
+
+/**
+ * Approximate the static-exchange "hanging" value of each piece of `color`.
+ * Cheap two-tier check: attacked + undefended ⇒ ~90% of value already lost;
+ * attacked + defended ⇒ small risk discount. Only evaluated for pieces worth
+ * at least a knight so it stays fast on 12×12 boards.
+ */
+function hangingTerm(state: GameState, color: Color): number {
+  const board = state.board;
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+  const opp: Color = color === "w" ? "b" : "w";
+  let penalty = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = board[r][c];
+      if (!p || p.color !== color) continue;
+      const v = valueFor(p.id, state.registry[p.id]);
+      if (v < 250) continue; // skip pawns / barricades — noise vs. cost
+      if (state.registry[p.id]?.special === "juggernaut") continue; // huge & special-cased
+      const attacked = isSquareAttacked(state, { r, c }, opp);
+      if (!attacked) continue;
+      // Test "defended" by temporarily flipping the resident piece's colour so
+      // friendly attackers (which can't normally target their own square) show
+      // up as recapturers.
+      const saved = board[r][c];
+      board[r][c] = { id: p.id, color: opp };
+      const defended = isSquareAttacked(state, { r, c }, color);
+      board[r][c] = saved;
+      penalty -= defended ? v * 0.2 : v * 0.85;
+    }
+  }
+  return penalty;
 }
