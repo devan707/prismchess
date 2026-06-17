@@ -376,7 +376,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           : winner === humanColor ? "aiLost"
           : "aiWon"
         }
-        designName={design.name ?? "Custom"}
+        designName={`${design.rows}×${design.cols} Custom`}
       />
 
       <PromotionDialog
