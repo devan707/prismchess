@@ -285,25 +285,27 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   if (def.special === "necromancer") {
     // Collect raisable corpses adjacent to the necromancer first; those
     // squares are reserved for resurrection and MUST NOT also be offered as
-    // ordinary move destinations.
+    // ordinary move destinations. When multiple corpses sit on the same
+    // square (e.g. a piece moved through and was later captured there), only
+    // the MOST RECENT corpse is raisable — matching what Spirit View shows.
     const corpses = state.corpses ?? [];
     const corpseSquares = new Set<string>();
-    const seenSq = new Set<string>();
+    const latestBySquare = new Map<string, (typeof corpses)[number]>();
     for (const corp of corpses) {
       const dr = corp.square.r - from.r;
       const dc = corp.square.c - from.c;
       if (dr === 0 && dc === 0) continue;
       if (Math.abs(dr) > 1 || Math.abs(dc) > 1) continue;
-      if (board[corp.square.r][corp.square.c]) continue; // must be empty to raise onto
+      if (board[corp.square.r][corp.square.c]) continue;
       const cdef = state.registry[corp.pieceId];
       if (!cdef) continue;
-      // Juggernauts and Barricades cannot be resurrected.
       if (cdef.special === "juggernaut") continue;
       if (cdef.immobile) continue;
-      corpseSquares.add(`${corp.square.r},${corp.square.c}`);
-      const key = `${corp.square.r},${corp.square.c},${corp.pieceId},${corp.originalOwner}`;
-      if (seenSq.has(key)) continue;
-      seenSq.add(key);
+      const key = `${corp.square.r},${corp.square.c}`;
+      corpseSquares.add(key);
+      latestBySquare.set(key, corp); // later iterations overwrite — latest wins
+    }
+    for (const corp of latestBySquare.values()) {
       moves.push({
         from,
         to: corp.square,
