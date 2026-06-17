@@ -291,7 +291,7 @@ export function MoveDiagram({ id, color = "w", maxSize = 180 }: Props) {
         <span className="flex items-center gap-1">
           <span
             className="inline-block rounded-full"
-            style={{ width: 8, height: 8, background: "hsl(var(--primary) / 0.7)" }}
+            style={{ width: 8, height: 8, background: MOVE_FILL }}
           />
           Move
         </span>
