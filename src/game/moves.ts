@@ -327,11 +327,24 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.to.r][move.to.c] = null;
     return b;
   }
+  if (move.kind === "portalSwap" && move.from) {
+    const friendly = b[move.to.r][move.to.c];
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    b[move.from.r][move.from.c] = friendly;
+    return b;
+  }
+  if (move.kind === "resurrect" && move.resurrectPieceId) {
+    // Necromancer stays; new piece appears at `to`.
+    b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
+    return b;
+  }
   if (move.from) {
     b[move.from.r][move.from.c] = null;
   }
   let piece: Piece = move.piece;
-  if (move.promotion) {
+  if (move.shapeshiftTo) {
+    piece = { id: move.shapeshiftTo, color: move.piece.color };
+  } else if (move.promotion) {
     piece = { id: move.promotion, color: move.piece.color };
   }
   b[move.to.r][move.to.c] = piece;
