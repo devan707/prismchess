@@ -10,12 +10,12 @@ import { Board } from "@/components/chess/Board";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { Captured, MoveHistory } from "@/components/chess/MoveHistory";
 import { ReservesPanel } from "@/components/designer/ReservesPanel";
-import { Home, Flag, RefreshCw, Clock, Copy } from "lucide-react";
+import { Home, Flag, RefreshCw, Clock, Copy, Handshake } from "lucide-react";
 import {
   getMatch, resign, claimTimeout,
 } from "@/lib/multiplayer.functions";
 import {
-  formatClock, liveTimeRemaining, useMultiplayerGame, type MatchSnapshot,
+  formatClock, liveTimeRemaining, useMultiplayerGame, type MatchEvent, type MatchSnapshot,
 } from "@/hooks/useMultiplayerGame";
 import { toast } from "sonner";
 import type { Color, Move } from "@/game/types";
