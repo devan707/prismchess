@@ -1,5 +1,7 @@
 import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
 import { isSquareAttacked } from "../moves";
+import { loadPlaybook } from "./playbook";
+
 
 
 /**
@@ -29,17 +31,20 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
 const PAWN_UNIT = 100;
 
 export function valueFor(id: PieceId, def: PieceDef | undefined): number {
+  const pb = loadPlaybook();
+  const mult = pb.pieceValueMultipliers[id] ?? 1;
   const v = PIECE_VALUES_PAWNS[id];
-  if (v != null) return v * PAWN_UNIT;
-  if (!def) return PAWN_UNIT;
+  if (v != null) return v * PAWN_UNIT * mult;
+  if (!def) return PAWN_UNIT * mult;
   // Fallback for custom pieces: rough by movement breadth.
   let est = 1;
   if (def.royal) est += 50;
   const slides = def.movement?.slides?.length ?? 0;
   const leaps = def.movement?.leaps?.length ?? 0;
   est += slides * 0.8 + leaps * 0.3;
-  return est * PAWN_UNIT;
+  return est * PAWN_UNIT * mult;
 }
+
 
 function inB(board: Board, r: number, c: number): boolean {
   return r >= 0 && r < board.length && c >= 0 && c < board[0].length;
@@ -282,13 +287,13 @@ export function evaluate(state: GameState, toMove: Color): number {
   // Dynamic, piece-specific tactical bonuses.
   score += dynamicBonus(state, toMove);
   score -= dynamicBonus(state, toMove === "w" ? "b" : "w");
-  // Hanging-piece penalty: if a piece is attacked and not adequately defended,
-  // count most of its value as already lost. This stops shallow searches from
-  // happily moving a Wizard next to a pawn that an Assassin can recapture.
-  score += hangingTerm(state, toMove);
-  score -= hangingTerm(state, toMove === "w" ? "b" : "w");
+  // Hanging-piece penalty, scaled by the learned caution multiplier.
+  const pb = loadPlaybook();
+  score += hangingTerm(state, toMove) * pb.cautionMultiplier;
+  score -= hangingTerm(state, toMove === "w" ? "b" : "w") * pb.cautionMultiplier;
   return score;
 }
+
 
 /**
  * Approximate the static-exchange "hanging" value of each piece of `color`.

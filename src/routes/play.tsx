@@ -16,7 +16,8 @@ import {
 import { loadDesign } from "@/game/design";
 import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X } from "lucide-react";
+import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
+import { Home, RotateCcw, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain } from "lucide-react";
 
 
 export const Route = createFileRoute("/play")({
@@ -91,6 +92,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [tipsOn, setTipsOn] = useState<boolean>(() => {
     try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
   });
@@ -347,6 +349,9 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
             <div className="bg-card border rounded-xl shadow-2xl p-6 text-center max-w-xs space-y-3">
               <div className="font-display text-xl font-bold">{statusLabel}</div>
               <div className="flex flex-col gap-2">
+                <Button onClick={() => setReviewOpen(true)} variant="secondary">
+                  <Brain className="h-4 w-4 mr-1" /> Review with AI
+                </Button>
                 <Button onClick={handleNewGame}>
                   <RefreshCw className="h-4 w-4 mr-1" /> New game
                 </Button>
@@ -358,6 +363,21 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           </div>
         )}
       </main>
+
+      <PostGameAnalysis
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        state={state}
+        aiColor={humanColor === "w" ? "b" : "w"}
+        difficulty={difficulty}
+        outcome={
+          !terminal ? "unknown"
+          : winner == null ? "draw"
+          : winner === humanColor ? "aiLost"
+          : "aiWon"
+        }
+        designName={`${design.rows}×${design.cols} Custom`}
+      />
 
       <PromotionDialog
         open={!!pendingPromotion}
