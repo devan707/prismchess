@@ -16,6 +16,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/forum'
+import { Route as AuthenticatedForumIndexRouteImport } from './routes/_authenticated/forum.index'
 import { Route as AuthenticatedForumSuggestRouteImport } from './routes/_authenticated/forum.suggest'
 import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
 import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
@@ -54,6 +55,11 @@ const AuthenticatedForumRoute = AuthenticatedForumRouteImport.update({
   path: '/forum',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedForumIndexRoute = AuthenticatedForumIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedForumRoute,
+} as any)
 const AuthenticatedForumSuggestRoute =
   AuthenticatedForumSuggestRouteImport.update({
     id: '/suggest',
@@ -82,17 +88,18 @@ export interface FileRoutesByFullPath {
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/forum/': typeof AuthenticatedForumIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
-  '/forum': typeof AuthenticatedForumRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/forum': typeof AuthenticatedForumIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,6 +113,7 @@ export interface FileRoutesById {
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
   '/_authenticated/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/_authenticated/forum/': typeof AuthenticatedForumIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,17 +127,18 @@ export interface FileRouteTypes {
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
+    | '/forum/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/play'
     | '/sandbox'
-    | '/forum'
     | '/profile'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
+    | '/forum'
   id:
     | '__root__'
     | '/'
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
     | '/_authenticated/forum/suggest'
+    | '/_authenticated/forum/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -203,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedForumRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/forum/': {
+      id: '/_authenticated/forum/'
+      path: '/'
+      fullPath: '/forum/'
+      preLoaderRoute: typeof AuthenticatedForumIndexRouteImport
+      parentRoute: typeof AuthenticatedForumRoute
+    }
     '/_authenticated/forum/suggest': {
       id: '/_authenticated/forum/suggest'
       path: '/suggest'
@@ -231,12 +248,14 @@ interface AuthenticatedForumRouteChildren {
   AuthenticatedForumTopicIdRoute: typeof AuthenticatedForumTopicIdRoute
   AuthenticatedForumNewRoute: typeof AuthenticatedForumNewRoute
   AuthenticatedForumSuggestRoute: typeof AuthenticatedForumSuggestRoute
+  AuthenticatedForumIndexRoute: typeof AuthenticatedForumIndexRoute
 }
 
 const AuthenticatedForumRouteChildren: AuthenticatedForumRouteChildren = {
   AuthenticatedForumTopicIdRoute: AuthenticatedForumTopicIdRoute,
   AuthenticatedForumNewRoute: AuthenticatedForumNewRoute,
   AuthenticatedForumSuggestRoute: AuthenticatedForumSuggestRoute,
+  AuthenticatedForumIndexRoute: AuthenticatedForumIndexRoute,
 }
 
 const AuthenticatedForumRouteWithChildren =
