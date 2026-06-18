@@ -161,7 +161,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: oklch(0.55 0.005 280 / 0.5);
+    background: oklch(0.82 0.005 280 / 0.30);
     backdrop-filter: blur(6px);
     z-index: 0;
   }
