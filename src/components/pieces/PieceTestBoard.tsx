@@ -213,28 +213,34 @@ export function PieceTestBoard({ def, options, rangedSpec, size = 9 }: Props) {
               style={{ background: isDark ? "rgb(120 113 108 / 0.35)" : "rgb(245 245 244 / 0.6)" }}
             >
               {/* target highlight */}
-              {tgt && (
-                <>
-                  <span
-                    className={`absolute inset-0 ${
-                      tgt.kind === "capture"
-                        ? "bg-red-500/30 ring-2 ring-red-500"
-                        : tgt.kind === "ranged"
-                        ? "bg-orange-500/20 ring-2 ring-dashed ring-orange-500"
-                        : "bg-emerald-500/20 ring-2 ring-emerald-500"
-                    } ${tgt.conditional && tgt.kind !== "ranged" ? "ring-dashed" : ""}`}
-                  />
-                  {tgt.kind === "ranged" && (
-                    // Crosshair so ranged squares read as "fire here", not "move here".
-                    <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="relative block w-4 h-4 rounded-full border-2 border-orange-600">
-                        <span className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-[2px] bg-orange-600" />
-                        <span className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[2px] bg-orange-600" />
+              {tgt && (() => {
+                const rangedHit = tgt.kind === "ranged" && occ === "enemy";
+                const rangedColor = rangedHit ? "red" : "orange";
+                return (
+                  <>
+                    <span
+                      className={`absolute inset-0 ${
+                        tgt.kind === "capture"
+                          ? "bg-red-500/30 ring-2 ring-red-500"
+                          : tgt.kind === "ranged"
+                          ? rangedHit
+                            ? "bg-red-500/25 ring-2 ring-red-600"
+                            : "bg-orange-500/20 ring-2 ring-dashed ring-orange-500"
+                          : "bg-emerald-500/20 ring-2 ring-emerald-500"
+                      } ${tgt.conditional && tgt.kind !== "ranged" ? "ring-dashed" : ""}`}
+                    />
+                    {tgt.kind === "ranged" && (
+                      // Crosshair so ranged squares read as "fire here", not "move here".
+                      <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className={`relative block w-4 h-4 rounded-full border-2 ${rangedColor === "red" ? "border-red-600" : "border-orange-600"}`}>
+                          <span className={`absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-[2px] ${rangedColor === "red" ? "bg-red-600" : "bg-orange-600"}`} />
+                          <span className={`absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[2px] ${rangedColor === "red" ? "bg-red-600" : "bg-orange-600"}`} />
+                        </span>
                       </span>
-                    </span>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                );
+              })()}
               {isSelfSel && <span className="absolute inset-0 ring-2 ring-amber-400" />}
               {occ === "self" && (
                 <span className="relative z-10 text-2xl leading-none">

@@ -18,6 +18,8 @@ interface Props {
   onAdd: (def: PieceDef) => void;
   /** Custom piece ids already present in the design. */
   alreadyInDesign: string[];
+  /** Called after deleting a piece you own — so the parent design can drop it too. */
+  onRemoveFromDesign?: (id: string) => void;
 }
 
 type Row = {
@@ -34,7 +36,7 @@ type Row = {
 
 type Tab = "mine" | "new" | "popular";
 
-export function PieceLibraryPanel({ onAdd, alreadyInDesign }: Props) {
+export function PieceLibraryPanel({ onAdd, alreadyInDesign, onRemoveFromDesign }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("new");
   const [mine, setMine] = useState<Row[]>([]);
@@ -92,6 +94,8 @@ export function PieceLibraryPanel({ onAdd, alreadyInDesign }: Props) {
     if (!confirm(`Delete "${row.name}"?`)) return;
     try {
       await remove({ data: { pieceId: row.id } });
+      const def = row.def as PieceDef;
+      onRemoveFromDesign?.(def.id);
       toast.success("Deleted");
       await refresh();
     } catch (e) {

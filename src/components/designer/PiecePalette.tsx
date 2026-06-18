@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Color, PieceDef, PieceId } from "@/game/types";
 import { PieceById } from "@/components/chess/PieceGlyph";
-import { Eraser } from "lucide-react";
+import { Eraser, X } from "lucide-react";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 
 interface Props {
@@ -15,11 +15,14 @@ interface Props {
   onSelectPiece: (id: PieceId | "erase" | null) => void;
   /** Whether a board square is currently selected — drives the helper hint. */
   hasSquareSelected: boolean;
+  /** Ids of pieces that can be removed from this design's palette (custom pieces added via the library). */
+  removableIds?: string[];
+  onRemovePiece?: (id: PieceId) => void;
 }
 
 export function PiecePalette({
   pieces, color, onColorChange, reserves, onReserveChange,
-  selectedPiece, onSelectPiece, hasSquareSelected,
+  selectedPiece, onSelectPiece, hasSquareSelected, removableIds, onRemovePiece,
 }: Props) {
   const [hovered, setHovered] = useState<PieceId | null>(null);
   return (
@@ -55,6 +58,7 @@ export function PiecePalette({
         {pieces.map((def) => {
           const reserveCount = def.defaultReserve != null ? reserves[color][def.id] ?? 0 : null;
           const isSelected = selectedPiece === def.id;
+          const canRemove = !!removableIds?.includes(def.id) && !!onRemovePiece;
           return (
             <div
               key={def.id}
@@ -69,6 +73,17 @@ export function PiecePalette({
               onMouseLeave={() => setHovered((h) => (h === def.id ? null : h))}
               title={`${def.name}${def.description ? ` — ${def.description}` : ""}`}
             >
+              {canRemove && (
+                <button
+                  type="button"
+                  aria-label={`Remove ${def.name} from palette`}
+                  className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow hover:scale-110 transition"
+                  onClick={(e) => { e.stopPropagation(); onRemovePiece!(def.id); }}
+                  title="Remove from this game"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
               <PieceById id={def.id} color={color} def={def} className="text-3xl" />
               <span className="text-[10px] mt-1 text-muted-foreground truncate w-full text-center">{def.name}</span>
               {reserveCount !== null && (
