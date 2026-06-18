@@ -61,6 +61,7 @@ const SaveInput = z.object({
   description: z.string().trim().max(400).default(""),
   def: PieceDefJson,
   visibility: z.enum(["private", "public"]),
+  remixedFromId: UuidSchema.nullable().optional(),
 });
 
 export const savePiece = createServerFn({ method: "POST" })
@@ -78,6 +79,7 @@ export const savePiece = createServerFn({ method: "POST" })
           description: data.description,
           def: data.def as never,
           visibility: data.visibility,
+          remixed_from_id: data.remixedFromId ?? null,
         })
         .select("id, slug")
         .single();
