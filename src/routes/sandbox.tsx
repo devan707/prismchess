@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BoardSizePicker } from "@/components/designer/BoardSizePicker";
 import { PresetPicker } from "@/components/designer/PresetPicker";
 import { PiecePalette } from "@/components/designer/PiecePalette";
@@ -30,10 +30,13 @@ import { ArrowLeft, Play, Save, Sparkles, Wand2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
-import { publishGame } from "@/lib/social.functions";
+import { publishGame, getMyPublishedGame } from "@/lib/social.functions";
 import { PieceLibraryPanel } from "@/components/pieces/PieceLibraryPanel";
 
 export const Route = createFileRoute("/sandbox")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    edit: typeof search.edit === "string" ? search.edit : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Sandbox — Design Your Own Chess" },
@@ -45,6 +48,7 @@ export const Route = createFileRoute("/sandbox")({
 
 function Sandbox() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const [design, setDesign] = useState<Design>(() => buildDefaultDesign(8, 8, "classic"));
   const [paletteColor, setPaletteColor] = useState<Color>("w");
   const [mirror, setMirror] = useState(true);
@@ -57,8 +61,30 @@ function Sandbox() {
   const suggestDesc = useServerFn(suggestGameDescription);
   const genTutorial = useServerFn(generateGameTutorial);
   const publish = useServerFn(publishGame);
+  const fetchMyGame = useServerFn(getMyPublishedGame);
   const [publishing, setPublishing] = useState(false);
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
+
+  // If ?edit=<gameId> is present, hydrate the sandbox from that published variant.
+  useEffect(() => {
+    if (!search.edit) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const row = await fetchMyGame({ data: { gameId: search.edit! } });
+        if (cancelled || !row) return;
+        setDesign(row.design as unknown as Design);
+        setSaveName(row.name);
+        setDescription(row.description);
+        setPublishedGameId(row.id);
+        toast.info(`Editing "${row.name}" — Publish will update this listing.`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Couldn't load that game");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [search.edit, fetchMyGame]);
+
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 

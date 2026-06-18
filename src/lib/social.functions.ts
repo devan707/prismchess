@@ -549,6 +549,51 @@ export const listMyPublishedGames = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/** Owner-only fetch of a single published game (used by the sandbox edit flow). */
+export const getMyPublishedGame = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ gameId: UuidSchema }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("published_games")
+      .select("id, slug, name, description, design, tutorial")
+      .eq("id", data.gameId)
+      .eq("author_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/** Games this user has liked — joined with the published_games row. */
+export const listMyLikedGames = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: likes, error: likeErr } = await context.supabase
+      .from("game_likes")
+      .select("game_id, created_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (likeErr) throw new Error(likeErr.message);
+    const ids = (likes ?? []).map((l) => l.game_id);
+    if (ids.length === 0) return [];
+    const { data: games, error: gamesErr } = await context.supabase
+      .from("published_games")
+      .select("id, slug, name, description, like_count, comment_count, created_at, author_id, is_hidden")
+      .in("id", ids);
+    if (gamesErr) throw new Error(gamesErr.message);
+    const visible = (games ?? []).filter((g) => !g.is_hidden);
+    const authorIds = Array.from(new Set(visible.map((r) => r.author_id)));
+    const profiles = authorIds.length
+      ? (await context.supabase.from("profiles").select("id, username, display_name, avatar").in("id", authorIds)).data ?? []
+      : [];
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const order = new Map(ids.map((id, i) => [id, i] as const));
+    return visible
+      .map((g) => ({ ...g, author: byId.get(g.author_id) ?? null }))
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  });
+
+
 // ============ LIKES ============
 
 export const toggleLike = createServerFn({ method: "POST" })
