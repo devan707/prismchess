@@ -1304,7 +1304,7 @@ export function allLegalMoves(state: GameState): Move[] {
     // a forced pass so the turn can still end.
     if (out.length === 0) {
       const p = state.board[ph.r]?.[ph.c];
-      if (p && p.id === "H" && p.color === state.turn) {
+      if (p && (p.id === "H" || p.id === "G") && p.color === state.turn) {
         out.push({ from: ph, to: ph, piece: p, kind: "handPass" });
       }
     }
