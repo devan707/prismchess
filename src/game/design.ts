@@ -135,33 +135,36 @@ export const PRESETS: Preset[] = [
   {
     id: "menagerie",
     name: "Menagerie",
-    description: "Classic layout reimagined: Dragons & a Wizard on the corners, Dragons as knights, Archers as bishops, Shapeshifter pawns up front.",
+    description: "Classic layout reimagined: Archers as rooks, Dragons as knights, Wizards as bishops, a Regent leading the army, and an Assassin (white) / Necromancer (black) standing in for the queen. Shapeshifter pawns up front.",
     build: (rows, cols) => {
       // Designed for an 8×8 board. Fall back to classic-ish on smaller boards.
       if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
-      // Back rank: Dragon, Dragon, Archer, Queen, King, Archer, Dragon, Wizard
-      //   Wizard sits on White's light-square corner (h1) so it is bound to its
-      //   own color; the mirror places Black's Wizard on (rows-1, cols-1), which
-      //   is Black's color-matched corner.
+      // Back rank: Archer, Dragon, Wizard, <queen-slot>, Regent, Wizard, Dragon, Archer
+      // White's queen slot is an Assassin (Z); Black's mirrors to a Necromancer (M).
       const cKing = 4;
       const cQueen = 3;
-      const back: PieceId[] = [];
+      const whiteBack: PieceId[] = [];
+      const blackBack: PieceId[] = [];
       for (let c = 0; c < cols; c++) {
-        if (c === 0) back.push("D");
-        else if (c === 1) back.push("D");
-        else if (c === 2) back.push("A");
-        else if (c === cQueen) back.push("Q");
-        else if (c === cKing) back.push("K");
-        else if (c === 5) back.push("A");
-        else if (c === 6) back.push("D");
-        else if (c === cols - 1) back.push("W");
-        else back.push("P"); // any extra columns on wider boards get pawns
+        let id: PieceId;
+        if (c === 0 || c === 7) id = "A";
+        else if (c === 1 || c === 6) id = "D";
+        else if (c === 2 || c === 5) id = "W";
+        else if (c === cQueen) id = "_Q"; // sentinel, replaced per side
+        else if (c === cKing) id = "G";
+        else id = "P";
+        whiteBack.push(id === "_Q" ? "Z" : id);
+        blackBack.push(id === "_Q" ? "M" : id);
       }
-      const white: Placement[] = [];
-      back.forEach((id, c) => white.push({ color: "w", pieceId: id, r: 0, c }));
-      // Shapeshifter pawns across rank 2.
-      for (let c = 0; c < cols; c++) white.push({ color: "w", pieceId: "S", r: 1, c });
-      return mirror(white, rows, cols);
+      const placements: Placement[] = [];
+      whiteBack.forEach((id, c) => placements.push({ color: "w", pieceId: id, r: 0, c }));
+      blackBack.forEach((id, c) => placements.push({ color: "b", pieceId: id, r: rows - 1, c }));
+      // Shapeshifter pawns across rank 2 / second-to-last rank.
+      for (let c = 0; c < cols; c++) {
+        placements.push({ color: "w", pieceId: "S", r: 1, c });
+        placements.push({ color: "b", pieceId: "S", r: rows - 2, c });
+      }
+      return placements;
     },
   },
   {
