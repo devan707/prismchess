@@ -104,6 +104,34 @@ export const listMyPieces = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/** Pieces this user has liked — joined with the custom_pieces row. */
+export const listMyLikedPieces = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: likes, error: likeErr } = await context.supabase
+      .from("piece_likes")
+      .select("piece_id, created_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (likeErr) throw new Error(likeErr.message);
+    const ids = (likes ?? []).map((l) => l.piece_id);
+    if (ids.length === 0) return [];
+    const { data: pieces, error: piecesErr } = await context.supabase
+      .from("custom_pieces")
+      .select(PIECE_COLS + ", is_hidden")
+      .in("id", ids);
+    if (piecesErr) throw new Error(piecesErr.message);
+    type Row = {
+      id: string; slug: string; name: string; description: string;
+      def: import("@/integrations/supabase/types").Json; visibility: string;
+      like_count: number; created_at: string; author_id: string;
+      image_url: string | null; is_hidden: boolean;
+    };
+    const visible = ((pieces ?? []) as Row[]).filter((p) => !p.is_hidden);
+    const order = new Map(ids.map((id, i) => [id, i] as const));
+    return visible.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  });
+
 export const listDiscoveryPieces = createServerFn({ method: "GET" })
   .handler(async () => {
     const { createClient } = await import("@supabase/supabase-js");
