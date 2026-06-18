@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Home, Heart, MessageSquare, Play, Trash2, Pencil } from "lucide-react";
+import { Home, Heart, MessageSquare, Play, Trash2, Pencil, Wand2 } from "lucide-react";
 import {
   getPublishedGame, listComments, addComment, deleteComment, toggleLike, getMyLikeState,
 } from "@/lib/social.functions";
