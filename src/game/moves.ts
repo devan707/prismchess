@@ -1159,7 +1159,10 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
       if (!p || p.color !== byColor) continue;
       const moves = pseudoMovesFrom(scanState, { r, c });
       for (const m of moves) {
-        if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
+        const partnerHits =
+          (m.kind === "shadowLink" || m.kind === "twinLink") &&
+          !!m.partnerTo && m.partnerTo.r === sq.r && m.partnerTo.c === sq.c;
+        if (((m.to.r === sq.r && m.to.c === sq.c) || partnerHits) && m.kind !== "drop") {
           if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
           if (m.kind === "portalSwap") continue;
           if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
