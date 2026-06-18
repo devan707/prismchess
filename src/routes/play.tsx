@@ -524,7 +524,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground leading-snug mt-1.5">
-                    {selectedDef.description}
+                    {selectedDescription}
                   </p>
                 </div>
               </div>
