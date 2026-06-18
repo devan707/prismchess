@@ -1,5 +1,6 @@
 import type { Board, Color, GameState, Move, MovementSpec, Offset, Piece, PieceDef, PieceId, Square } from "./types";
 import { cloneBoard, findRoyals, inBoardBounds } from "./board";
+import { compileOption } from "./customMovement";
 
 function rowsCols(board: Board): { rows: number; cols: number } {
   return { rows: board.length, cols: board[0]?.length ?? 0 };
