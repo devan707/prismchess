@@ -862,6 +862,11 @@ export function attackSquaresFrom(state: GameState, from: Square): Square[] {
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
   const out: Square[] = [];
+  // For the side to move, probe with the full legality filter so we don't
+  // paint orange "threat" dots on squares the piece can't actually reach
+  // (e.g. a pinned assassin / dragon / archer). For enemy inspection we
+  // still show the raw pseudo threat pattern.
+  const useLegal = piece.color === state.turn && !state.pendingHand;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (r === from.r && c === from.c) continue;
@@ -871,7 +876,9 @@ export function attackSquaresFrom(state: GameState, from: Square): Square[] {
           : row,
       );
       const probeState = { ...state, board: probeBoard } as GameState;
-      const moves = pseudoMovesFrom(probeState, from);
+      const moves = useLegal
+        ? legalMovesFrom(probeState, from)
+        : pseudoMovesFrom(probeState, from);
       const hits = moves.some((m) => {
         if (m.to.r !== r || m.to.c !== c) return false;
         if (!m.captured) return false;
