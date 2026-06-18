@@ -95,6 +95,67 @@ function Home() {
     setSaved(loadSavedGames());
   };
 
+  const playPublished = async (g: DiscoveryGame) => {
+    // Discovery payload doesn't include the design — fetch it on demand.
+    const { getPublishedGame } = await import("@/lib/social.functions");
+    const res = await getPublishedGame({ data: { slug: g.slug } });
+    if (!res) return;
+    const { saveDesign: sd, saveCurrentMeta: scm } = await import("@/game/design");
+    sd(res.game.design as never);
+    scm({
+      id: `published:${res.game.id}`,
+      name: res.game.name,
+      description: res.game.description,
+      tutorial: (res.game.tutorial as never) ?? undefined,
+    });
+    navigate({ to: "/play" });
+  };
+
+  const renderCommunityCard = (g: DiscoveryGame) => (
+    <div key={g.id} className="relative rounded-xl border bg-card p-4 pb-3 flex flex-col">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <h3 className="font-display font-semibold truncate">{g.name}</h3>
+        {g.rows && g.cols && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+            {g.rows}×{g.cols}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-1 truncate">
+        by{" "}
+        {g.author ? (
+          <Link to="/u/$username" params={{ username: g.author.username }} className="hover:underline">
+            {g.author.display_name ?? g.author.username}
+          </Link>
+        ) : "unknown"}
+      </p>
+      <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{g.description}</p>
+      <div className="mt-auto flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1" title="Likes">
+            <Heart className="h-3 w-3" /> {g.like_count}
+          </span>
+          <Link
+            to="/g/$slug"
+            params={{ slug: g.slug }}
+            className="inline-flex items-center gap-1 hover:text-foreground"
+            title="View comments"
+          >
+            <MessageSquare className="h-3 w-3" /> {g.comment_count}
+          </Link>
+        </div>
+        <div className="flex items-center gap-1">
+          <Link to="/g/$slug" params={{ slug: g.slug }}>
+            <Button size="sm" variant="ghost">Details</Button>
+          </Link>
+          <Button size="sm" onClick={() => playPublished(g)}>
+            <Play className="h-3 w-3 mr-1" /> Play
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-5xl mx-auto px-4 pt-4 flex justify-end">
