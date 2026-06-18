@@ -1012,20 +1012,32 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       (cp) => !(cp.square.r === move.to.r && cp.square.c === move.to.c),
     );
   }
+  // King's Hand makes two king-steps per turn. The first move keeps the
+  // turn with the same player; the second (or a handPass) flips it. End-of-
+  // turn effects (prism aura sweep, enPassant clearing) only run when the
+  // turn actually flips.
+  const isHand = move.piece.id === "H" && (move.kind === "normal" || move.kind === undefined);
+  const wasPending = !!state.pendingHand;
+  const isFirstHandMove = isHand && !wasPending;
+  const flipTurn = !isFirstHandMove;
+  const nextPendingHand = isFirstHandMove ? { r: move.to.r, c: move.to.c } : null;
   const next: GameState = {
     ...state,
     board,
     reserves,
     captured,
     corpses: nextCorpses,
-    enPassant: move.kind === "double" && move.from
-      ? (move.from.r !== move.to.r
-          ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
-          : { r: move.from.r, c: (move.from.c + move.to.c) / 2 })
-      : null,
-    turn: state.turn === "w" ? "b" : "w",
+    enPassant: flipTurn
+      ? (move.kind === "double" && move.from
+          ? (move.from.r !== move.to.r
+              ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
+              : { r: move.from.r, c: (move.from.c + move.to.c) / 2 })
+          : null)
+      : state.enPassant,
+    turn: flipTurn ? (state.turn === "w" ? "b" : "w") : state.turn,
+    pendingHand: nextPendingHand,
   };
-  applyPrismFlips(next.board, move, state.registry);
+  applyPrismFlips(next.board, move, state.registry, flipTurn);
   return next;
 }
 
