@@ -3,22 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   BUILTIN_GAMES,
-  deleteSavedGame,
   loadSavedGames,
   tutorialForBuiltin,
-  tutorialForSaved,
   type GameType,
   type SavedGame,
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
-import { getVariantStats, type VariantStats } from "@/lib/variant-stats.functions";
 import { listDiscoveryGames } from "@/lib/social.functions";
-import { PlayCount } from "@/components/chess/PlayCount";
-import {
-  Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History,
-  BookOpen, Users, Mail, Heart, MessageSquare, Flame, Clock, Archive, ChevronRight,
-} from "lucide-react";
-import { UserMenu } from "@/components/UserMenu";
+import { listMyMatches } from "@/lib/multiplayer.functions";
+import { AppShell } from "@/components/shell/AppShell";
+import { Card } from "@/components/ui/card";
+import { Play, Heart, MessageSquare, ChevronRight, Sparkles, Swords, Hammer } from "lucide-react";
 import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
@@ -37,38 +32,62 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+interface LastVariant {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+function readLastVariant(): LastVariant | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("designer:currentMeta");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.id === "string" && typeof parsed.name === "string") {
+      return { id: parsed.id, name: parsed.name, description: parsed.description };
+    }
+  } catch { /* noop */ }
+  return null;
+}
+
+function pickFeatured(): GameType {
+  // Rotate by day-of-year so it changes daily but is stable across renders
+  const day = Math.floor(Date.now() / 86_400_000);
+  return BUILTIN_GAMES[day % BUILTIN_GAMES.length];
+}
+
 function Home() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState<SavedGame[]>([]);
-  const [stats, setStats] = useState<Record<string, VariantStats>>({});
   type DiscoveryRes = Awaited<ReturnType<typeof listDiscoveryGames>>;
   type DiscoveryGame = DiscoveryRes["newest"][number];
   const [discovery, setDiscovery] = useState<DiscoveryRes | null>(null);
-  const [showArchive, setShowArchive] = useState(false);
+  type Match = Awaited<ReturnType<typeof listMyMatches>>[number];
+  const [activeMatch, setActiveMatch] = useState<Match | null>(null);
+  const [lastVariant, setLastVariant] = useState<LastVariant | null>(null);
 
-  useEffect(() => { setSaved(loadSavedGames()); }, []);
+  useEffect(() => {
+    setSaved(loadSavedGames());
+    setLastVariant(readLastVariant());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     listDiscoveryGames()
       .then((d) => { if (!cancelled) setDiscovery(d); })
       .catch(() => { /* best-effort */ });
+    listMyMatches()
+      .then((ms) => {
+        if (cancelled) return;
+        const ongoing = ms.find((m) => m.status === "active" || m.status === "pending");
+        setActiveMatch(ongoing ?? null);
+      })
+      .catch(() => { /* signed-out: ignore */ });
     return () => { cancelled = true; };
   }, []);
 
-  const variantKeys = useMemo(() => [
-    ...BUILTIN_GAMES.map((g) => `builtin:${g.id}`),
-    ...saved.map((g) => `saved:${g.id}`),
-  ], [saved]);
-
-  useEffect(() => {
-    if (variantKeys.length === 0) return;
-    let cancelled = false;
-    getVariantStats({ data: { variantKeys } })
-      .then((s) => { if (!cancelled) setStats(s); })
-      .catch(() => { /* counters are best-effort */ });
-    return () => { cancelled = true; };
-  }, [variantKeys]);
+  const featured = useMemo(() => pickFeatured(), []);
 
   const playBuiltin = (g: GameType) => {
     const design = g.build();
@@ -82,20 +101,9 @@ function Home() {
     navigate({ to: "/play" });
   };
 
-  const playSaved = (g: SavedGame) => {
-    saveDesign(g.design);
-    saveCurrentMeta({
-      id: `saved:${g.id}`,
-      name: g.name,
-      description: g.description,
-      tutorial: tutorialForSaved(g),
-    });
+  const continueLast = () => {
+    if (!lastVariant) return;
     navigate({ to: "/play" });
-  };
-
-  const removeSaved = (id: string) => {
-    deleteSavedGame(id);
-    setSaved(loadSavedGames());
   };
 
   const playPublished = async (g: DiscoveryGame) => {
@@ -113,275 +121,176 @@ function Home() {
     navigate({ to: "/play" });
   };
 
-  const SectionHeader = ({ icon, title, meta, action }: { icon?: React.ReactNode; title: string; meta?: React.ReactNode; action?: React.ReactNode }) => (
-    <div className="flex items-end justify-between mb-4">
-      <h2 className="home-accent-bar font-display text-xl sm:text-2xl font-bold text-foreground inline-flex items-center gap-2">
-        {icon}{title}
-      </h2>
-      <div className="flex items-center gap-3">
-        {meta && <span className="text-[10px] font-bold tracking-widest uppercase text-[#c9a84c]/70">{meta}</span>}
-        {action}
-      </div>
-    </div>
-  );
-
-  const renderCommunityCard = (g: DiscoveryGame) => (
-    <div key={g.id} className="relative home-panel p-4 pb-3 flex flex-col">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <h3 className="font-display font-semibold truncate text-foreground">{g.name}</h3>
-        {g.rows && g.cols && (
-          <span className="text-[10px] px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#e8d28c] shrink-0 font-black">
-            {g.rows}×{g.cols}
-          </span>
-        )}
-      </div>
-      <p className="text-[11px] text-muted-foreground mb-1 truncate">
-        by{" "}
-        {g.author ? (
-          <Link to="/u/$username" params={{ username: g.author.username }} className="hover:underline text-[#c9a84c]">
-            {g.author.display_name ?? g.author.username}
-          </Link>
-        ) : "unknown"}
-      </p>
-      <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{g.description}</p>
-      <div className="mt-auto flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1" title="Likes">
-            <Heart className="h-3 w-3" /> {g.like_count}
-          </span>
-          <Link
-            to="/g/$slug"
-            params={{ slug: g.slug }}
-            className="inline-flex items-center gap-1 hover:text-foreground"
-            title="View comments"
-          >
-            <MessageSquare className="h-3 w-3" /> {g.comment_count}
-          </Link>
-        </div>
-        <div className="flex items-center gap-1">
-          <Link to="/g/$slug" params={{ slug: g.slug }}>
-            <Button size="sm" variant="ghost" className="rounded-none text-foreground/80 hover:text-foreground">Details</Button>
-          </Link>
-          <Button size="sm" onClick={() => playPublished(g)} className="rounded-none bg-[#c9a84c] text-[#0a0d14] hover:bg-[#d9b85c]">
-            <Play className="h-3 w-3 mr-1" /> Play
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="dark relative min-h-screen text-foreground home-aurora-bg">
-      <div aria-hidden className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,12,0.5)_70%,rgba(5,7,12,0.85)_100%)]" />
-      <div className="relative">
-
-
-      <h1 className="sr-only">Prism Chess — Design your own variant</h1>
-
-      <div className="max-w-5xl mx-auto px-4 pt-4 flex justify-end">
-        <UserMenu />
-      </div>
-
-      <header className="max-w-5xl mx-auto px-4 pt-2 pb-8 text-center">
-        <div className="relative mx-auto w-fit">
-          <div aria-hidden className="absolute inset-0 -m-12 rounded-full bg-[radial-gradient(circle,rgba(255,250,240,0.55),rgba(255,250,240,0.15)_45%,transparent_70%)] blur-2xl" />
-          <img
-            src={logoUrl}
-            alt="Prism Chess"
-            width={320}
-            height={320}
-            className="relative mx-auto h-44 w-44 sm:h-56 sm:w-56"
-          />
-        </div>
-
-        <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#d4baff]/80 font-medium">
-          The Ultimate Variant Sandbox
-        </p>
-      </header>
-
-
-      <main className="max-w-5xl mx-auto px-4 pb-32 space-y-10">
-        {/* Primary actions */}
-        <section className="space-y-3">
-          <Link to="/multiplayer" className="block">
-            <button className="prism-button-primary w-full py-4 font-semibold text-base tracking-wide active:scale-[0.99] transition">
-              <span className="relative z-10 inline-flex items-center justify-center gap-3">
-                <Swords className="h-5 w-5" /> Play Multiplayer
-              </span>
-            </button>
-          </Link>
-          <div className="grid grid-cols-2 gap-3">
-            <Link to="/sandbox">
-              <button className="prism-button w-full flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-widest active:scale-[0.99] transition">
-                <span className="relative z-10 flex flex-col items-center gap-2">
-                  <Hammer className="h-6 w-6" />
-                  SANDBOX
-                </span>
-              </button>
-            </Link>
-            <Link to="/forum">
-              <button className="prism-button w-full flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-widest active:scale-[0.99] transition">
-                <span className="relative z-10 flex flex-col items-center gap-2">
-                  <MessagesSquare className="h-6 w-6" />
-                  COMMUNITY
-                </span>
-              </button>
-            </Link>
-          </div>
-        </section>
-
-
-        {/* Built-in games */}
-        <section>
-          <SectionHeader title="Built-in games" meta={`${BUILTIN_GAMES.length} variants`} />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {BUILTIN_GAMES.map((g) => {
-              const s = stats[`builtin:${g.id}`];
-              return (
-                <button
-                  key={g.id}
-                  onClick={() => playBuiltin(g)}
-                  className="relative group text-left home-panel p-4 pb-7 hover:border-[#c9a84c]/50 hover:bg-[rgba(20,26,38,0.85)] transition"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-display font-semibold text-foreground">{g.name}</h3>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#e8d28c] font-black">
-                      {g.rows}×{g.cols}
-                    </span>
+    <AppShell showPlayCta>
+      <div className="space-y-6">
+        {/* RESUME */}
+        {(activeMatch || lastVariant) && (
+          <section className="space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Resume</h2>
+            {activeMatch && (
+              <Link to="/multiplayer/$matchId" params={{ matchId: activeMatch.id }} className="block">
+                <Card className="p-4 flex items-center gap-3 hover:border-primary transition">
+                  <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                    <Swords className="h-6 w-6" />
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3 line-clamp-3">{g.description}</p>
-                  <span className="inline-flex items-center text-[11px] font-black text-[#c9a84c] uppercase tracking-wider group-hover:gap-2 gap-1 transition-all">
-                    Play <ChevronRight className="h-3 w-3" />
-                  </span>
-                  {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Saved games */}
-        <section>
-          <SectionHeader
-            title="Your saved games"
-            action={
-              <Link to="/sandbox">
-                <Button size="sm" variant="ghost" className="rounded-none text-[#c9a84c] hover:text-[#d9b85c]">
-                  <Sparkles className="h-4 w-4 mr-1" /> Design new
-                </Button>
-              </Link>
-            }
-          />
-          {saved.length === 0 ? (
-            <div className="border border-dashed border-[#c9a84c]/25 bg-[rgba(14,18,26,0.5)] p-8 text-center text-sm text-muted-foreground">
-              No saved games yet. Head into the sandbox to design one and save it.
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {saved.map((g) => {
-                const s = stats[`saved:${g.id}`];
-                return (
-                  <div key={g.id} className="relative home-panel p-4 pb-7 flex flex-col">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-display font-semibold truncate text-foreground">{g.name}</h3>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#e8d28c] font-black">
-                        {g.design.rows}×{g.design.cols}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Saved {new Date(g.createdAt).toLocaleDateString()}
-                    </p>
-                    <div className="mt-auto flex gap-2">
-                      <Button size="sm" className="flex-1 rounded-none bg-[#c9a84c] text-[#0a0d14] hover:bg-[#d9b85c]" onClick={() => playSaved(g)}>
-                        <Play className="h-3 w-3 mr-1" /> Play
-                      </Button>
-                      <Button size="sm" variant="ghost" className="rounded-none text-muted-foreground hover:text-destructive" onClick={() => removeSaved(g.id)} aria-label="Delete">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">Active multiplayer match</div>
+                    <div className="text-xs text-muted-foreground">Tap to return to the board</div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* New from community */}
-        <section>
-          <SectionHeader
-            icon={<Clock className="h-5 w-5 text-[#c9a84c]" />}
-            title="New from the community"
-            action={
-              <Link to="/sandbox">
-                <Button size="sm" variant="ghost" className="rounded-none text-[#c9a84c] hover:text-[#d9b85c]">
-                  <Sparkles className="h-4 w-4 mr-1" /> Publish your own
-                </Button>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </Card>
               </Link>
-            }
-          />
-          {!discovery ? (
-            <div className="border border-dashed border-[#c9a84c]/25 bg-[rgba(14,18,26,0.5)] p-8 text-center text-sm text-muted-foreground">Loading…</div>
-          ) : discovery.newest.length === 0 ? (
-            <div className="border border-dashed border-[#c9a84c]/25 bg-[rgba(14,18,26,0.5)] p-8 text-center text-sm text-muted-foreground">
-              No public games yet. Design one in the sandbox and publish it!
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {discovery.newest.map(renderCommunityCard)}
-            </div>
-          )}
-        </section>
-
-        {discovery && discovery.popular.length > 0 && (
-          <section>
-            <SectionHeader icon={<Flame className="h-5 w-5 text-[#c9a84c]" />} title="Popular" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {discovery.popular.map(renderCommunityCard)}
-            </div>
-          </section>
-        )}
-
-        {discovery && discovery.archive.length > 0 && (
-          <section>
-            <SectionHeader
-              icon={<Archive className="h-5 w-5 text-[#c9a84c]" />}
-              title="Archive"
-              meta={`${discovery.archive.length}`}
-              action={
-                <Button size="sm" variant="ghost" className="rounded-none text-[#c9a84c] hover:text-[#d9b85c]" onClick={() => setShowArchive((v) => !v)}>
-                  {showArchive ? "Hide" : "Show"}
-                </Button>
-              }
-            />
-            {showArchive && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {discovery.archive.map(renderCommunityCard)}
-              </div>
+            )}
+            {lastVariant && (
+              <button onClick={continueLast} className="block w-full text-left">
+                <Card className="p-4 flex items-center gap-3 hover:border-primary transition">
+                  <div className="h-12 w-12 rounded-md bg-secondary flex items-center justify-center">
+                    <img src={logoUrl} alt="" className="h-8 w-8" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">Continue {lastVariant.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">Pick up your last game</div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </Card>
+              </button>
             )}
           </section>
         )}
-      </main>
 
-      {/* Fixed bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[rgba(6,5,12,0.85)] border-t border-[rgba(180,140,255,0.25)]">
-        <div className="max-w-5xl mx-auto px-4 py-3 grid grid-cols-4">
-          {[
-            { to: "/friends", icon: Users, label: "Friends" },
-            { to: "/messages", icon: Mail, label: "Messages" },
-            { to: "/history", icon: History, label: "History" },
-            { to: "/help", icon: BookOpen, label: "Help" },
-          ].map(({ to, icon: Icon, label }) => (
-            <Link key={to} to={to} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-bold tracking-widest uppercase">{label}</span>
+        {/* QUICK PLAY (featured) */}
+        <section className="space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Featured variant</h2>
+          <Card className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-14 w-14 rounded-md bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-primary shrink-0">
+                <Sparkles className="h-7 w-7" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-display font-semibold text-base">{featured.name}</div>
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{featured.description}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button className="flex-1" onClick={() => playBuiltin(featured)}>
+                <Play className="h-4 w-4 mr-2" /> Play vs AI
+              </Button>
+              <Link to="/lobby" className="flex-shrink-0">
+                <Button variant="outline">More games</Button>
+              </Link>
+            </div>
+          </Card>
+        </section>
+
+        {/* NEW FROM COMMUNITY */}
+        <section className="space-y-2">
+          <div className="flex items-end justify-between px-1">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New from the community</h2>
+            <Link to="/discover" className="text-xs font-semibold text-primary inline-flex items-center gap-0.5">
+              See all <ChevronRight className="h-3 w-3" />
             </Link>
-          ))}
-        </div>
-      </nav>
+          </div>
+          {!discovery ? (
+            <Card className="p-6 text-center text-sm text-muted-foreground">Loading…</Card>
+          ) : discovery.newest.length === 0 ? (
+            <Card className="p-6 text-center text-sm text-muted-foreground">
+              No public games yet. <Link to="/create" className="text-primary font-medium">Design one →</Link>
+            </Card>
+          ) : (
+            <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
+              <div className="flex gap-3 pb-2 snap-x">
+                {discovery.newest.slice(0, 10).map((g) => (
+                  <Card key={g.id} className="p-3 w-56 shrink-0 snap-start flex flex-col">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="font-semibold truncate text-sm">{g.name}</div>
+                      {g.rows && g.cols && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                          {g.rows}×{g.cols}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2lh]">{g.description}</p>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+                      <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {g.like_count}</span>
+                      <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {g.comment_count}</span>
+                    </div>
+                    <Button size="sm" className="w-full" onClick={() => playPublished(g)}>
+                      <Play className="h-3 w-3 mr-1" /> Play
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* POPULAR */}
+        {discovery && discovery.popular.length > 0 && (
+          <section className="space-y-2">
+            <div className="flex items-end justify-between px-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Popular</h2>
+              <Link to="/discover" className="text-xs font-semibold text-primary inline-flex items-center gap-0.5">
+                See all <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
+              <div className="flex gap-3 pb-2 snap-x">
+                {discovery.popular.slice(0, 10).map((g) => (
+                  <Card key={g.id} className="p-3 w-56 shrink-0 snap-start flex flex-col">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="font-semibold truncate text-sm">{g.name}</div>
+                      {g.rows && g.cols && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                          {g.rows}×{g.cols}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2lh]">{g.description}</p>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+                      <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {g.like_count}</span>
+                      <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {g.comment_count}</span>
+                    </div>
+                    <Button size="sm" className="w-full" onClick={() => playPublished(g)}>
+                      <Play className="h-3 w-3 mr-1" /> Play
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* YOUR DRAFTS preview */}
+        {saved.length > 0 && (
+          <section className="space-y-2">
+            <div className="flex items-end justify-between px-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your drafts</h2>
+              <Link to="/create" className="text-xs font-semibold text-primary inline-flex items-center gap-0.5">
+                Manage <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <Card className="divide-y">
+              {saved.slice(0, 3).map((g) => (
+                <Link
+                  key={g.id}
+                  to="/create"
+                  className="flex items-center gap-3 p-3 hover:bg-muted/50 transition"
+                >
+                  <div className="h-10 w-10 rounded bg-secondary flex items-center justify-center">
+                    <Hammer className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{g.name}</div>
+                    <div className="text-xs text-muted-foreground">{g.design.rows}×{g.design.cols}</div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              ))}
+            </Card>
+          </section>
+        )}
       </div>
-    </div>
-
-
+    </AppShell>
   );
 }
