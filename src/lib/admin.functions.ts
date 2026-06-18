@@ -360,3 +360,63 @@ export const adminGetStats = createServerFn({ method: "GET" })
       topPieces: topPieces.data ?? [],
     };
   });
+
+// ─── Ability requests ──────────────────────────────────────────────────────
+export const adminListAbilityRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertMod(context);
+    const { data, error } = await context.supabase
+      .from("piece_ability_requests")
+      .select("id, piece_id, author_id, request_text, status, admin_note, created_at, reviewed_at, reviewed_by")
+      .order("status", { ascending: true })
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as Array<{ piece_id: string; author_id: string } & Record<string, unknown>>;
+    const pieceIds = Array.from(new Set(rows.map((r) => r.piece_id)));
+    const authorIds = Array.from(new Set(rows.map((r) => r.author_id)));
+    const [{ data: pieces }, { data: profs }] = await Promise.all([
+      pieceIds.length
+        ? context.supabase.from("custom_pieces").select("id, name, slug").in("id", pieceIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; name: string; slug: string }> }),
+      authorIds.length
+        ? context.supabase.from("profiles").select("id, username, display_name").in("id", authorIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; username: string; display_name: string | null }> }),
+    ]);
+    const pieceMap = new Map((pieces ?? []).map((p: any) => [p.id, p]));
+    const profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+    return rows.map((r) => ({
+      ...r,
+      piece: pieceMap.get(r.piece_id) ?? null,
+      author: profMap.get(r.author_id) ?? null,
+    }));
+  });
+
+export const adminResolveAbilityRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({
+      requestId: z.string().uuid(),
+      status: z.enum(["approved", "declined"]),
+      adminNote: z.string().max(500).optional(),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertMod(context);
+    const { error } = await context.supabase
+      .from("piece_ability_requests")
+      .update({
+        status: data.status,
+        admin_note: data.adminNote ?? null,
+        reviewed_by: context.userId,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", data.requestId);
+    if (error) throw new Error(error.message);
+    await log(context, "ability_request.resolve", "ability_request", data.requestId, {
+      status: data.status,
+      adminNote: data.adminNote ?? null,
+    });
+    return { ok: true };
+  });
