@@ -581,6 +581,27 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
   }
 
+  // King's Hand combo step: a single 2-square king-line move that counts as
+  // both of its required turn-steps. Only generated when no pending second
+  // move is owed (otherwise the second step is a normal 1-square leap).
+  // Requires the intermediate square to be empty and the landing square to
+  // be empty or hold a capturable enemy.
+  if (piece.id === "H" && !state.pendingHand) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const midR = from.r + dr, midC = from.c + dc;
+        const toR = from.r + 2 * dr, toC = from.c + 2 * dc;
+        if (!inBoardBounds(board, { r: toR, c: toC })) continue;
+        const mid = board[midR][midC];
+        if (mid) continue; // path must be unobstructed
+        const t = board[toR][toC];
+        if (t && (t.color === piece.color || isBarricade(t, state.registry) || isFixture(t, state.registry))) continue;
+        moves.push({ from, to: { r: toR, c: toC }, piece, captured: t ?? null, kind: "handDouble" });
+      }
+    }
+  }
+
   // Castling: king moves two squares laterally toward an un-moved rook.
   // Only generated for the side to move — prevents infinite recursion when
   // isSquareAttacked scans the opposing king's pseudo-moves.
@@ -1161,7 +1182,7 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     }
     // First-of-two King's Hand move: defer own-king safety to the second
     // step. Otherwise enforce it now (board pre-prism-flip).
-    const isFirstHand = !state.pendingHand && m.piece.id === "H";
+    const isFirstHand = !state.pendingHand && m.piece.id === "H" && m.kind !== "handDouble";
     if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
