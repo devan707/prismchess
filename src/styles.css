@@ -182,26 +182,35 @@
   color: transparent;
 }
 
-/* ---- Contrast fixes on dark cards ----
-   Cards are dark gray, but many shadcn tokens (primary, muted-foreground,
-   bg-background) resolve to LIGHT-theme values and disappear on dark cards.
-   These overrides remap those tokens to readable values whenever they
-   appear inside a .bg-card surface. */
-.bg-card {
+/* ---- Contrast fixes on dark surfaces (cards, popovers) ----
+   Cards/popovers are dark; many tokens (primary, foreground, muted-foreground,
+   bg-background) resolve to LIGHT-theme values and disappear on them.
+   Force descendant text to inherit a light color, and remap common surface
+   utilities when nested inside a dark surface. Selector matches bg-card,
+   bg-card/40, bg-card/60, bg-popover, bg-popover/N, etc. */
+[class*="bg-card"], [class*="bg-popover"] {
+  color: var(--card-foreground);
+
   /* readable text */
   & .text-primary { color: var(--card-foreground); }
   & .text-foreground { color: var(--card-foreground); }
+  & .text-foreground\/90 { color: oklch(0.97 0.01 280 / 0.9); }
+  & .text-foreground\/80 { color: oklch(0.97 0.01 280 / 0.8); }
+  & .text-foreground\/70 { color: oklch(0.97 0.01 280 / 0.7); }
   & .text-muted-foreground { color: oklch(0.78 0.02 280); }
 
   /* surfaces / fills */
   & .bg-primary\/10 { background-color: oklch(1 0 0 / 0.10); }
   & .bg-secondary { background-color: oklch(1 0 0 / 0.08); }
   & .bg-muted { background-color: oklch(1 0 0 / 0.08); }
+  & .bg-muted\/40 { background-color: oklch(1 0 0 / 0.05); }
+  & .bg-muted\/30 { background-color: oklch(1 0 0 / 0.04); }
   & .bg-background { background-color: oklch(0.30 0.02 280); }
 
   /* borders / hovers */
   & .border-input { border-color: oklch(1 0 0 / 0.18); }
   & .hover\:bg-muted\/50:hover { background-color: oklch(1 0 0 / 0.06); }
+  & .hover\:bg-muted:hover { background-color: oklch(1 0 0 / 0.08); }
   & .hover\:bg-accent:hover { background-color: oklch(1 0 0 / 0.08); }
   & .hover\:border-primary:hover { border-color: oklch(1 0 0 / 0.35); }
 }
