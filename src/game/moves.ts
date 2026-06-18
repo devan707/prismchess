@@ -1080,16 +1080,17 @@ function flipPieceAt(board: Board, r: number, c: number, registry: Record<PieceI
   board[r][c] = { ...p, color: p.color === "w" ? "b" : "w" };
 }
 
-function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, PieceDef>) {
+function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, PieceDef>, endOfTurn: boolean = true) {
   const aura = prismAuraCells(board, registry);
   if (aura.size === 0) return;
   const inAura = (r: number, c: number) => aura.has(`${r},${c}`);
-  // Prism light is a unified field — crossing one or many aura squares only
-  // flips a piece once. Pass-through: a linear move that crossed the aura and
-  // ended outside it flips the mover a single time here. Pieces that end
-  // inside the aura are flipped by the end-of-turn sweep below (also once).
+  // Pass-through flip on a linear move that crossed the aura and ended
+  // outside it. Always applies (even on the King's Hand first step), but
+  // a 1-square king leap never has intermediate squares so this is a no-op
+  // for KH in practice.
   if (move.from && move.kind !== "drop" && move.kind !== "portalSwap" &&
       move.kind !== "necroRaise" && move.kind !== "resurrect" &&
+      move.kind !== "handPass" &&
       move.kind !== "juggShift" && move.kind !== "juggCharge" && move.kind !== "juggExit") {
     const dr = move.to.r - move.from.r;
     const dc = move.to.c - move.from.c;
@@ -1108,7 +1109,8 @@ function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, Pie
       }
     }
   }
-  // End-of-turn sweep: every non-royal piece currently in the aura flips once.
+  // End-of-turn sweep — only when the turn actually ends.
+  if (!endOfTurn) return;
   for (const key of aura) {
     const [r, c] = key.split(",").map(Number);
     flipPieceAt(board, r, c, registry);
