@@ -11,7 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SandboxRouteImport } from './routes/sandbox'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as MoreRouteImport } from './routes/more'
+import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as CreateRouteImport } from './routes/create'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -47,9 +51,29 @@ const PlayRoute = PlayRouteImport.update({
   path: '/play',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MoreRoute = MoreRouteImport.update({
+  id: '/more',
+  path: '/more',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LobbyRoute = LobbyRouteImport.update({
+  id: '/lobby',
+  path: '/lobby',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -184,7 +208,11 @@ const AuthenticatedMultiplayerJoinTokenRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/create': typeof CreateRoute
+  '/discover': typeof DiscoverRoute
   '/help': typeof HelpRoute
+  '/lobby': typeof LobbyRoute
+  '/more': typeof MoreRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
@@ -212,7 +240,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/create': typeof CreateRoute
+  '/discover': typeof DiscoverRoute
   '/help': typeof HelpRoute
+  '/lobby': typeof LobbyRoute
+  '/more': typeof MoreRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/friends': typeof AuthenticatedFriendsRoute
@@ -239,7 +271,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/create': typeof CreateRoute
+  '/discover': typeof DiscoverRoute
   '/help': typeof HelpRoute
+  '/lobby': typeof LobbyRoute
+  '/more': typeof MoreRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
@@ -269,7 +305,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/create'
+    | '/discover'
     | '/help'
+    | '/lobby'
+    | '/more'
     | '/play'
     | '/sandbox'
     | '/forum'
@@ -297,7 +337,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/create'
+    | '/discover'
     | '/help'
+    | '/lobby'
+    | '/more'
     | '/play'
     | '/sandbox'
     | '/friends'
@@ -323,7 +367,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/create'
+    | '/discover'
     | '/help'
+    | '/lobby'
+    | '/more'
     | '/play'
     | '/sandbox'
     | '/_authenticated/forum'
@@ -353,7 +401,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CreateRoute: typeof CreateRoute
+  DiscoverRoute: typeof DiscoverRoute
   HelpRoute: typeof HelpRoute
+  LobbyRoute: typeof LobbyRoute
+  MoreRoute: typeof MoreRoute
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
@@ -378,11 +430,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/more': {
+      id: '/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof MoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lobby': {
+      id: '/lobby'
+      path: '/lobby'
+      fullPath: '/lobby'
+      preLoaderRoute: typeof LobbyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/help': {
       id: '/help'
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -636,7 +716,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CreateRoute: CreateRoute,
+  DiscoverRoute: DiscoverRoute,
   HelpRoute: HelpRoute,
+  LobbyRoute: LobbyRoute,
+  MoreRoute: MoreRoute,
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
@@ -648,13 +732,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
