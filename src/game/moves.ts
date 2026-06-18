@@ -901,16 +901,28 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
           if (m.kind === "juggExit") continue;
           if (m.kind === "castle") continue;
-          // Prism cancels attacks: if the attacker would flip color en route
-          // (passing through the rainbow aura) or upon arrival (landing in
-          // the aura), it becomes the defender's own piece and never delivers
-          // the threat. Simulate the move + prism resolution and check the
-          // colour of the piece that actually lands on `sq`.
-          if (hasAura) {
-            const post = applyMoveToBoard(board, m);
-            applyPrismFlips(post, m, state.registry);
-            const landed = post[sq.r]?.[sq.c];
-            if (!landed || landed.color !== byColor) continue;
+          // Prism cancels attacks only when the attacker would flip color
+          // BEFORE reaching `sq` — i.e. it crosses an aura square on the
+          // way in (and didn't already start inside the aura). A royal
+          // standing inside the aura still dies on capture, because the
+          // king is removed before the end-of-turn prism sweep flips the
+          // attacker. Landing-in-aura alone does not cancel the threat.
+          if (hasAura && m.from) {
+            const dr = m.to.r - m.from.r;
+            const dc = m.to.c - m.from.c;
+            const aR = Math.abs(dr), aC = Math.abs(dc);
+            const linear = aR === 0 || aC === 0 || aR === aC;
+            if (linear) {
+              const steps = Math.max(aR, aC);
+              const sR = steps ? dr / steps : 0;
+              const sC = steps ? dc / steps : 0;
+              const startedInAura = aura.has(`${m.from.r},${m.from.c}`);
+              let crossed = false;
+              for (let s = 1; s < steps; s++) {
+                if (aura.has(`${m.from.r + s * sR},${m.from.c + s * sC}`)) { crossed = true; break; }
+              }
+              if (!startedInAura && crossed) continue;
+            }
           }
           return true;
         }
