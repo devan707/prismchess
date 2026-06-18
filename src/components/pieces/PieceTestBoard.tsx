@@ -214,15 +214,26 @@ export function PieceTestBoard({ def, options, rangedSpec, size = 9 }: Props) {
             >
               {/* target highlight */}
               {tgt && (
-                <span
-                  className={`absolute inset-0 ${
-                    tgt.kind === "capture"
-                      ? "bg-red-500/30 ring-2 ring-red-500"
-                      : tgt.kind === "ranged"
-                      ? "bg-orange-500/30 ring-2 ring-orange-500"
-                      : "bg-emerald-500/20 ring-2 ring-emerald-500"
-                  } ${tgt.conditional ? "ring-dashed" : ""}`}
-                />
+                <>
+                  <span
+                    className={`absolute inset-0 ${
+                      tgt.kind === "capture"
+                        ? "bg-red-500/30 ring-2 ring-red-500"
+                        : tgt.kind === "ranged"
+                        ? "bg-orange-500/20 ring-2 ring-dashed ring-orange-500"
+                        : "bg-emerald-500/20 ring-2 ring-emerald-500"
+                    } ${tgt.conditional && tgt.kind !== "ranged" ? "ring-dashed" : ""}`}
+                  />
+                  {tgt.kind === "ranged" && (
+                    // Crosshair so ranged squares read as "fire here", not "move here".
+                    <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="relative block w-4 h-4 rounded-full border-2 border-orange-600">
+                        <span className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-[2px] bg-orange-600" />
+                        <span className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[2px] bg-orange-600" />
+                      </span>
+                    </span>
+                  )}
+                </>
               )}
               {isSelfSel && <span className="absolute inset-0 ring-2 ring-amber-400" />}
               {occ === "self" && (

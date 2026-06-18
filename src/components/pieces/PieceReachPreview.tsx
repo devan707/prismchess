@@ -80,7 +80,12 @@ export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
       case "slide":
         return <span className={`block w-2 h-2 rounded-full bg-sky-500 ${ring}`} />;
       case "ranged":
-        return <span className={`block w-2 h-2 rounded-full bg-orange-500`} />;
+        // Crosshair: outer ring + center dot, distinct from solid move/capture dots.
+        return (
+          <span className="relative block w-3 h-3 rounded-full border-2 border-orange-500">
+            <span className="absolute inset-0 m-auto w-[3px] h-[3px] rounded-full bg-orange-500" />
+          </span>
+        );
     }
   };
 
@@ -120,7 +125,7 @@ export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
           <span className="text-emerald-600">○</span> move only ·{" "}
           <span className="text-red-600">●</span> capture only ·{" "}
           <span className="text-sky-600">●</span> slide
-          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">●</span> ranged</>)}
+          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">◎</span> ranged</>)}
           {" · "}<span className="text-amber-600">ring</span> = conditional
         </p>
       )}
