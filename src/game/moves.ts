@@ -61,15 +61,19 @@ function emitFromSpec(
   const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
 
   const accept = (target: Square, occ: Piece | null) => {
-    if (isBarricade(occ, registry)) return false;
     if (isFixture(occ, registry)) return false;
+    if (isImmobileBarricade(occ, registry)) {
+      // Barricades can never be moved THROUGH/onto an empty square — they
+      // can only be captured (friendly fire included), and only by pieces
+      // that aren't pawns or archers.
+      if (mode === "move") return false;
+      return canDestroyBarricade(piece, registry);
+    }
     if (occ === null) return mode === "move" || mode === "both";
     if (isFriendly(occ, piece.color)) return false;
     // enemy
     return mode === "capture" || mode === "both";
   };
-
-  if (spec.leaps) {
     for (const o of spec.leaps) {
       const r = from.r + o.dr;
       const c = from.c + o.dc;
