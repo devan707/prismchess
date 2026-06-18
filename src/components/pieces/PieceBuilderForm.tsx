@@ -67,6 +67,8 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [emoji, setEmoji] = useState("");
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [steps, setSteps] = useState<MoveStep[]>([defaultStep()]);
+  const [overrideEnabled, setOverrideEnabled] = useState(false);
+  const [overridePts, setOverridePts] = useState<number>(3);
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
