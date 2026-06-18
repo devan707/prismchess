@@ -124,6 +124,26 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
 
+/** True when the enemy piece at `occSq` is front-immune (juggernaut or
+ *  immobile barricade) AND the attacker at `attackerSq` is approaching it
+ *  from its front arc. Such an enemy can be neither captured nor moved
+ *  through — sliders/charges stop BEFORE it. Knights bypass front immunity
+ *  (handled by callers that need the exception). */
+function frontImmuneBlocker(
+  occ: Piece | null,
+  occSq: Square,
+  attackerSq: Square,
+  registry: Record<PieceId, PieceDef>,
+  wide: boolean,
+): boolean {
+  if (!occ) return false;
+  const def = registry[occ.id];
+  if (!def) return false;
+  const frontImmune = def.special === "juggernaut" || def.immobile === true;
+  if (!frontImmune) return false;
+  return attackerInFrontArc(occSq, attackerSq, occ.color, wide);
+}
+
 /** The mirror square across the board's vertical center axis. Linked pieces
  *  (Shadow Knight, Twin Tower) must always occupy mirror squares of each
  *  other. On odd-width boards a piece on the centre column mirrors to
@@ -410,6 +430,11 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         if (occ.color === piece.color || isBarricade(occ, state.registry) || isFixture(occ, state.registry)) {
           blocked = true; break;
         }
+        // Front-immune enemy (juggernaut / barricade) approached from its
+        // front cannot be trampled — it blocks the shift entirely.
+        if (frontImmuneBlocker(occ, cell, from, state.registry, wide)) {
+          blocked = true; break;
+        }
         trampled.push(occ);
       }
       if (blocked) continue;
@@ -439,6 +464,12 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       const blocks = (t: Piece | null) =>
         !!t && (t.color === piece.color || isBarricade(t, state.registry) || isFixture(t, state.registry));
       if (blocks(t1) || blocks(t2)) break;
+      // Front-immune enemies (other juggernauts, barricades) approached from
+      // their front cannot be trampled — the charge stops BEFORE that cell.
+      // Because the charger and any opposing juggernaut always face each
+      // other, this means juggernauts can never charge through one another.
+      if (frontImmuneBlocker(t1, nF, from, state.registry, wide)) break;
+      if (frontImmuneBlocker(t2, nP, from, state.registry, wide)) break;
       if (t1 && t1.color !== piece.color && !isFixture(t1, state.registry)) trampled.push(t1);
       if (t2 && t2.color !== piece.color && !isFixture(t2, state.registry)) trampled.push(t2);
       curF = nF; curP = nP;

@@ -26,6 +26,12 @@ export function buildBaseTutorial(opts: {
     (id) => !STANDARD_PIECE_IDS.includes(id as PieceId),
   ) as PieceId[];
 
+  // Build a lookup that includes both built-in pieces and any user-defined
+  // pieces that ship with the design (e.g. a Catapult created in the piece
+  // builder). Without this, custom pieces would silently lose their slide.
+  const customById = new Map(design.customPieces.map((p) => [p.id, p]));
+  const lookup = (id: PieceId) => customById.get(id) ?? PIECE_LIBRARY[id];
+
   const slides: TutorialSlide[] = [
     {
       title: `Welcome to ${name}`,
@@ -50,7 +56,7 @@ export function buildBaseTutorial(opts: {
     });
   } else {
     for (const id of customPresent) {
-      const def = PIECE_LIBRARY[id];
+      const def = lookup(id);
       if (!def) continue;
       slides.push({
         title: `${def.name}`,

@@ -82,6 +82,7 @@ function PlayRoute() {
           open={tutorialOpen}
           onOpenChange={setTutorialOpen}
           isFirstTime={!hasSeenTutorial(meta.id)}
+          customPieces={design.customPieces}
         />
       )}
     </>

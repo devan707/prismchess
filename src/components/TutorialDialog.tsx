@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { MoveDiagram } from "@/components/chess/MoveDiagram";
+import { PieceReachPreview } from "@/components/pieces/PieceReachPreview";
 import { PIECE_LIBRARY } from "@/game/pieces";
 import type { GameTutorial } from "@/game/tutorials";
+import type { PieceDef } from "@/game/types";
+import type { MoveOption } from "@/game/customMovement";
 import { markTutorialSeen } from "@/lib/tutorial-state";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +20,9 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Show "first time playing" banner. */
   isFirstTime?: boolean;
+  /** User-defined pieces shipped with the variant — used to render diagrams
+   *  for custom pieces that aren't in the built-in PIECE_LIBRARY. */
+  customPieces?: PieceDef[];
 }
 
 export function TutorialDialog({
@@ -26,11 +32,18 @@ export function TutorialDialog({
   open,
   onOpenChange,
   isFirstTime,
+  customPieces,
 }: Props) {
   const [idx, setIdx] = useState(0);
   const slides = tutorial.slides;
   const slide = slides[Math.min(idx, slides.length - 1)];
   const last = idx >= slides.length - 1;
+
+  const customById = useMemo(() => {
+    const m = new Map<string, PieceDef>();
+    for (const p of customPieces ?? []) m.set(p.id, p);
+    return m;
+  }, [customPieces]);
 
   const close = () => {
     markTutorialSeen(gameId);
@@ -39,6 +52,17 @@ export function TutorialDialog({
   };
 
   if (!slide) return null;
+
+  // Resolve the piece definition for this slide: prefer the variant's own
+  // custom pieces (so a user-built Catapult shows its real diagram), and
+  // fall back to the built-in library for stock pieces.
+  const pid = slide.pieceId;
+  const slideDef: PieceDef | undefined = pid
+    ? customById.get(pid) ?? PIECE_LIBRARY[pid]
+    : undefined;
+  const builtinHasDiagram = pid ? !!PIECE_LIBRARY[pid] : false;
+  const customOptions: MoveOption[] | undefined =
+    pid && !builtinHasDiagram ? slideDef?.options : undefined;
 
   return (
     <Dialog
@@ -60,20 +84,20 @@ export function TutorialDialog({
         </DialogHeader>
 
         <div className="px-5 pb-3 min-h-[180px]">
-          {slide.pieceId && PIECE_LIBRARY[slide.pieceId] && (
+          {pid && slideDef && (
             <div className="mb-3 rounded-lg border bg-card/60 p-3">
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-12 w-12 rounded-md bg-background border flex items-center justify-center">
                   <PieceById
-                    id={slide.pieceId}
+                    id={pid}
                     color="w"
-                    def={PIECE_LIBRARY[slide.pieceId]}
+                    def={slideDef}
                     className="h-9 w-9"
                   />
                 </div>
                 <div>
                   <div className="font-display text-sm font-semibold">
-                    {PIECE_LIBRARY[slide.pieceId].name}
+                    {slideDef.name}
                   </div>
                   <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
                     Custom piece
@@ -81,7 +105,19 @@ export function TutorialDialog({
                 </div>
               </div>
               <div className="flex justify-center">
-                <MoveDiagram id={slide.pieceId} color="w" maxSize={180} />
+                {builtinHasDiagram ? (
+                  <MoveDiagram id={pid} color="w" maxSize={180} />
+                ) : customOptions && customOptions.length > 0 ? (
+                  <PieceReachPreview
+                    options={customOptions}
+                    rangedSpec={slideDef.rangedCapture?.spec}
+                    size={9}
+                  />
+                ) : (
+                  <p className="text-[11px] text-muted-foreground italic">
+                    Movement diagram unavailable for this piece.
+                  </p>
+                )}
               </div>
             </div>
           )}
