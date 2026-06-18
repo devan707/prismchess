@@ -79,6 +79,7 @@ export type Database = {
           like_count: number
           name: string
           play_count: number
+          remixed_from_id: string | null
           slug: string
           updated_at: string
           visibility: string
@@ -96,6 +97,7 @@ export type Database = {
           like_count?: number
           name: string
           play_count?: number
+          remixed_from_id?: string | null
           slug: string
           updated_at?: string
           visibility?: string
@@ -113,11 +115,20 @@ export type Database = {
           like_count?: number
           name?: string
           play_count?: number
+          remixed_from_id?: string | null
           slug?: string
           updated_at?: string
           visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "custom_pieces_remixed_from_id_fkey"
+            columns: ["remixed_from_id"]
+            isOneToOne: false
+            referencedRelation: "custom_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dm_messages: {
         Row: {
@@ -701,6 +712,7 @@ export type Database = {
           is_hidden: boolean
           like_count: number
           name: string
+          remixed_from_id: string | null
           slug: string
           tutorial: Json | null
           updated_at: string
@@ -716,6 +728,7 @@ export type Database = {
           is_hidden?: boolean
           like_count?: number
           name: string
+          remixed_from_id?: string | null
           slug: string
           tutorial?: Json | null
           updated_at?: string
@@ -731,11 +744,20 @@ export type Database = {
           is_hidden?: boolean
           like_count?: number
           name?: string
+          remixed_from_id?: string | null
           slug?: string
           tutorial?: Json | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "published_games_remixed_from_id_fkey"
+            columns: ["remixed_from_id"]
+            isOneToOne: false
+            referencedRelation: "published_games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
