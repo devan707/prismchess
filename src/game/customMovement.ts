@@ -33,15 +33,25 @@ export interface MoveStep {
 
 export type RangedTiming = "before" | "after" | "replace";
 
-export interface RangedAttack {
-  enabled: boolean;
+/** A single direction+range band of a ranged attack. */
+export interface RangedAttackOption {
   /** Absolute direction family. */
   direction: StepDirAbs;
-  /** Inclusive square-range, 1..4. */
+  /** Inclusive square-range, 1..10. */
   minDistance: number;
   maxDistance: number;
-  timing: RangedTiming;
 }
+
+export interface RangedAttack {
+  enabled: boolean;
+  timing: RangedTiming;
+  /** One or more direction+range bands. The union of all bands defines
+   *  the set of squares the piece can fire at. */
+  options: RangedAttackOption[];
+}
+
+export const RANGED_MAX_DISTANCE = 10;
+export const MAX_RANGED_OPTIONS = 4;
 
 export interface CompiledMovement {
   moveSpec: MovementSpec;
@@ -215,16 +225,20 @@ export function compileMovement(steps: MoveStep[]): CompiledMovement {
   return lastCaptures ? { moveSpec } : { moveSpec, captureSpec: {} };
 }
 
-/** Compile a ranged attack picker into a MovementSpec of leap offsets. */
+/** Compile the user's ranged attack picker into a MovementSpec of leap offsets.
+ *  Unions the leap endpoints produced by every direction+range band. */
 export function compileRangedAttack(r: RangedAttack): { spec: MovementSpec; error?: string } {
   if (!r.enabled) return { spec: {} };
-  const min = Math.max(1, Math.min(4, Math.floor(r.minDistance)));
-  const max = Math.max(min, Math.min(4, Math.floor(r.maxDistance)));
-  const dirs = absDirOffsets(r.direction);
+  const opts = r.options ?? [];
+  if (opts.length === 0) return { spec: {}, error: "Add at least one ranged attack option." };
   const leaps: Offset[] = [];
-  for (const d of dirs) {
-    for (let k = min; k <= max; k++) {
-      leaps.push({ dr: d.dr * k, dc: d.dc * k });
+  for (const opt of opts) {
+    const min = Math.max(1, Math.min(RANGED_MAX_DISTANCE, Math.floor(opt.minDistance)));
+    const max = Math.max(min, Math.min(RANGED_MAX_DISTANCE, Math.floor(opt.maxDistance)));
+    for (const d of absDirOffsets(opt.direction)) {
+      for (let k = min; k <= max; k++) {
+        leaps.push({ dr: d.dr * k, dc: d.dc * k });
+      }
     }
   }
   const deduped = dedupeOffsets(leaps);
@@ -298,13 +312,15 @@ export const CONDITION_OPTIONS: { value: MoveCondition; label: string }[] = [
   { value: "from-starting-square", label: "Only from starting square" },
 ];
 
+export function defaultRangedAttackOption(): RangedAttackOption {
+  return { direction: "any-diag", minDistance: 2, maxDistance: 3 };
+}
+
 export function defaultRangedAttack(): RangedAttack {
   return {
     enabled: false,
-    direction: "any-diag",
-    minDistance: 2,
-    maxDistance: 3,
     timing: "replace",
+    options: [defaultRangedAttackOption()],
   };
 }
 

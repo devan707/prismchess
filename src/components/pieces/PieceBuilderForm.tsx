@@ -10,16 +10,20 @@ import {
   RANGED_TIMING_OPTIONS,
   OPTION_KIND_OPTIONS,
   CONDITION_OPTIONS,
+  RANGED_MAX_DISTANCE,
+  MAX_RANGED_OPTIONS,
   compileOption,
   compileRangedAttack,
   defaultStep,
   defaultOption,
   defaultRangedAttack,
+  defaultRangedAttackOption,
   type MoveOption,
   type MoveOptionKind,
   type MoveCondition,
   type MoveStep,
   type RangedAttack,
+  type RangedAttackOption,
   type RangedTiming,
   type StepDirAbs,
   type StepDirRel,
@@ -420,19 +424,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
             Enable a ranged attack
           </label>
           {ranged.enabled && (
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <Label className="text-xs">Direction</Label>
-                <select
-                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
-                  value={ranged.direction}
-                  onChange={(e) => setRanged((r) => ({ ...r, direction: e.target.value as StepDirAbs }))}
-                >
-                  {ABSOLUTE_DIR_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-3 text-sm">
               <div>
                 <Label className="text-xs">When fired</Label>
                 <select
@@ -448,48 +440,114 @@ export function PieceBuilderForm({ onSaved }: Props) {
                   {RANGED_TIMING_OPTIONS.find((o) => o.value === ranged.timing)?.hint}
                 </p>
               </div>
-              <div>
-                <Label className="text-xs">Minimum distance</Label>
-                <select
-                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
-                  value={String(ranged.minDistance)}
-                  onChange={(e) => setRanged((r) => {
-                    const v = Number(e.target.value);
-                    return { ...r, minDistance: v, maxDistance: Math.max(v, r.maxDistance) };
-                  })}
-                >
-                  {[1, 2, 3, 4].map((n) => (<option key={n} value={n}>{n} square{n > 1 ? "s" : ""}</option>))}
-                </select>
-              </div>
-              <div>
-                <Label className="text-xs">Maximum distance</Label>
-                <select
-                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
-                  value={String(ranged.maxDistance)}
-                  onChange={(e) => setRanged((r) => {
-                    const v = Number(e.target.value);
-                    return { ...r, maxDistance: v, minDistance: Math.min(v, r.minDistance) };
-                  })}
-                >
-                  {[1, 2, 3, 4].map((n) => (<option key={n} value={n}>{n} square{n > 1 ? "s" : ""}</option>))}
-                </select>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Attack patterns</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={ranged.options.length >= MAX_RANGED_OPTIONS}
+                    onClick={() => setRanged((r) => ({
+                      ...r,
+                      options: [...r.options, defaultRangedAttackOption()],
+                    }))}
+                  >
+                    <Plus className="size-3.5 mr-1" /> Add pattern
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Each pattern adds a direction + distance band (e.g. North 2–3, NE 3–4). The piece can fire
+                  at any square covered by any pattern.
+                </p>
+                {ranged.options.map((opt, idx) => {
+                  const updateOpt = (patch: Partial<RangedAttackOption>) =>
+                    setRanged((r) => ({
+                      ...r,
+                      options: r.options.map((o, i) => (i === idx ? { ...o, ...patch } : o)),
+                    }));
+                  const removeOpt = () =>
+                    setRanged((r) => ({
+                      ...r,
+                      options: r.options.filter((_, i) => i !== idx),
+                    }));
+                  const distOptions = Array.from({ length: RANGED_MAX_DISTANCE }, (_, i) => i + 1);
+                  return (
+                    <div key={idx} className="rounded-md border bg-background/40 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Pattern {idx + 1}</span>
+                        {ranged.options.length > 1 && (
+                          <Button type="button" size="sm" variant="ghost" onClick={removeOpt}>
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid sm:grid-cols-3 gap-2">
+                        <div>
+                          <Label className="text-[11px]">Direction</Label>
+                          <select
+                            className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                            value={opt.direction}
+                            onChange={(e) => updateOpt({ direction: e.target.value as StepDirAbs })}
+                          >
+                            {ABSOLUTE_DIR_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-[11px]">Min distance</Label>
+                          <select
+                            className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                            value={String(opt.minDistance)}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              updateOpt({ minDistance: v, maxDistance: Math.max(v, opt.maxDistance) });
+                            }}
+                          >
+                            {distOptions.map((n) => (
+                              <option key={n} value={n}>{n} sq</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-[11px]">Max distance</Label>
+                          <select
+                            className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                            value={String(opt.maxDistance)}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              updateOpt({ maxDistance: v, minDistance: Math.min(v, opt.minDistance) });
+                            }}
+                          >
+                            {distOptions.map((n) => (
+                              <option key={n} value={n}>{n} sq</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
         </section>
 
-        {/* Special ability request */}
+        {/* Special request (ability or general) */}
         <section className="rounded-lg border bg-card p-4 space-y-3">
-          <h2 className="font-display text-lg font-semibold">5. Special ability (optional, requires review)</h2>
+          <h2 className="font-display text-lg font-semibold">5. Special request (optional, requires review)</h2>
           <p className="text-xs text-muted-foreground">
-            Want something beyond movement — resurrection, swapping places, etc.? Describe it here. A reviewer
-            will look at the request and let you know if it can be added. Your piece is fully playable
-            regardless.
+            Want something we don't support yet? Describe it here and a reviewer will take a look. Examples:
+            <em> a special ability</em> (resurrection, swapping, once-per-game effects),
+            <em> a custom animation</em> (a glowing arrow on a ranged attack, a shadow trail on a leap),
+            <em> a sound effect</em>, or <em> a new visual touch</em>. Your piece is fully playable regardless.
           </p>
           <Textarea
             value={abilityRequest}
             onChange={(e) => setAbilityRequest(e.target.value.slice(0, 800))}
-            placeholder="e.g. Once per game, may resurrect a friendly pawn on an adjacent empty square."
+            placeholder="e.g. Add a glowing arrow animation for the ranged attack. Or: once per game, may resurrect a friendly pawn on an adjacent empty square."
             maxLength={800}
             rows={3}
           />
