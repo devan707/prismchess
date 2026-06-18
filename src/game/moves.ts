@@ -1282,6 +1282,14 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       }
     }
   }
+  // Linked-piece partner capture: record corpse at partnerTo.
+  if (move.partnerCaptured && move.partnerTo && !move.partnerCaptured.raisedOnce) {
+    nextCorpses.push({
+      square: move.partnerTo,
+      pieceId: move.partnerCaptured.id,
+      originalOwner: move.partnerCaptured.color,
+    });
+  }
   // Juggernaut trample: record a corpse on each trampled square along the
   // charge lane (both lead and partner rows/cols).
   if (move.juggTrampled && move.juggTrampled.length && move.from && (move.kind === "juggCharge" || move.kind === "juggExit")) {
