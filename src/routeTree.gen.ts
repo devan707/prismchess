@@ -38,6 +38,7 @@ import { Route as AuthenticatedMessagesThreadIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedForumSuggestRouteImport } from './routes/_authenticated/forum.suggest'
 import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
 import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
+import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
 import { Route as AuthenticatedMultiplayerJoinTokenRouteImport } from './routes/_authenticated/multiplayer.join.$token'
 
@@ -192,6 +193,12 @@ const AuthenticatedForumTopicIdRoute =
     path: '/$topicId',
     getParentRoute: () => AuthenticatedForumRoute,
   } as any)
+const AuthenticatedAdminReportsRoute =
+  AuthenticatedAdminReportsRouteImport.update({
+    id: '/admin/reports',
+    path: '/admin/reports',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicHooksCleanupStaleChallengesRoute =
   ApiPublicHooksCleanupStaleChallengesRouteImport.update({
     id: '/api/public/hooks/cleanup-stale-challenges',
@@ -225,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/g/$slug': typeof GSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
@@ -254,6 +262,7 @@ export interface FileRoutesByTo {
   '/g/$slug': typeof GSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces': typeof PiecesIndexRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
@@ -288,6 +297,7 @@ export interface FileRoutesById {
   '/g/$slug': typeof GSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
+  '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
   '/_authenticated/forum/suggest': typeof AuthenticatedForumSuggestRoute
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/g/$slug'
     | '/pieces/new'
     | '/pieces/'
+    | '/admin/reports'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/g/$slug'
     | '/pieces/new'
     | '/pieces'
+    | '/admin/reports'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
@@ -384,6 +396,7 @@ export interface FileRouteTypes {
     | '/g/$slug'
     | '/pieces/new'
     | '/pieces/'
+    | '/_authenticated/admin/reports'
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
     | '/_authenticated/forum/suggest'
@@ -619,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedForumTopicIdRouteImport
       parentRoute: typeof AuthenticatedForumRoute
     }
+    '/_authenticated/admin/reports': {
+      id: '/_authenticated/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/hooks/cleanup-stale-challenges': {
       id: '/api/public/hooks/cleanup-stale-challenges'
       path: '/api/public/hooks/cleanup-stale-challenges'
@@ -695,6 +715,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMultiplayerRoute: typeof AuthenticatedMultiplayerRouteWithChildren
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedUUsernameRoute: typeof AuthenticatedUUsernameRoute
 }
 
@@ -706,6 +727,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMultiplayerRoute: AuthenticatedMultiplayerRouteWithChildren,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedUUsernameRoute: AuthenticatedUUsernameRoute,
 }
 
