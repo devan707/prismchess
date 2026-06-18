@@ -634,6 +634,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       if (isFixture(t, state.registry)) continue;
       moves.push({ from, to, piece, captured: t, kind: "archerShoot" });
     }
+  }
+
+
 
   // King's Hand combo step: a single 2-square king-line move that counts as
   // both of its required turn-steps. Only generated when no pending second
