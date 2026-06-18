@@ -98,6 +98,8 @@ function Sandbox() {
         setSaveName((isDuplicate || isRemix) ? `${row.name} (remix)` : row.name);
         setDescription(row.description);
         setPublishedGameId((isDuplicate || isRemix) ? null : row.id);
+        // Record the original-author link so credit survives republish.
+        setRemixedFromId((isDuplicate || isRemix) ? row.id : null);
         toast.info(
           isRemix
             ? `Remixing "${row.name}" — tweak the design and publish as your own variant.`
