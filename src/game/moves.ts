@@ -586,7 +586,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   // move is owed (otherwise the second step is a normal 1-square leap).
   // Requires the intermediate square to be empty and the landing square to
   // be empty or hold a capturable enemy.
-  if ((piece.id === "H" || piece.id === "G") && !state.pendingHand) {
+  if ((piece.id === "H" || piece.id === "G" || piece.id === "L") && !state.pendingHand) {
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
         if (dr === 0 && dc === 0) continue;
@@ -1139,7 +1139,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
   // turn with the same player; the second (or a handPass) flips it. End-of-
   // turn effects (prism aura sweep, enPassant clearing) only run when the
   // turn actually flips.
-  const isHand = (move.piece.id === "H" || move.piece.id === "G") && (move.kind === "normal" || move.kind === undefined);
+  const isHand = (move.piece.id === "H" || move.piece.id === "G" || move.piece.id === "L") && (move.kind === "normal" || move.kind === undefined);
   const wasPending = !!state.pendingHand;
   const isFirstHandMove = isHand && !wasPending;
   const flipTurn = !isFirstHandMove;
@@ -1251,7 +1251,7 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   // only with another single king-step.
   if (state.pendingHand) {
     if (from.r !== state.pendingHand.r || from.c !== state.pendingHand.c) return [];
-    if (p.id !== "H" && p.id !== "G") return [];
+    if (p.id !== "H" && p.id !== "G" && p.id !== "L") return [];
   }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
@@ -1288,7 +1288,7 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     }
     // First-of-two King's Hand move: defer own-king safety to the second
     // step. Otherwise enforce it now (board pre-prism-flip).
-    const isFirstHand = !state.pendingHand && (m.piece.id === "H" || m.piece.id === "G") && m.kind !== "handDouble";
+    const isFirstHand = !state.pendingHand && (m.piece.id === "H" || m.piece.id === "G" || m.piece.id === "L") && m.kind !== "handDouble";
     if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
@@ -1304,7 +1304,7 @@ export function allLegalMoves(state: GameState): Move[] {
     // a forced pass so the turn can still end.
     if (out.length === 0) {
       const p = state.board[ph.r]?.[ph.c];
-      if (p && (p.id === "H" || p.id === "G") && p.color === state.turn) {
+      if (p && (p.id === "H" || p.id === "G" || p.id === "L") && p.color === state.turn) {
         out.push({ from: ph, to: ph, piece: p, kind: "handPass" });
       }
     }
