@@ -171,10 +171,10 @@ function Home() {
   );
 
   return (
-    <div className="relative min-h-screen text-foreground dark">
-      {/* Misty rainbow backdrop */}
-      <div aria-hidden className="home-aurora-bg fixed inset-0 -z-20" />
-      <div aria-hidden className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,12,0.55)_70%,rgba(5,7,12,0.85)_100%)]" />
+    <div className="dark relative min-h-screen text-foreground home-aurora-bg">
+      <div aria-hidden className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,12,0.5)_70%,rgba(5,7,12,0.85)_100%)]" />
+      <div className="relative">
+
 
       <h1 className="sr-only">Prism Chess — Design your own variant</h1>
 
