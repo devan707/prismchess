@@ -833,6 +833,43 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
 }
 
 /** Is `sq` attacked by any piece of `byColor`? Ignores drops & King's Hand (since it can't deliver check to a king relative to royalty — it CAN deliver check actually). */
+/**
+ * Every square the piece at `from` threatens — i.e. every square it could
+ * capture an enemy on if one were standing there. Used by the Board UI to
+ * paint "attackable" squares orange (vs green move-only squares). For a
+ * dragon this differs from its move pattern: flights to empty squares are
+ * not attacks, but the strike pattern over empty squares still threatens.
+ */
+export function attackSquaresFrom(state: GameState, from: Square): Square[] {
+  const piece = state.board[from.r]?.[from.c];
+  if (!piece) return [];
+  const victimColor: Color = piece.color === "w" ? "b" : "w";
+  const rows = state.board.length;
+  const cols = state.board[0]?.length ?? 0;
+  const out: Square[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (r === from.r && c === from.c) continue;
+      const probeBoard = state.board.map((row, ri) =>
+        ri === r
+          ? row.map((cell, ci) => (ci === c ? ({ id: "P", color: victimColor } as Piece) : cell))
+          : row,
+      );
+      const probeState = { ...state, board: probeBoard } as GameState;
+      const moves = pseudoMovesFrom(probeState, from);
+      const hits = moves.some((m) => {
+        if (m.to.r !== r || m.to.c !== c) return false;
+        if (!m.captured) return false;
+        if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") return false;
+        if (m.kind === "juggShift" || m.kind === "juggExit") return false;
+        return true;
+      });
+      if (hits) out.push({ r, c });
+    }
+  }
+  return out;
+}
+
 export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): boolean {
   const board = state.board;
   for (let r = 0; r < board.length; r++) {
