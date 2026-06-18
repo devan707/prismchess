@@ -3,13 +3,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ABSOLUTE_DIR_OPTIONS,
   RELATIVE_DIR_OPTIONS,
+  RANGED_TIMING_OPTIONS,
   compileMovement,
+  compileRangedAttack,
   defaultStep,
+  defaultRangedAttack,
   type MoveStep,
+  type RangedAttack,
+  type RangedTiming,
   type StepDirAbs,
   type StepDirRel,
 } from "@/game/customMovement";
@@ -28,30 +32,32 @@ interface Props {
 
 const MAX_STEPS = 4;
 
-/**
- * Construct the PieceDef stored in the database AND used in-game.
- * Custom piece ids are namespaced `u:<random>` so they don't collide with
- * the built-in single-letter ids.
- */
 function buildPieceDef(opts: {
   id: string;
   name: string;
   description: string;
   emoji: string;
   steps: MoveStep[];
+  ranged: RangedAttack;
   pointsOverride?: number;
 }): PieceDef | { error: string } {
   const compiled = compileMovement(opts.steps);
   if (compiled.error) return { error: compiled.error };
+  const ranged = compileRangedAttack(opts.ranged);
+  if (ranged.error) return { error: ranged.error };
   const def: PieceDef = {
     id: opts.id,
     name: opts.name,
     glyph: opts.emoji,
     emoji: true,
-    movement: compiled.spec,
+    movement: compiled.moveSpec,
     description: opts.description,
     builtinCustom: false,
   };
+  if (compiled.captureSpec) def.capture = compiled.captureSpec;
+  if (opts.ranged.enabled && (ranged.spec.leaps?.length ?? 0) > 0) {
+    def.rangedCapture = { spec: ranged.spec, timing: opts.ranged.timing };
+  }
   if (opts.pointsOverride != null) def.pointsOverride = opts.pointsOverride;
   return def;
 }
@@ -67,6 +73,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [emoji, setEmoji] = useState("");
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [steps, setSteps] = useState<MoveStep[]>([defaultStep()]);
+  const [ranged, setRanged] = useState<RangedAttack>(defaultRangedAttack());
   const [overrideEnabled, setOverrideEnabled] = useState(false);
   const [overridePts, setOverridePts] = useState<number>(3);
   const [saving, setSaving] = useState(false);
@@ -75,21 +82,30 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
   const id = useMemo(() => genId(), []);
 
+  const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
+
   const validation = useMemo(() => {
     if (!name.trim()) return "Name your piece.";
     if (!emoji) return "Pick or generate an icon (emoji).";
     const c = compileMovement(steps);
     if (c.error) return c.error;
+    if (compiledRanged.error) return compiledRanged.error;
     return null;
-  }, [name, emoji, steps]);
+  }, [name, emoji, steps, compiledRanged]);
+
+  const compiledMove = useMemo(() => compileMovement(steps), [steps]);
 
   const previewDef: PieceDef = {
     id,
     name: name || "New piece",
     glyph: emoji || "❓",
     emoji: true,
-    movement: compileMovement(steps).spec,
+    movement: compiledMove.moveSpec,
+    capture: compiledMove.captureSpec,
     description,
+    rangedCapture: ranged.enabled && (compiledRanged.spec.leaps?.length ?? 0) > 0
+      ? { spec: compiledRanged.spec, timing: ranged.timing }
+      : undefined,
   };
 
   const estimatedPts = useMemo(() => estimatePiecePoints(previewDef), [previewDef]);
@@ -105,6 +121,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
         direction: { kind: "relative", rel: "any-perp" },
         distance: 1,
         jumps: true,
+        captures: true,
       },
     ]);
   };
@@ -135,7 +152,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const doSave = async (visibility: "private" | "public") => {
     if (validation) { toast.error(validation); return; }
     const def = buildPieceDef({
-      id, name: name.trim(), description: description.trim(), emoji, steps,
+      id, name: name.trim(), description: description.trim(), emoji, steps, ranged,
       pointsOverride: overrideEnabled ? overridePts : undefined,
     });
     if ("error" in def) { toast.error(def.error); return; }
@@ -158,6 +175,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
       // Reset
       setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
       setSteps([defaultStep()]);
+      setRanged(defaultRangedAttack());
       setOverrideEnabled(false);
       setOverridePts(3);
     } catch (e) {
@@ -207,10 +225,12 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
         {/* Movement */}
         <section className="rounded-lg border bg-card p-4 space-y-3">
-          <h2 className="font-display text-lg font-semibold">3. Movement</h2>
+          <h2 className="font-display text-lg font-semibold">3. Movement & melee attack</h2>
           <p className="text-xs text-muted-foreground">
-            Define one step at a time. For knight-like pieces, every step must "jump over pieces" — pieces in the path won't block.
-            For rook/bishop-like pieces, use a single step with unlimited distance.
+            Define one step at a time. Each step has a <strong>Captures on landing</strong> checkbox — leave it
+            on for standard chess (the piece captures wherever it can move). Turn it off to make a non-capturing
+            move (e.g. pawn-style forward). For multi-step (knight-like) chains, only the last step's capture
+            flag is used. For rook/bishop-like pieces, use a single step with unlimited distance.
           </p>
           <div className="space-y-3">
             {steps.map((step, idx) => (
@@ -218,6 +238,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
                 key={idx}
                 idx={idx}
                 step={step}
+                isLast={idx === steps.length - 1}
                 canRemove={steps.length > 1}
                 onChange={(patch) => updateStep(idx, patch)}
                 onRemove={() => removeStep(idx)}
@@ -231,12 +252,78 @@ export function PieceBuilderForm({ onSaved }: Props) {
           )}
         </section>
 
-        {/* Capture (v1: same as movement) */}
-        <section className="rounded-lg border bg-card p-4 space-y-2">
-          <h2 className="font-display text-lg font-semibold">4. Capture</h2>
+        {/* Ranged attack */}
+        <section className="rounded-lg border bg-card p-4 space-y-3">
+          <h2 className="font-display text-lg font-semibold">4. Ranged attack (optional)</h2>
           <p className="text-xs text-muted-foreground">
-            Captures on the square it lands on (standard chess). Ranged attacks, stampede, and special abilities are coming in the next release.
+            Like the Archer: capture an enemy at distance <em>without moving</em>. Arrows fly over intervening
+            pieces. For an Archer, use diagonal · 2–3 squares · instead of movement.
           </p>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={ranged.enabled}
+              onChange={(e) => setRanged((r) => ({ ...r, enabled: e.target.checked }))}
+            />
+            Enable a ranged attack
+          </label>
+          {ranged.enabled && (
+            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+              <div>
+                <Label className="text-xs">Direction</Label>
+                <select
+                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                  value={ranged.direction}
+                  onChange={(e) => setRanged((r) => ({ ...r, direction: e.target.value as StepDirAbs }))}
+                >
+                  {ABSOLUTE_DIR_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">When fired</Label>
+                <select
+                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                  value={ranged.timing}
+                  onChange={(e) => setRanged((r) => ({ ...r, timing: e.target.value as RangedTiming }))}
+                >
+                  {RANGED_TIMING_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {RANGED_TIMING_OPTIONS.find((o) => o.value === ranged.timing)?.hint}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Minimum distance</Label>
+                <select
+                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                  value={String(ranged.minDistance)}
+                  onChange={(e) => setRanged((r) => {
+                    const v = Number(e.target.value);
+                    return { ...r, minDistance: v, maxDistance: Math.max(v, r.maxDistance) };
+                  })}
+                >
+                  {[1, 2, 3, 4].map((n) => (<option key={n} value={n}>{n} square{n > 1 ? "s" : ""}</option>))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Maximum distance</Label>
+                <select
+                  className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                  value={String(ranged.maxDistance)}
+                  onChange={(e) => setRanged((r) => {
+                    const v = Number(e.target.value);
+                    return { ...r, maxDistance: v, minDistance: Math.min(v, r.minDistance) };
+                  })}
+                >
+                  {[1, 2, 3, 4].map((n) => (<option key={n} value={n}>{n} square{n > 1 ? "s" : ""}</option>))}
+                </select>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 
@@ -254,7 +341,10 @@ export function PieceBuilderForm({ onSaved }: Props) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Reach from a center cell</p>
-            <PieceReachPreview steps={steps} />
+            <PieceReachPreview
+              steps={steps}
+              rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
+            />
           </div>
 
           {/* Worth */}
@@ -318,12 +408,13 @@ export function PieceBuilderForm({ onSaved }: Props) {
 interface StepProps {
   idx: number;
   step: MoveStep;
+  isLast: boolean;
   canRemove: boolean;
   onChange: (patch: Partial<MoveStep>) => void;
   onRemove: () => void;
 }
 
-function StepRow({ idx, step, canRemove, onChange, onRemove }: StepProps) {
+function StepRow({ idx, step, isLast, canRemove, onChange, onRemove }: StepProps) {
   const isFirst = idx === 0;
   const dirKind = step.direction.kind;
 
@@ -407,10 +498,25 @@ function StepRow({ idx, step, canRemove, onChange, onRemove }: StepProps) {
               checked={step.jumps}
               onChange={(e) => onChange({ jumps: e.target.checked })}
             />
-            Jumps over pieces (not blocked)
+            Jumps over pieces
           </label>
         </div>
       </div>
+
+      <label
+        className={`flex items-center gap-2 text-xs cursor-pointer pt-1 ${
+          !isLast ? "opacity-60" : ""
+        }`}
+        title={!isLast ? "For multi-step chains, only the last step's capture flag is used." : undefined}
+      >
+        <input
+          type="checkbox"
+          checked={step.captures}
+          onChange={(e) => onChange({ captures: e.target.checked })}
+        />
+        Captures on landing
+        {!isLast && <span className="text-muted-foreground">(only the last step's flag matters)</span>}
+      </label>
     </div>
   );
 }
