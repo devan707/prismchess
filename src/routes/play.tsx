@@ -357,6 +357,20 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                     {muted ? "Unmute" : "Mute"}
                   </Button>
                 </div>
+                <div>
+                  <Button
+                    onClick={() => setEnemyInspect((v) => !v)}
+                    size="sm"
+                    variant={enemyInspect ? "secondary" : "outline"}
+                    aria-pressed={enemyInspect}
+                    className="w-full"
+                  >
+                    {enemyInspect ? "Inspect enemy moves: On" : "Inspect enemy moves: Off"}
+                  </Button>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Click an opponent piece to preview its moves and attack pattern.
+                  </p>
+                </div>
                 <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
