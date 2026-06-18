@@ -197,6 +197,30 @@ export function PieceBuilderForm({ onSaved, initial, template }: Props) {
   const estimatedPts = useMemo(() => estimatePiecePoints(previewDef), [previewDef]);
   const finalPts = overrideEnabled ? overridePts : estimatedPts;
 
+  // Auto-size the reach/playtest boards so far-flung ranged shots stay visible.
+  const previewBoardSize = useMemo(() => {
+    let maxAbs = 2;
+    const consider = (dr: number, dc: number) => {
+      maxAbs = Math.max(maxAbs, Math.abs(dr), Math.abs(dc));
+    };
+    for (const opt of options) {
+      const c = compileOption(opt);
+      for (const o of c.spec.leaps ?? []) consider(o.dr, o.dc);
+      for (const s of c.spec.slides ?? []) {
+        const k = s.max && s.max > 0 ? s.max : 4;
+        consider(s.dr * k, s.dc * k);
+      }
+    }
+    if (ranged.enabled) {
+      for (const o of compiledRanged.spec.leaps ?? []) consider(o.dr, o.dc);
+    }
+    // Need (2 * maxAbs + 1) cells to keep the center cell + farthest reach visible.
+    const needed = 2 * maxAbs + 1;
+    // Clamp to a sensible window so the board doesn't get microscopic.
+    return Math.min(15, Math.max(9, needed));
+  }, [options, ranged.enabled, compiledRanged]);
+
+
   const updateOption = (idx: number, patch: Partial<MoveOption>) =>
     setOptions((arr) => arr.map((o, i) => (i === idx ? { ...o, ...patch } : o)));
   const updateStep = (optIdx: number, stepIdx: number, patch: Partial<MoveStep>) =>
