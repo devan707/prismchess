@@ -140,6 +140,12 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   useEffect(() => {
     try { localStorage.setItem("play:takeback", takebackOn ? "1" : "0"); } catch {}
   }, [takebackOn]);
+  const [enemyInspect, setEnemyInspect] = useState<boolean>(() => {
+    try { return localStorage.getItem("play:enemyInspect") !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("play:enemyInspect", enemyInspect ? "1" : "0"); } catch {}
+  }, [enemyInspect]);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [overlayHost, setOverlayHost] = useState<HTMLElement | null>(null);
 
@@ -351,6 +357,20 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                     {muted ? "Unmute" : "Mute"}
                   </Button>
                 </div>
+                <div>
+                  <Button
+                    onClick={() => setEnemyInspect((v) => !v)}
+                    size="sm"
+                    variant={enemyInspect ? "secondary" : "outline"}
+                    aria-pressed={enemyInspect}
+                    className="w-full"
+                  >
+                    {enemyInspect ? "Inspect enemy moves: On" : "Inspect enemy moves: Off"}
+                  </Button>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Click an opponent piece to preview its moves and attack pattern.
+                  </p>
+                </div>
                 <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -421,6 +441,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           onDrop={(id, to) => viewingPast ? false : tryDrop(id, to)}
           disabled={viewingPast || terminal}
           onSelectionChange={handleSelectionChange}
+          allowEnemyInspect={enemyInspect}
         />
 
         {takebackOn && state.history.length > 0 && !terminal && !viewingPast && (

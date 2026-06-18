@@ -3,7 +3,7 @@ import type { GameState, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
-import { inCheck, pseudoMovesFrom, legalMovesFrom } from "@/game/moves";
+import { inCheck, pseudoMovesFrom, legalMovesFrom, attackSquaresFrom } from "@/game/moves";
 
 interface BoardProps {
   state: GameState;
@@ -18,9 +18,12 @@ interface BoardProps {
   disabled?: boolean;
   /** Notified whenever the on-board selection changes (or clears). */
   onSelectionChange?: (sq: Square | null) => void;
+  /** Allow clicking an opponent piece to inspect its move/attack pattern.
+   *  Only enabled in PvComputer (and analysis); disabled in PvP matches. */
+  allowEnemyInspect?: boolean;
 }
 
-export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange }: BoardProps) {
+export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange, allowEnemyInspect = false }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
 
@@ -30,38 +33,29 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
   const legalTargets = legalFor(selected ?? dragFrom);
-  const inspectPiece = selected ? state.board[selected.r][selected.c] : null;
-  const inspectSelected = !!inspectPiece && inspectPiece.color !== humanColor;
-  // "Attack coverage": every square this enemy piece could capture IF an enemy were there.
-  // We probe each square by dropping a phantom victim and asking pseudoMovesFrom for a capture.
-  const inspectTargets: Square[] = (() => {
-    if (!inspectSelected || !selected || !inspectPiece) return [];
-    const attackerColor = inspectPiece.color;
-    const victimColor: "w" | "b" = attackerColor === "w" ? "b" : "w";
+  const selectedPieceForInspect = selected ? state.board[selected.r][selected.c] : null;
+  const isEnemyInspect = !!selectedPieceForInspect && selectedPieceForInspect.color !== humanColor;
+
+  // Attack pattern of the selected piece (any owner) — squares the piece
+  // threatens, i.e. could capture if an enemy stood there. Used to paint
+  // orange "attack-only" indicators (e.g. dragon strike on empty squares,
+  // pawn diagonals without a target).
+  const attackSquares: Square[] = (() => {
+    if (!selected || !selectedPieceForInspect) return [];
+    return attackSquaresFrom(state, selected);
+  })();
+  const attackSet = new Set(attackSquares.map((s) => `${s.r},${s.c}`));
+
+  // For enemy inspection we don't have legalFor — derive pseudo non-capture
+  // move squares directly so we can still paint green move-only dots.
+  const enemyMoveOnlyTargets: Square[] = (() => {
+    if (!isEnemyInspect || !selected) return [];
     const out: Square[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (r === selected.r && c === selected.c) continue;
-        const existing = state.board[r][c];
-        // If a friendly piece sits there, the attacker can't capture it; still
-        // counts as "covered" for the player's planning purposes — probe with
-        // a temporary swap to a phantom enemy.
-        const probeBoard = state.board.map((row, ri) =>
-          ri === r ? row.map((cell, ci) => (ci === c ? { id: "P", color: victimColor } as typeof cell : cell)) : row,
-        );
-        const probeState = { ...state, board: probeBoard } as typeof state;
-        const moves = pseudoMovesFrom(probeState, selected);
-        const hits = moves.some((m) => {
-          if (m.to.r !== r || m.to.c !== c) return false;
-          if (!m.captured) return false;
-          if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") return false;
-          if (m.kind === "juggShift" || m.kind === "juggExit") return false;
-          return true;
-        });
-        if (hits) out.push({ r, c });
-        // suppress unused warning
-        void existing;
-      }
+    for (const m of pseudoMovesFrom(state, selected)) {
+      if (m.captured) continue;
+      if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") continue;
+      if (m.kind === "juggExit") continue;
+      out.push(m.to);
     }
     return out;
   })();
@@ -257,7 +251,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
       if (p) { setSelected(sq); return; }
       setSelected(null);
     } else {
-      if (p) setSelected(sq);
+      if (p) {
+        // Enemy-piece inspection is opt-in (PvComputer only).
+        if (p.color !== humanColor && !allowEnemyInspect) return;
+        setSelected(sq);
+      }
     }
 
   };
@@ -282,11 +280,34 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggFoot = juggInfo?.footprint.has(`${r},${c}`) ?? false;
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
-          const isLegal = legalTargets.some((t) => t.r === r && t.c === c) || juggFoot;
-          const isCapture = (isLegal && !!piece) || juggTrample;
+          const isLegalRaw = legalTargets.some((t) => t.r === r && t.c === c);
+          void isLegalRaw;
+          const isLegalForJugg = isLegalRaw || juggFoot;
+          void isLegalForJugg;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
-          const isInspect = inspectTargets.some((t) => t.r === r && t.c === c);
-          const isInspectCapture = isInspect && !!piece;
+          const isAttackPattern = attackSet.has(`${r},${c}`);
+          const isEnemyMoveOnly = isEnemyInspect && enemyMoveOnlyTargets.some((t) => t.r === r && t.c === c);
+
+          // Three-color move indicator:
+          //   RED  = piece can capture an enemy here (or juggernaut trample target).
+          //   GREEN= legal/pseudo move to an empty square (no attack threatened).
+          //   ORANGE= square is threatened (could capture if enemy were here),
+          //           but no enemy currently stands there.
+          let markerKind: "capture" | "move" | "attack" | null = null;
+          if (juggTrample) {
+            markerKind = "capture";
+          } else if (juggFoot) {
+            markerKind = null; // juggernaut footprint paints its own overlay
+          } else if (isEnemyInspect) {
+            if (isAttackPattern && piece && piece.color === humanColor) markerKind = "capture";
+            else if (isEnemyMoveOnly && !piece) markerKind = "move";
+            else if (isAttackPattern && !piece) markerKind = "attack";
+          } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
+            if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
+            else if (isLegalRaw && !piece) markerKind = "move";
+            else if (isAttackPattern && !piece) markerKind = "attack";
+          }
+
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
           const isCheck = checkSquares.some((k) => k.r === r && k.c === c);
 
@@ -353,29 +374,21 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <span className="absolute top-0.5 left-1 text-[10px] font-semibold opacity-60"
                   style={{ color: light ? "oklch(0.3 0.04 145)" : "oklch(0.92 0.02 85)" }}>{rankLabel}</span>
               )}
-              {isLegal && !isCapture && !juggFoot && (
+              {markerKind === "move" && (
                 <div className="absolute rounded-full pointer-events-none"
                   style={{ width: "30%", height: "30%", background: "var(--color-board-legal)" }} />
               )}
-              {isLegal && isCapture && !juggFoot && (
+              {markerKind === "attack" && (
+                <div className="absolute rounded-full pointer-events-none"
+                  style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
+              )}
+              {markerKind === "capture" && !juggFoot && (
                 <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
                   style={{ borderColor: "var(--color-board-capture)", boxShadow: "inset 0 0 0 4px var(--color-board-capture)" }} />
-              )}
-              {juggTrample && (
-                <div className="absolute inset-1 rounded-full pointer-events-none"
-                  style={{ boxShadow: "inset 0 0 0 3px var(--color-board-capture)" }} />
               )}
               {isDropTarget && (
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"
                   style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 2px var(--color-board-legal)" }} />
-              )}
-              {isInspect && !isInspectCapture && (
-                <div className="absolute rounded-full pointer-events-none"
-                  style={{ width: "24%", height: "24%", background: "var(--color-board-inspect)" }} />
-              )}
-              {isInspect && isInspectCapture && (
-                <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
-                  style={{ borderColor: "var(--color-board-inspect)", boxShadow: "inset 0 0 0 4px var(--color-board-inspect)" }} />
               )}
               {piece && (() => {
                 const isJugg = state.registry[piece.id]?.special === "juggernaut";
