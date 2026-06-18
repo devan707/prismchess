@@ -16,7 +16,7 @@ import {
 } from "@/lib/multiplayer.functions";
 import { BUILTIN_GAMES } from "@/game/library";
 import { loadSavedGames, type SavedGame } from "@/game/library";
-import { Home, Swords, Users, Plus, Copy, Trash2, Clock, Hourglass } from "lucide-react";
+import { Home, Swords, Users, Plus, Copy, Trash2, Clock, Hourglass, Zap } from "lucide-react";
 import { toast } from "sonner";
 import type { Color, Design } from "@/game/types";
 
