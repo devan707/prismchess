@@ -448,6 +448,7 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
                     <p className="text-[11px] text-muted-foreground">Show the description panel below the board.</p>
                   </div>
                   <Switch checked={tipsOn} onCheckedChange={setTipsOn} />
+                </div>
                 <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
