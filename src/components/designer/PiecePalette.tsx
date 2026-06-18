@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Color, PieceDef, PieceId } from "@/game/types";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { Eraser } from "lucide-react";
+import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 
 interface Props {
   pieces: PieceDef[];
