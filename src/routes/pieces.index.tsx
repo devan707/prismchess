@@ -31,6 +31,7 @@ type Row = {
   like_count: number;
   created_at: string;
   author_id: string;
+  image_url: string | null;
 };
 
 function PiecesIndex() {
