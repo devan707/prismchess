@@ -435,6 +435,19 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
                     Click an opponent piece to preview its moves and attack pattern.
                   </p>
                 </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-2.5">
+                  <div className="min-w-0">
+                    <Label className="text-sm">Show move possibilities</Label>
+                    <p className="text-[11px] text-muted-foreground">Highlight legal squares for the piece you select.</p>
+                  </div>
+                  <Switch checked={showHints} onCheckedChange={setShowHints} />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-2.5">
+                  <div className="min-w-0">
+                    <Label className="text-sm">Show piece info window</Label>
+                    <p className="text-[11px] text-muted-foreground">Show the description panel below the board.</p>
+                  </div>
+                  <Switch checked={tipsOn} onCheckedChange={setTipsOn} />
                 <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
