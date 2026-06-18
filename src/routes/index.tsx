@@ -38,8 +38,20 @@ function Home() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState<SavedGame[]>([]);
   const [stats, setStats] = useState<Record<string, VariantStats>>({});
+  type DiscoveryRes = Awaited<ReturnType<typeof listDiscoveryGames>>;
+  type DiscoveryGame = DiscoveryRes["newest"][number];
+  const [discovery, setDiscovery] = useState<DiscoveryRes | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
 
   useEffect(() => { setSaved(loadSavedGames()); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listDiscoveryGames()
+      .then((d) => { if (!cancelled) setDiscovery(d); })
+      .catch(() => { /* best-effort */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const variantKeys = useMemo(() => [
     ...BUILTIN_GAMES.map((g) => `builtin:${g.id}`),
