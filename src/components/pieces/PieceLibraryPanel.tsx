@@ -18,6 +18,8 @@ interface Props {
   onAdd: (def: PieceDef) => void;
   /** Custom piece ids already present in the design. */
   alreadyInDesign: string[];
+  /** Called after deleting a piece you own — so the parent design can drop it too. */
+  onRemoveFromDesign?: (id: string) => void;
 }
 
 type Row = {
