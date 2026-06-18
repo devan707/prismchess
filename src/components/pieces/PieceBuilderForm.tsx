@@ -663,10 +663,10 @@ export function PieceBuilderForm({ onSaved, template }: Props) {
               </p>
             )}
             <Button className="w-full" variant="outline" disabled={!!validation || saving} onClick={() => doSave("private")}>
-              {isEdit ? "Save changes (private)" : "Save private"}
+              Save private
             </Button>
             <Button className="w-full" disabled={!!validation || saving} onClick={() => doSave("public")}>
-              {isEdit ? "Save changes (public)" : "Publish public"}
+              Publish public
             </Button>
           </div>
         </div>
