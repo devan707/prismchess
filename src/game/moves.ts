@@ -983,20 +983,35 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           // king is removed before the end-of-turn prism sweep flips the
           // attacker. Landing-in-aura alone does not cancel the threat.
           if (hasAura && m.from) {
-            const dr = m.to.r - m.from.r;
-            const dc = m.to.c - m.from.c;
-            const aR = Math.abs(dr), aC = Math.abs(dc);
-            const linear = aR === 0 || aC === 0 || aR === aC;
-            if (linear) {
-              const steps = Math.max(aR, aC);
-              const sR = steps ? dr / steps : 0;
-              const sC = steps ? dc / steps : 0;
-              const startedInAura = aura.has(`${m.from.r},${m.from.c}`);
-              let crossed = false;
-              for (let s = 1; s < steps; s++) {
-                if (aura.has(`${m.from.r + s * sR},${m.from.c + s * sC}`)) { crossed = true; break; }
+            // Only consider aura cancellation if the attacker would actually
+            // get flipped by the prism. Royals, prisms, juggernauts, portals,
+            // wizards, and necromancers are flip-exempt — their attacks are
+            // never cancelled by passing through the aura.
+            const adef = state.registry[p.id];
+            const flipEligible =
+              !!adef &&
+              !adef.royal &&
+              adef.special !== "prism" &&
+              adef.special !== "juggernaut" &&
+              adef.special !== "portal" &&
+              adef.special !== "wizard" &&
+              adef.special !== "necromancer";
+            if (flipEligible) {
+              const dr = m.to.r - m.from.r;
+              const dc = m.to.c - m.from.c;
+              const aR = Math.abs(dr), aC = Math.abs(dc);
+              const linear = aR === 0 || aC === 0 || aR === aC;
+              if (linear) {
+                const steps = Math.max(aR, aC);
+                const sR = steps ? dr / steps : 0;
+                const sC = steps ? dc / steps : 0;
+                const startedInAura = aura.has(`${m.from.r},${m.from.c}`);
+                let crossed = false;
+                for (let s = 1; s < steps; s++) {
+                  if (aura.has(`${m.from.r + s * sR},${m.from.c + s * sC}`)) { crossed = true; break; }
+                }
+                if (!startedInAura && crossed) continue;
               }
-              if (!startedInAura && crossed) continue;
             }
           }
           return true;
