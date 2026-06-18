@@ -411,6 +411,23 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"
                   style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 2px var(--color-board-legal)" }} />
               )}
+              {arrowAnim && arrowAnim.from.r === r && arrowAnim.from.c === c && (
+                <div
+                  key={`arrow-${arrowAnim.key}`}
+                  aria-hidden
+                  className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                  style={{
+                    fontSize: "0.55em",
+                    ["--arrow-dx" as string]: `${arrowAnim.dx}%`,
+                    ["--arrow-dy" as string]: `${arrowAnim.dy}%`,
+                    ["--arrow-rot" as string]: `${arrowAnim.rot}deg`,
+                    animation: "archer-arrow 360ms ease-out forwards",
+                    filter: "drop-shadow(0 0 2px rgba(0,0,0,0.55))",
+                  }}
+                >
+                  ➤
+                </div>
+              )}
               {piece && (() => {
                 const isJugg = state.registry[piece.id]?.special === "juggernaut";
                 if (isJugg) {
