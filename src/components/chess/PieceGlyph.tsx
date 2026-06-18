@@ -1,6 +1,7 @@
 import type { Color, Piece, PieceDef } from "@/game/types";
 import { NecromancerGlyph } from "./NecromancerGlyph";
 import { PrismGlyph } from "./PrismGlyph";
+import juggernautArt from "@/assets/juggernaut-top.png";
 
 interface Props {
   piece: Piece;
@@ -18,6 +19,11 @@ export function PieceGlyph({ piece, def, className }: Props) {
   // Prism is a rainbow fixture — render as a custom SVG (no silhouette filter,
   // color-agnostic) so its refractive look reads on any square.
   const isPrism = def?.special === "prism";
+  // Juggernaut: on the live board it spans 2 cells via a dedicated overlay
+  // (Board.tsx). Everywhere else — sandbox palette, designer board,
+  // promotion dialog, graveyard — render the same artwork in a single cell
+  // so the silhouette stays consistent instead of falling back to 🛡️.
+  const isJuggernaut = def?.special === "juggernaut";
 
   // Unified approach: every piece is rendered as a silhouette in its side's
   // colour with a strong contrasting outline so it's unmistakable on any square.
@@ -48,6 +54,18 @@ export function PieceGlyph({ piece, def, className }: Props) {
         <NecromancerGlyph color={piece.color} />
       ) : isPrism ? (
         <PrismGlyph />
+      ) : isJuggernaut ? (
+        <img
+          src={juggernautArt}
+          alt=""
+          draggable={false}
+          style={{
+            width: "115%",
+            height: "115%",
+            objectFit: "contain",
+            filter: `${piece.color === "w" ? "invert(1) hue-rotate(180deg)" : "none"} drop-shadow(0 0 1px rgba(0,0,0,0.9)) drop-shadow(0 0 2px rgba(0,0,0,0.7)) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`,
+          }}
+        />
       ) : (
         <span
           className="relative"
