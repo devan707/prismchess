@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import type { PieceDef } from "@/game/types";
 import { listDiscoveryPieces, likePiece } from "@/lib/piece-builder.functions";
+import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { AdminMenu } from "@/components/admin/AdminMenu";
 import { ArrowLeft, Heart, Plus } from "lucide-react";
 import { toast } from "sonner";
 
