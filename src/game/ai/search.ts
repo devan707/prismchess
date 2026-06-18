@@ -236,6 +236,40 @@ class Searcher {
   }
 }
 
+/** Tempo / purpose score used to break root-eval ties intelligently. Higher
+ *  = the move "does something" (captures, checks, threats, defense,
+ *  advancement). Used so the AI never picks a pointless shuffle when a
+ *  purposeful alternative scores the same. */
+function purposeBonus(state: GameState, m: Move): number {
+  let b = 0;
+  if (m.captured) {
+    const see = seeMove(state, m);
+    if (see >= 0) b += 200 + see * 0.05;
+  }
+  if (m.promotion || m.shapeshiftTo) b += 80;
+  if (m.juggTrampled && m.juggTrampled.length) b += 60;
+  // Reward giving check.
+  const next = applyMoveToState(state, m);
+  if (inCheck(next, next.turn)) b += 60;
+  // Forward progress (only for non-special moves with a from-square).
+  if (m.from) {
+    const wide = state.cols > state.rows;
+    const dir = m.piece.color === "w" ? 1 : -1;
+    const forwardDelta = wide ? (m.to.c - m.from.c) * dir : (m.to.r - m.from.r) * dir;
+    if (forwardDelta > 0) b += Math.min(20, forwardDelta * 6);
+  }
+  // Penalise immediate self-repeat (just-moved-this-piece-back-and-forth).
+  const h = state.history;
+  if (h && h.length >= 2 && m.from) {
+    const prev = h[h.length - 2]; // our previous move
+    if (prev && prev.piece.color === m.piece.color && prev.to.r === m.from.r &&
+        prev.to.c === m.from.c && prev.from && !m.captured) {
+      b -= 120;
+    }
+  }
+  return b;
+}
+
 export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   const start = Date.now();
   const deadline = start + Math.max(20, opts.budgetMs);
@@ -256,7 +290,23 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     if (!(err instanceof TimeUp)) throw err;
   }
   let chosen = searcher.bestMoveAtRoot;
-  if (searcher.tiesAtRoot.length > 1) chosen = pickRandom(searcher.tiesAtRoot);
+  // On medium / hard, break score-ties by purpose (captures, checks, threats,
+  // advancement) instead of randomness — every move should "do something".
+  // Easy keeps a touch of randomness so beginners can win.
+  if (searcher.tiesAtRoot.length > 1) {
+    if (opts.difficulty === "easy") {
+      chosen = pickRandom(searcher.tiesAtRoot);
+    } else {
+      let bestPurpose = -Infinity;
+      const best: Move[] = [];
+      for (const t of searcher.tiesAtRoot) {
+        const p = purposeBonus(state, t);
+        if (p > bestPurpose) { bestPurpose = p; best.length = 0; best.push(t); }
+        else if (p === bestPurpose) best.push(t);
+      }
+      chosen = best.length > 1 ? pickRandom(best) : best[0];
+    }
+  }
   // Easy: 25% chance to play a random legal move so beginners can win.
   if (opts.difficulty === "easy" && chosen && Math.random() < 0.25) {
     const all = allLegalMoves(state);
@@ -270,6 +320,7 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     elapsedMs: Date.now() - start,
   };
 }
+
 
 /** Difficulty → (budgetMs, maxDepth). Scaled down for big boards / explosive specials. */
 export function paramsFor(state: GameState, difficulty: Difficulty): { budgetMs: number; maxDepth: number } {
