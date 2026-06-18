@@ -13,7 +13,7 @@ import { listDiscoveryGames } from "@/lib/social.functions";
 import { listMyMatches } from "@/lib/multiplayer.functions";
 import { AppShell } from "@/components/shell/AppShell";
 import { Card } from "@/components/ui/card";
-import { Play, Heart, MessageSquare, ChevronRight, Sparkles, Swords, Hammer } from "lucide-react";
+import { Play, Heart, MessageSquare, ChevronRight, Swords, Hammer } from "lucide-react";
 import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
