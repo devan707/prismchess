@@ -1,9 +1,25 @@
 import { Link } from "@tanstack/react-router";
-import { Play } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { BottomTabs } from "./BottomTabs";
 import logoUrl from "@/assets/logo.png";
 import type { ReactNode } from "react";
+
+function PrismPlayIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="prismPlayGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="oklch(0.78 0.13 25)" />
+          <stop offset="25%" stopColor="oklch(0.82 0.12 70)" />
+          <stop offset="50%" stopColor="oklch(0.84 0.11 150)" />
+          <stop offset="75%" stopColor="oklch(0.80 0.12 230)" />
+          <stop offset="100%" stopColor="oklch(0.78 0.13 320)" />
+        </linearGradient>
+      </defs>
+      <path d="M8 5v14l11-7z" fill="url(#prismPlayGrad)" />
+    </svg>
+  );
+}
 
 interface AppShellProps {
   children: ReactNode;
