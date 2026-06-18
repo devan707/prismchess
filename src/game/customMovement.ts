@@ -283,6 +283,21 @@ export function defaultStep(): MoveStep {
   };
 }
 
+export function defaultOption(kind: MoveOptionKind = "move-or-capture"): MoveOption {
+  return { steps: [defaultStep()], kind, condition: "none" };
+}
+
+export const OPTION_KIND_OPTIONS: { value: MoveOptionKind; label: string; hint: string }[] = [
+  { value: "move-or-capture", label: "Move or capture", hint: "Standard — the piece moves there or captures whatever is there." },
+  { value: "move-only",       label: "Move only",       hint: "Cannot capture on this option (pawn-style forward push)." },
+  { value: "capture-only",    label: "Capture only",    hint: "Only legal when an enemy is on the destination (pawn-style diagonal)." },
+];
+
+export const CONDITION_OPTIONS: { value: MoveCondition; label: string }[] = [
+  { value: "none",                 label: "Always available" },
+  { value: "from-starting-square", label: "Only from starting square" },
+];
+
 export function defaultRangedAttack(): RangedAttack {
   return {
     enabled: false,
