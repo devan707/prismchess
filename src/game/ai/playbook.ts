@@ -155,7 +155,7 @@ export function resetAllPlaybooks(): void {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const k = window.localStorage.key(i);
-      if (k && (k.startsWith(V2_PREFIX) || k === V1_KEY)) toRemove.push(k);
+      if (k && (k.startsWith(V3_PREFIX) || k.startsWith(V2_PREFIX) || k === V1_KEY)) toRemove.push(k);
     }
     for (const k of toRemove) window.localStorage.removeItem(k);
   } catch { /* noop */ }
