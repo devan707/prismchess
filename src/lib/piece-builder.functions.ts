@@ -177,3 +177,178 @@ export const deletePiece = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------- Public piece-by-slug (for shareable detail pages) ----------
+
+export const getPieceBySlug = createServerFn({ method: "GET" })
+  .inputValidator((i: unknown) => z.object({ slug: z.string().trim().min(1).max(60) }).parse(i))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.SUPABASE_URL!;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
+    const sb = createClient(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+    const { data: row, error } = await sb
+      .from("custom_pieces")
+      .select(PIECE_COLS + ", is_hidden")
+      .eq("slug", data.slug)
+      .eq("visibility", "public")
+      .eq("is_hidden", false)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) return null;
+    // Author profile (public username/display name).
+    const { data: prof } = await sb
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", row.author_id)
+      .maybeSingle();
+    return { ...row, author: prof ?? null };
+  });
+
+// ---------- Upload / clear image (PNG 300×300 transparent) ----------
+
+/** Parse PNG width/height/color-type from the first 26 bytes of the file. */
+function parsePngHeader(buf: Uint8Array): { width: number; height: number; colorType: number } | null {
+  if (buf.length < 26) return null;
+  // Signature: 89 50 4E 47 0D 0A 1A 0A
+  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  for (let i = 0; i < 8; i++) if (buf[i] !== sig[i]) return null;
+  // IHDR chunk starts at byte 8; width = bytes 16..19, height = 20..23, colorType = 25
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const width = view.getUint32(16, false);
+  const height = view.getUint32(20, false);
+  const colorType = buf[25];
+  return { width, height, colorType };
+}
+
+export const uploadPieceImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => {
+    if (!(input instanceof FormData)) throw new Error("Expected multipart upload.");
+    const pieceId = String(input.get("pieceId") ?? "");
+    if (!UuidSchema.safeParse(pieceId).success) throw new Error("Invalid pieceId.");
+    const file = input.get("file");
+    if (!(file instanceof File)) throw new Error("Missing file.");
+    return { pieceId, file };
+  })
+  .handler(async ({ data, context }) => {
+    const { pieceId, file } = data;
+    if (file.size > 1_000_000) throw new Error("Image must be under 1 MB.");
+    if (file.type && file.type !== "image/png") throw new Error("Image must be a PNG.");
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const header = parsePngHeader(bytes);
+    if (!header) throw new Error("File is not a valid PNG.");
+    if (header.width !== 300 || header.height !== 300) {
+      throw new Error(`Image must be exactly 300×300 (got ${header.width}×${header.height}).`);
+    }
+    // PNG colour types with alpha: 4 (grayscale+alpha), 6 (RGBA), or 3 (paletted, may have tRNS).
+    if (header.colorType !== 4 && header.colorType !== 6 && header.colorType !== 3) {
+      throw new Error("Image must have a transparent background (PNG with alpha channel).");
+    }
+
+    // Confirm ownership before writing — RLS would also block this, but a
+    // clear error message beats a generic 'row violates policy'.
+    const { data: piece, error: ownErr } = await context.supabase
+      .from("custom_pieces")
+      .select("id, slug, author_id")
+      .eq("id", pieceId)
+      .maybeSingle();
+    if (ownErr) throw new Error(ownErr.message);
+    if (!piece) throw new Error("Piece not found.");
+    if (piece.author_id !== context.userId) throw new Error("You can only edit your own pieces.");
+
+    const path = `${context.userId}/${piece.id}.png`;
+    const { error: upErr } = await context.supabase.storage
+      .from("piece-images")
+      .upload(path, bytes, { contentType: "image/png", upsert: true });
+    if (upErr) throw new Error(upErr.message);
+
+    const url = `/api/public/piece-img/${path}?v=${Date.now()}`;
+    const { error: updErr } = await context.supabase
+      .from("custom_pieces")
+      .update({ image_path: path, image_url: url })
+      .eq("id", piece.id);
+    if (updErr) throw new Error(updErr.message);
+    return { ok: true as const, imageUrl: url };
+  });
+
+export const clearPieceImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ pieceId: UuidSchema }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: piece } = await context.supabase
+      .from("custom_pieces")
+      .select("id, image_path, author_id")
+      .eq("id", data.pieceId)
+      .maybeSingle();
+    if (!piece || piece.author_id !== context.userId) throw new Error("Not allowed.");
+    if (piece.image_path) {
+      await context.supabase.storage.from("piece-images").remove([piece.image_path]);
+    }
+    const { error } = await context.supabase
+      .from("custom_pieces")
+      .update({ image_path: null, image_url: null })
+      .eq("id", data.pieceId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---------- Forum showcase: anyone (signed-in) can create a topic for a piece ----------
+
+export const createPieceShowcase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        pieceId: UuidSchema,
+        title: z.string().trim().min(3).max(140),
+        body: z.string().trim().min(1).max(8000),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    // Verify piece exists & is public so showcase links work for everyone.
+    const { data: piece, error: pErr } = await context.supabase
+      .from("custom_pieces")
+      .select("id, visibility")
+      .eq("id", data.pieceId)
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!piece) throw new Error("Piece not found.");
+    if (piece.visibility !== "public") throw new Error("Only public pieces can be showcased.");
+    const { data: row, error } = await context.supabase
+      .from("forum_topics")
+      .insert({
+        author_id: context.userId,
+        title: data.title,
+        body: data.body,
+        shared_piece_id: data.pieceId,
+        is_showcase: true,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  });
+
+/** Public list of recent showcases for a given piece — used on the detail page. */
+export const listPieceShowcases = createServerFn({ method: "GET" })
+  .inputValidator((i: unknown) => z.object({ pieceId: UuidSchema }).parse(i))
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.SUPABASE_URL!;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
+    const sb = createClient(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+    const { data: topics } = await sb
+      .from("forum_topics")
+      .select("id, title, reply_count, like_count, last_activity_at, author_id")
+      .eq("shared_piece_id", data.pieceId)
+      .order("last_activity_at", { ascending: false })
+      .limit(20);
+    return topics ?? [];
+  });
