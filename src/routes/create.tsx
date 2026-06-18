@@ -265,8 +265,7 @@ function Create() {
                           </div>
                         </div>
                         <Link to="/pieces/$slug" params={{ slug: p.slug }}><Button size="sm" variant="ghost" aria-label="View"><ExternalLink className="h-3 w-3" /></Button></Link>
-                        <Link to="/pieces/$slug/edit" params={{ slug: p.slug }}><Button size="sm" variant="ghost" aria-label="Edit"><Pencil className="h-3 w-3" /></Button></Link>
-                        <Link to="/pieces/new" search={{ from: p.slug }}><Button size="sm" variant="ghost" aria-label="Duplicate" title="Duplicate as a new piece"><Copy className="h-3 w-3" /></Button></Link>
+                        <Link to="/pieces/new" search={{ from: p.slug }}><Button size="sm" variant="ghost" aria-label="Edit as new" title="Edit as a new piece (the original stays intact for games already using it)"><Pencil className="h-3 w-3" /></Button></Link>
                         <Button size="sm" variant="ghost" onClick={() => handleDeletePiece(p)} aria-label="Delete"><Trash2 className="h-3 w-3" /></Button>
                       </div>
                     );
