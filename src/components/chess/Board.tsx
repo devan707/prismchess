@@ -281,7 +281,9 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
           const isLegalRaw = legalTargets.some((t) => t.r === r && t.c === c);
-          const isLegal = isLegalRaw || juggFoot;
+          void isLegalRaw;
+          const isLegalForJugg = isLegalRaw || juggFoot;
+          void isLegalForJugg;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
           const isAttackPattern = attackSet.has(`${r},${c}`);
           const isEnemyMoveOnly = isEnemyInspect && enemyMoveOnlyTargets.some((t) => t.r === r && t.c === c);
