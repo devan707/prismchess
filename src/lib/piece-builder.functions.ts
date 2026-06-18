@@ -127,7 +127,7 @@ export const listMyLikedPieces = createServerFn({ method: "GET" })
       like_count: number; created_at: string; author_id: string;
       image_url: string | null; is_hidden: boolean;
     };
-    const visible = ((pieces ?? []) as Row[]).filter((p) => !p.is_hidden);
+    const visible = ((pieces ?? []) as unknown as Row[]).filter((p) => !p.is_hidden);
     const order = new Map(ids.map((id, i) => [id, i] as const));
     return visible.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
   });
