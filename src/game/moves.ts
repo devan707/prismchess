@@ -1139,9 +1139,6 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   if (move.kind === "archerShoot") {
     // Archer/Trebuchet stays in place; target enemy is removed (true ranged attack).
     b[move.to.r][move.to.c] = null;
-  if (move.kind === "archerShoot") {
-    // Archer/Trebuchet stays in place; target enemy is removed (true ranged attack).
-    b[move.to.r][move.to.c] = null;
     // Ranged kill on a juggernaut destroys its partner half too.
     if (move.captured && move.captured.id === "J") {
       const wide = boardIsWide(b);
@@ -1157,6 +1154,7 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
         }
       }
     }
+    killMirrorTwin(b, move.to, move.captured);
     return b;
   }
   if (move.kind === "castle" && move.from && move.rookFrom && move.rookTo) {
