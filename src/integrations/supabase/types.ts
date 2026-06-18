@@ -35,6 +35,48 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_pieces: {
+        Row: {
+          author_id: string
+          created_at: string
+          def: Json
+          description: string
+          id: string
+          like_count: number
+          name: string
+          play_count: number
+          slug: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          def: Json
+          description?: string
+          id?: string
+          like_count?: number
+          name: string
+          play_count?: number
+          slug: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          def?: Json
+          description?: string
+          id?: string
+          like_count?: number
+          name?: string
+          play_count?: number
+          slug?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
       dm_messages: {
         Row: {
           body: string
@@ -484,6 +526,32 @@ export type Database = {
           white_time_ms?: number
         }
         Relationships: []
+      }
+      piece_likes: {
+        Row: {
+          created_at: string
+          piece_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          piece_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          piece_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piece_likes_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "custom_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
