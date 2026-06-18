@@ -102,45 +102,50 @@ function offsetKey(o: Offset) { return `${o.dr},${o.dc}`; }
  *    intermediate blockers).
  */
 export function compileMovement(steps: MoveStep[]): CompiledMovement {
-  if (!steps.length) return { spec: {}, error: "Add at least one movement step." };
+  if (!steps.length) return { moveSpec: {}, error: "Add at least one movement step." };
 
   // First step must be absolute.
   if (steps[0].direction.kind !== "absolute") {
-    return { spec: {}, error: "The first step must be an absolute direction." };
+    return { moveSpec: {}, error: "The first step must be an absolute direction." };
   }
+
+  // The capture-on-landing rule comes from the LAST step (which determines
+  // the endpoint). For single-step pieces that's the only step.
+  const lastCaptures = steps[steps.length - 1].captures;
 
   // --- single-step shortcut: slide or leap ---
   if (steps.length === 1) {
     const s = steps[0];
     if (s.direction.kind !== "absolute") {
-      return { spec: {}, error: "The first step must be an absolute direction." };
+      return { moveSpec: {}, error: "The first step must be an absolute direction." };
     }
     const dirs = absDirOffsets(s.direction.dir);
+    let moveSpec: MovementSpec;
     if (s.distance === "unlimited" && !s.jumps) {
       const slides: SlideDir[] = dirs.map((d) => ({ dr: d.dr, dc: d.dc }));
-      return { spec: { slides } };
-    }
-    if (typeof s.distance === "number" && s.distance > 1 && !s.jumps) {
+      moveSpec = { slides };
+    } else if (typeof s.distance === "number" && s.distance > 1 && !s.jumps) {
       const slides: SlideDir[] = dirs.map((d) => ({ dr: d.dr, dc: d.dc, max: s.distance as number }));
-      return { spec: { slides } };
+      moveSpec = { slides };
+    } else {
+      const dist = s.distance === "unlimited" ? 1 : s.distance;
+      const leaps: Offset[] = dirs.map((d) => ({ dr: d.dr * dist, dc: d.dc * dist }));
+      moveSpec = { leaps: dedupeOffsets(leaps) };
     }
-    // distance 1 OR jumping -> leaps at endpoint(s)
-    const dist = s.distance === "unlimited" ? 1 : s.distance;
-    const leaps: Offset[] = dirs.map((d) => ({ dr: d.dr * dist, dc: d.dc * dist }));
-    return { spec: { leaps: dedupeOffsets(leaps) } };
+    return lastCaptures ? { moveSpec } : { moveSpec, captureSpec: {} };
   }
 
   // --- multi-step: enumerate endpoints. Require all jumps. ---
   for (const s of steps) {
     if (!s.jumps) {
       return {
-        spec: {},
+        moveSpec: {},
         error: "Multi-step movement: every step must be marked 'jumps over pieces'.",
       };
     }
     if (s.distance === "unlimited") {
       return {
-        spec: {},
+        moveSpec: {},
         error: "Multi-step movement: unlimited distance is only allowed on a single step.",
       };
     }
@@ -172,9 +177,27 @@ export function compileMovement(steps: MoveStep[]): CompiledMovement {
 
   walk(0, 0, 0, null);
   if (endpoints.size === 0) {
-    return { spec: {}, error: "Movement produced no reachable squares." };
+    return { moveSpec: {}, error: "Movement produced no reachable squares." };
   }
-  return { spec: { leaps: Array.from(endpoints.values()) } };
+  const moveSpec: MovementSpec = { leaps: Array.from(endpoints.values()) };
+  return lastCaptures ? { moveSpec } : { moveSpec, captureSpec: {} };
+}
+
+/** Compile a ranged attack picker into a MovementSpec of leap offsets. */
+export function compileRangedAttack(r: RangedAttack): { spec: MovementSpec; error?: string } {
+  if (!r.enabled) return { spec: {} };
+  const min = Math.max(1, Math.min(4, Math.floor(r.minDistance)));
+  const max = Math.max(min, Math.min(4, Math.floor(r.maxDistance)));
+  const dirs = absDirOffsets(r.direction);
+  const leaps: Offset[] = [];
+  for (const d of dirs) {
+    for (let k = min; k <= max; k++) {
+      leaps.push({ dr: d.dr * k, dc: d.dc * k });
+    }
+  }
+  const deduped = dedupeOffsets(leaps);
+  if (deduped.length === 0) return { spec: {}, error: "Ranged attack has no targets." };
+  return { spec: { leaps: deduped } };
 }
 
 function dedupeOffsets(list: Offset[]): Offset[] {
@@ -213,10 +236,28 @@ export const RELATIVE_DIR_OPTIONS: { value: StepDirRel; label: string }[] = [
   { value: "any-perp", label: "Turn 90° either way" },
 ];
 
+export const RANGED_TIMING_OPTIONS: { value: RangedTiming; label: string; hint: string }[] = [
+  { value: "replace", label: "Instead of movement", hint: "The piece skips its move and fires from where it stands." },
+  { value: "before",  label: "Before its movement",  hint: "Fires, then optionally moves on the same turn." },
+  { value: "after",   label: "After its movement",   hint: "Moves first, then fires from the landing square." },
+];
+
 export function defaultStep(): MoveStep {
   return {
     direction: { kind: "absolute", dir: "any-8" },
     distance: 1,
     jumps: false,
+    captures: true,
   };
 }
+
+export function defaultRangedAttack(): RangedAttack {
+  return {
+    enabled: false,
+    direction: "any-diag",
+    minDistance: 2,
+    maxDistance: 3,
+    timing: "replace",
+  };
+}
+
