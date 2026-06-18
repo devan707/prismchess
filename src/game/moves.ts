@@ -988,6 +988,17 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.from.r][move.from.c] = friendly;
     return b;
   }
+  if ((move.kind === "shadowLink" || move.kind === "twinLink") &&
+      move.from && move.partnerFrom && move.partnerTo && move.partnerPiece) {
+    // Clear both source squares first, then write both destinations. This
+    // correctly handles cases where partner lands on the mover's vacated
+    // square (or vice versa).
+    b[move.from.r][move.from.c] = null;
+    b[move.partnerFrom.r][move.partnerFrom.c] = null;
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    b[move.partnerTo.r][move.partnerTo.c] = { id: move.partnerPiece.id, color: move.partnerPiece.color };
+    return b;
+  }
   if (move.kind === "resurrect" && move.resurrectPieceId) {
     // Legacy path (graveyard-based resurrect). Necromancer stays.
     b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
