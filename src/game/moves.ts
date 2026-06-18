@@ -124,6 +124,26 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
 
+/** True when the enemy piece at `occSq` is front-immune (juggernaut or
+ *  immobile barricade) AND the attacker at `attackerSq` is approaching it
+ *  from its front arc. Such an enemy can be neither captured nor moved
+ *  through — sliders/charges stop BEFORE it. Knights bypass front immunity
+ *  (handled by callers that need the exception). */
+function frontImmuneBlocker(
+  occ: Piece | null,
+  occSq: Square,
+  attackerSq: Square,
+  registry: Record<PieceId, PieceDef>,
+  wide: boolean,
+): boolean {
+  if (!occ) return false;
+  const def = registry[occ.id];
+  if (!def) return false;
+  const frontImmune = def.special === "juggernaut" || def.immobile === true;
+  if (!frontImmune) return false;
+  return attackerInFrontArc(occSq, attackerSq, occ.color, wide);
+}
+
 /** The mirror square across the board's vertical center axis. Linked pieces
  *  (Shadow Knight, Twin Tower) must always occupy mirror squares of each
  *  other. On odd-width boards a piece on the centre column mirrors to
