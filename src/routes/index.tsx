@@ -14,7 +14,10 @@ import { saveCurrentMeta, saveDesign } from "@/game/design";
 import { getVariantStats, type VariantStats } from "@/lib/variant-stats.functions";
 import { listDiscoveryGames } from "@/lib/social.functions";
 import { PlayCount } from "@/components/chess/PlayCount";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail, Heart, MessageSquare, Flame, Clock, Archive } from "lucide-react";
+import {
+  Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History,
+  BookOpen, Users, Mail, Heart, MessageSquare, Flame, Clock, Archive, ChevronRight,
+} from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
@@ -96,7 +99,6 @@ function Home() {
   };
 
   const playPublished = async (g: DiscoveryGame) => {
-    // Discovery payload doesn't include the design — fetch it on demand.
     const { getPublishedGame } = await import("@/lib/social.functions");
     const res = await getPublishedGame({ data: { slug: g.slug } });
     if (!res) return;
@@ -111,12 +113,24 @@ function Home() {
     navigate({ to: "/play" });
   };
 
+  const SectionHeader = ({ icon, title, meta, action }: { icon?: React.ReactNode; title: string; meta?: React.ReactNode; action?: React.ReactNode }) => (
+    <div className="flex items-end justify-between mb-4">
+      <h2 className="home-accent-bar font-display text-xl sm:text-2xl font-bold text-foreground inline-flex items-center gap-2">
+        {icon}{title}
+      </h2>
+      <div className="flex items-center gap-3">
+        {meta && <span className="text-[10px] font-bold tracking-widest uppercase text-[#c9a84c]/70">{meta}</span>}
+        {action}
+      </div>
+    </div>
+  );
+
   const renderCommunityCard = (g: DiscoveryGame) => (
-    <div key={g.id} className="relative rounded-xl border bg-card p-4 pb-3 flex flex-col">
+    <div key={g.id} className="relative home-panel p-4 pb-3 flex flex-col">
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h3 className="font-display font-semibold truncate">{g.name}</h3>
+        <h3 className="font-display font-semibold truncate text-foreground">{g.name}</h3>
         {g.rows && g.cols && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+          <span className="text-[10px] px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#e8d28c] shrink-0 font-black">
             {g.rows}×{g.cols}
           </span>
         )}
@@ -124,7 +138,7 @@ function Home() {
       <p className="text-[11px] text-muted-foreground mb-1 truncate">
         by{" "}
         {g.author ? (
-          <Link to="/u/$username" params={{ username: g.author.username }} className="hover:underline">
+          <Link to="/u/$username" params={{ username: g.author.username }} className="hover:underline text-[#c9a84c]">
             {g.author.display_name ?? g.author.username}
           </Link>
         ) : "unknown"}
@@ -146,9 +160,9 @@ function Home() {
         </div>
         <div className="flex items-center gap-1">
           <Link to="/g/$slug" params={{ slug: g.slug }}>
-            <Button size="sm" variant="ghost">Details</Button>
+            <Button size="sm" variant="ghost" className="rounded-none text-foreground/80 hover:text-foreground">Details</Button>
           </Link>
-          <Button size="sm" onClick={() => playPublished(g)}>
+          <Button size="sm" onClick={() => playPublished(g)} className="rounded-none bg-[#c9a84c] text-[#0a0d14] hover:bg-[#d9b85c]">
             <Play className="h-3 w-3 mr-1" /> Play
           </Button>
         </div>
@@ -157,60 +171,71 @@ function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="dark relative min-h-screen text-foreground home-aurora-bg">
+      <div aria-hidden className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,12,0.5)_70%,rgba(5,7,12,0.85)_100%)]" />
+      <div className="relative">
+
+
+      <h1 className="sr-only">Prism Chess — Design your own variant</h1>
+
       <div className="max-w-5xl mx-auto px-4 pt-4 flex justify-end">
         <UserMenu />
       </div>
-      <header className="max-w-5xl mx-auto px-4 pt-2 pb-6 text-center">
-        <img src={logoUrl} alt="Prism Chess crest" width={128} height={128} className="mx-auto h-28 w-28 mb-2" />
-        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">
-          Prism <span className="text-primary">Chess</span>
-        </h1>
-        <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-          Design your own variant. Rule the board. Pick a game to play, build your own, or join the community.
+
+      <header className="max-w-5xl mx-auto px-4 pt-2 pb-8 text-center">
+        <img
+          src={logoUrl}
+          alt="Prism Chess"
+          width={320}
+          height={320}
+          className="mx-auto h-44 w-44 sm:h-56 sm:w-56 drop-shadow-[0_8px_30px_rgba(201,168,76,0.25)]"
+        />
+        <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#c9a84c]/80 font-medium">
+          The Ultimate Variant Sandbox
         </p>
-        <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
-          <Link to="/multiplayer">
-            <Button size="lg">
-              <Swords className="h-4 w-4 mr-2" /> Multiplayer
-            </Button>
-          </Link>
-          <Link to="/sandbox">
-            <Button size="lg" variant="outline">
-              <Hammer className="h-4 w-4 mr-2" /> Sandbox mode
-            </Button>
-          </Link>
-          <Link to="/friends">
-            <Button size="lg" variant="outline">
-              <Users className="h-4 w-4 mr-2" /> Friends
-            </Button>
-          </Link>
-          <Link to="/messages">
-            <Button size="lg" variant="outline">
-              <Mail className="h-4 w-4 mr-2" /> Messages
-            </Button>
-          </Link>
-          <Link to="/forum">
-            <Button size="lg" variant="outline">
-              <MessagesSquare className="h-4 w-4 mr-2" /> Community
-            </Button>
-          </Link>
-          <Link to="/history">
-            <Button size="lg" variant="outline">
-              <History className="h-4 w-4 mr-2" /> History
-            </Button>
-          </Link>
-          <Link to="/help">
-            <Button size="lg" variant="outline">
-              <BookOpen className="h-4 w-4 mr-2" /> Help
-            </Button>
-          </Link>
-        </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 pb-16 space-y-10">
+        {/* Primary actions */}
+        <section className="space-y-3">
+          <Link to="/multiplayer" className="block">
+            <button className="w-full flex items-center justify-center gap-3 bg-[#c9a84c] text-[#0a0d14] py-4 font-semibold shadow-[0_8px_30px_rgba(201,168,76,0.25)] hover:bg-[#d9b85c] active:scale-[0.99] transition">
+              <Swords className="h-5 w-5" /> Play Multiplayer
+            </button>
+          </Link>
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/sandbox">
+              <button className="w-full home-panel-strong flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-wider text-foreground hover:border-[#c9a84c]/60 transition">
+                <Hammer className="h-6 w-6 text-[#c9a84c]" />
+                SANDBOX
+              </button>
+            </Link>
+            <Link to="/forum">
+              <button className="w-full home-panel-strong flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-wider text-foreground hover:border-[#c9a84c]/60 transition">
+                <MessagesSquare className="h-6 w-6 text-[#c9a84c]" />
+                COMMUNITY
+              </button>
+            </Link>
+          </div>
+          {/* Secondary utility row */}
+          <div className="grid grid-cols-4 gap-2 pt-1">
+            {[
+              { to: "/friends", icon: Users, label: "Friends" },
+              { to: "/messages", icon: Mail, label: "Messages" },
+              { to: "/history", icon: History, label: "History" },
+              { to: "/help", icon: BookOpen, label: "Help" },
+            ].map(({ to, icon: Icon, label }) => (
+              <Link key={to} to={to} className="home-panel flex flex-col items-center justify-center py-3 gap-1 hover:border-[#c9a84c]/40 transition">
+                <Icon className="h-4 w-4 text-[#c9a84c]/90" />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Built-in games */}
         <section>
-          <h2 className="font-display text-xl font-semibold mb-3">Built-in games</h2>
+          <SectionHeader title="Built-in games" meta={`${BUILTIN_GAMES.length} variants`} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {BUILTIN_GAMES.map((g) => {
               const s = stats[`builtin:${g.id}`];
@@ -218,17 +243,17 @@ function Home() {
                 <button
                   key={g.id}
                   onClick={() => playBuiltin(g)}
-                  className="relative group text-left rounded-xl border bg-card p-4 pb-7 hover:border-primary hover:shadow-md transition"
+                  className="relative group text-left home-panel p-4 pb-7 hover:border-[#c9a84c]/50 hover:bg-[rgba(20,26,38,0.85)] transition"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-display font-semibold">{g.name}</h3>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    <h3 className="font-display font-semibold text-foreground">{g.name}</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#e8d28c] font-black">
                       {g.rows}×{g.cols}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">{g.description}</p>
-                  <span className="inline-flex items-center text-xs font-medium text-primary group-hover:gap-2 gap-1 transition-all">
-                    <Play className="h-3 w-3" /> Play
+                  <p className="text-xs text-muted-foreground mb-3 line-clamp-3">{g.description}</p>
+                  <span className="inline-flex items-center text-[11px] font-black text-[#c9a84c] uppercase tracking-wider group-hover:gap-2 gap-1 transition-all">
+                    Play <ChevronRight className="h-3 w-3" />
                   </span>
                   {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
                 </button>
@@ -237,17 +262,20 @@ function Home() {
           </div>
         </section>
 
+        {/* Saved games */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-xl font-semibold">Your saved games</h2>
-            <Link to="/sandbox">
-              <Button size="sm" variant="ghost">
-                <Sparkles className="h-4 w-4 mr-1" /> Design a new one
-              </Button>
-            </Link>
-          </div>
+          <SectionHeader
+            title="Your saved games"
+            action={
+              <Link to="/sandbox">
+                <Button size="sm" variant="ghost" className="rounded-none text-[#c9a84c] hover:text-[#d9b85c]">
+                  <Sparkles className="h-4 w-4 mr-1" /> Design new
+                </Button>
+              </Link>
+            }
+          />
           {saved.length === 0 ? (
-            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">
+            <div className="border border-dashed border-[#c9a84c]/25 bg-[rgba(14,18,26,0.5)] p-8 text-center text-sm text-muted-foreground">
               No saved games yet. Head into the sandbox to design one and save it.
             </div>
           ) : (
@@ -255,10 +283,10 @@ function Home() {
               {saved.map((g) => {
                 const s = stats[`saved:${g.id}`];
                 return (
-                  <div key={g.id} className="relative rounded-xl border bg-card p-4 pb-7 flex flex-col">
+                  <div key={g.id} className="relative home-panel p-4 pb-7 flex flex-col">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-display font-semibold truncate">{g.name}</h3>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      <h3 className="font-display font-semibold truncate text-foreground">{g.name}</h3>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#e8d28c] font-black">
                         {g.design.rows}×{g.design.cols}
                       </span>
                     </div>
@@ -266,10 +294,10 @@ function Home() {
                       Saved {new Date(g.createdAt).toLocaleDateString()}
                     </p>
                     <div className="mt-auto flex gap-2">
-                      <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
+                      <Button size="sm" className="flex-1 rounded-none bg-[#c9a84c] text-[#0a0d14] hover:bg-[#d9b85c]" onClick={() => playSaved(g)}>
                         <Play className="h-3 w-3 mr-1" /> Play
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
+                      <Button size="sm" variant="ghost" className="rounded-none text-muted-foreground hover:text-destructive" onClick={() => removeSaved(g.id)} aria-label="Delete">
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -281,21 +309,23 @@ function Home() {
           )}
         </section>
 
+        {/* New from community */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-xl font-semibold inline-flex items-center gap-2">
-              <Clock className="h-5 w-5" /> New from the community
-            </h2>
-            <Link to="/sandbox">
-              <Button size="sm" variant="ghost">
-                <Sparkles className="h-4 w-4 mr-1" /> Publish your own
-              </Button>
-            </Link>
-          </div>
+          <SectionHeader
+            icon={<Clock className="h-5 w-5 text-[#c9a84c]" />}
+            title="New from the community"
+            action={
+              <Link to="/sandbox">
+                <Button size="sm" variant="ghost" className="rounded-none text-[#c9a84c] hover:text-[#d9b85c]">
+                  <Sparkles className="h-4 w-4 mr-1" /> Publish your own
+                </Button>
+              </Link>
+            }
+          />
           {!discovery ? (
-            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">Loading…</div>
+            <div className="border border-dashed border-[#c9a84c]/25 bg-[rgba(14,18,26,0.5)] p-8 text-center text-sm text-muted-foreground">Loading…</div>
           ) : discovery.newest.length === 0 ? (
-            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">
+            <div className="border border-dashed border-[#c9a84c]/25 bg-[rgba(14,18,26,0.5)] p-8 text-center text-sm text-muted-foreground">
               No public games yet. Design one in the sandbox and publish it!
             </div>
           ) : (
@@ -307,9 +337,7 @@ function Home() {
 
         {discovery && discovery.popular.length > 0 && (
           <section>
-            <h2 className="font-display text-xl font-semibold mb-3 inline-flex items-center gap-2">
-              <Flame className="h-5 w-5" /> Popular
-            </h2>
+            <SectionHeader icon={<Flame className="h-5 w-5 text-[#c9a84c]" />} title="Popular" />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {discovery.popular.map(renderCommunityCard)}
             </div>
@@ -318,15 +346,16 @@ function Home() {
 
         {discovery && discovery.archive.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display text-xl font-semibold inline-flex items-center gap-2">
-                <Archive className="h-5 w-5" /> Archive
-                <span className="text-xs text-muted-foreground font-normal">({discovery.archive.length})</span>
-              </h2>
-              <Button size="sm" variant="ghost" onClick={() => setShowArchive((v) => !v)}>
-                {showArchive ? "Hide" : "Show"}
-              </Button>
-            </div>
+            <SectionHeader
+              icon={<Archive className="h-5 w-5 text-[#c9a84c]" />}
+              title="Archive"
+              meta={`${discovery.archive.length}`}
+              action={
+                <Button size="sm" variant="ghost" className="rounded-none text-[#c9a84c] hover:text-[#d9b85c]" onClick={() => setShowArchive((v) => !v)}>
+                  {showArchive ? "Hide" : "Show"}
+                </Button>
+              }
+            />
             {showArchive && (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {discovery.archive.map(renderCommunityCard)}
@@ -335,6 +364,8 @@ function Home() {
           </section>
         )}
       </main>
+      </div>
     </div>
+
   );
 }
