@@ -834,6 +834,11 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.to.r][move.to.c] = null;
     return b;
   }
+  if (move.kind === "archerShoot") {
+    // Archer stays in place; target enemy is removed (true ranged attack).
+    b[move.to.r][move.to.c] = null;
+    return b;
+  }
   if (move.kind === "castle" && move.from && move.rookFrom && move.rookTo) {
     b[move.from.r][move.from.c] = null;
     b[move.rookFrom.r][move.rookFrom.c] = null;
