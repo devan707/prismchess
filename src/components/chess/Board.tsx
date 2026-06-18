@@ -280,11 +280,32 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggFoot = juggInfo?.footprint.has(`${r},${c}`) ?? false;
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
-          const isLegal = legalTargets.some((t) => t.r === r && t.c === c) || juggFoot;
-          const isCapture = (isLegal && !!piece) || juggTrample;
+          const isLegalRaw = legalTargets.some((t) => t.r === r && t.c === c);
+          const isLegal = isLegalRaw || juggFoot;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
-          const isInspect = inspectTargets.some((t) => t.r === r && t.c === c);
-          const isInspectCapture = isInspect && !!piece;
+          const isAttackPattern = attackSet.has(`${r},${c}`);
+          const isEnemyMoveOnly = isEnemyInspect && enemyMoveOnlyTargets.some((t) => t.r === r && t.c === c);
+
+          // Three-color move indicator:
+          //   RED  = piece can capture an enemy here (or juggernaut trample target).
+          //   GREEN= legal/pseudo move to an empty square (no attack threatened).
+          //   ORANGE= square is threatened (could capture if enemy were here),
+          //           but no enemy currently stands there.
+          let markerKind: "capture" | "move" | "attack" | null = null;
+          if (juggTrample) {
+            markerKind = "capture";
+          } else if (juggFoot) {
+            markerKind = null; // juggernaut footprint paints its own overlay
+          } else if (isEnemyInspect) {
+            if (isAttackPattern && piece && piece.color === humanColor) markerKind = "capture";
+            else if (isEnemyMoveOnly && !piece) markerKind = "move";
+            else if (isAttackPattern && !piece) markerKind = "attack";
+          } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
+            if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
+            else if (isLegalRaw && !piece) markerKind = "move";
+            else if (isAttackPattern && !piece) markerKind = "attack";
+          }
+
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
           const isCheck = checkSquares.some((k) => k.r === r && k.c === c);
 
