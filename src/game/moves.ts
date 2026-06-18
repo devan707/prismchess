@@ -124,6 +124,23 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
 
+/** Find the other piece of the same id+color (the "twin") elsewhere on the board.
+ *  Used by linked pieces (Shadow Knight, Twin Tower). Returns null if no
+ *  partner exists or if more than one other candidate exists (ambiguous). */
+function findLinkPartner(board: Board, from: Square, piece: Piece): Square | null {
+  let found: Square | null = null;
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[0].length; c++) {
+      if (r === from.r && c === from.c) continue;
+      const t = board[r][c];
+      if (!t || t.id !== piece.id || t.color !== piece.color) continue;
+      if (found) return null; // ambiguous (3+ linked pieces) — disable
+      found = { r, c };
+    }
+  }
+  return found;
+}
+
 function promotionOptionsFor(state: GameState): PieceId[] {
   const out: PieceId[] = [];
   for (const id of Object.keys(state.registry)) {
