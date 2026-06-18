@@ -27,6 +27,10 @@ function Discover() {
   type DiscoveryGame = DiscoveryRes["newest"][number];
   const [discovery, setDiscovery] = useState<DiscoveryRes | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  const { isModOrAdmin } = useIsAdmin();
+  const setFlags = useServerFn(adminSetPublishedGameFlags);
+  const del = useServerFn(adminDeletePublishedGame);
+  const reload = () => listDiscoveryGames().then(setDiscovery).catch(() => {});
 
   useEffect(() => {
     let cancelled = false;
