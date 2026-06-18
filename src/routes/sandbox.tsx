@@ -36,6 +36,7 @@ import { PieceLibraryPanel } from "@/components/pieces/PieceLibraryPanel";
 export const Route = createFileRoute("/sandbox")({
   validateSearch: (search: Record<string, unknown>) => ({
     edit: typeof search.edit === "string" ? search.edit : undefined,
+    duplicate: typeof search.duplicate === "string" ? search.duplicate : undefined,
   }),
   head: () => ({
     meta: [
