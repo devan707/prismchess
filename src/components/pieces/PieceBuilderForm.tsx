@@ -155,7 +155,8 @@ export function PieceBuilderForm({ onSaved, initial, template }: Props) {
   const uploadImage = useServerFn(uploadPieceImage);
   const submitAbility = useServerFn(requestPieceAbility);
 
-  const [id] = useState<string>(() => initDef?.id ?? genId());
+  // Edit reuses the original piece id; new pieces (including duplicates) get a fresh id.
+  const [id] = useState<string>(() => (isEdit && initDef?.id) ? initDef.id : genId());
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
 
