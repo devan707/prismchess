@@ -872,29 +872,31 @@ export function attackSquaresFrom(state: GameState, from: Square): Square[] {
 
 export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): boolean {
   const board = state.board;
+  const aura = prismAuraCells(board, state.registry);
+  const hasAura = aura.size > 0;
   for (let r = 0; r < board.length; r++) {
     for (let c = 0; c < board[0].length; c++) {
       const p = board[r][c];
       if (!p || p.color !== byColor) continue;
-      // Use a scratch state for pseudo move gen (no EP capturing on empty square unrelated)
       const moves = pseudoMovesFrom(state, { r, c });
       for (const m of moves) {
         if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
-          // dragon flights land on empty squares (no capture) — not an attack.
-          // Dragon strikes carry a captured piece and ARE attacks.
           if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
-          // portal swaps land on friendly squares (never an enemy king square anyway).
           if (m.kind === "portalSwap") continue;
-          // resurrect places a friendly piece on an empty square — not an attack.
           if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
-          // juggExit walks off the board — not an attack on any on-board square.
           if (m.kind === "juggExit") continue;
-          // juggShift / juggCharge that land on (or trample onto) `sq` DO attack it:
-          // the lateral shift can capture a piece on the destination cell, and a
-          // charge tramples enemies along its lane. Fall through so the king
-          // recognises these squares as covered (prevents walking into them).
-          // castling is not an attack on the king's destination square.
           if (m.kind === "castle") continue;
+          // Prism cancels attacks: if the attacker would flip color en route
+          // (passing through the rainbow aura) or upon arrival (landing in
+          // the aura), it becomes the defender's own piece and never delivers
+          // the threat. Simulate the move + prism resolution and check the
+          // colour of the piece that actually lands on `sq`.
+          if (hasAura) {
+            const post = applyMoveToBoard(board, m);
+            applyPrismFlips(post, m, state.registry);
+            const landed = post[sq.r]?.[sq.c];
+            if (!landed || landed.color !== byColor) continue;
+          }
           return true;
         }
       }
