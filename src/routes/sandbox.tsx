@@ -8,7 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveCurrentMeta, saveDesign, validateDesign } from "@/game/design";
+import {
+  buildDefaultDesign,
+  buildUserPresetPlacements,
+  deleteUserPreset,
+  extractPresetFromDesign,
+  juggPartnerCandidates,
+  loadUserPresets,
+  PRESETS,
+  saveCurrentMeta,
+  saveDesign,
+  upsertUserPreset,
+  validateDesign,
+  type UserPreset,
+} from "@/game/design";
 import { saveSavedGame } from "@/game/library";
 import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
@@ -60,12 +73,50 @@ function Sandbox() {
   };
 
 
+  const [userPresets, setUserPresets] = useState<UserPreset[]>(() => {
+    if (typeof window === "undefined") return [];
+    return loadUserPresets();
+  });
+
   const applyPreset = (id: string) => {
+    if (id.startsWith("user:")) {
+      const uid = id.slice(5);
+      const preset = userPresets.find((p) => p.id === uid);
+      if (!preset) return;
+      setDesign((d) => ({ ...d, placements: buildUserPresetPlacements(preset, d.rows, d.cols) }));
+      setSelectedSquare(null);
+      return;
+    }
     const preset = PRESETS.find((p) => p.id === id);
     if (!preset) return;
     setDesign((d) => ({ ...d, placements: preset.build(d.rows, d.cols) }));
     setSelectedSquare(null);
   };
+
+  const saveCurrentAsPreset = (name: string) => {
+    const preset = extractPresetFromDesign(design, name);
+    if (preset.backRank.length === 0) {
+      toast.error("Place at least one piece on White's back rank before saving a layout.");
+      return;
+    }
+    const next = upsertUserPreset(preset);
+    setUserPresets(next);
+    toast.success(`Saved layout "${name}"`);
+  };
+
+  const renameUserPreset = (id: string, name: string) => {
+    const existing = userPresets.find((p) => p.id === id);
+    if (!existing) return;
+    const next = upsertUserPreset({ ...existing, name });
+    setUserPresets(next);
+  };
+
+  const removeUserPreset = (id: string) => {
+    const next = deleteUserPreset(id);
+    setUserPresets(next);
+    toast.success("Layout deleted.");
+  };
+
 
   const swapPawns = (from: PieceId, to: PieceId) => {
     setDesign((d) => {
@@ -374,7 +425,13 @@ function Sandbox() {
       <main className="max-w-7xl mx-auto px-4 pb-12 grid gap-4 lg:grid-cols-[260px_1fr_300px]">
         <aside className="space-y-3">
           <BoardSizePicker rows={design.rows} cols={design.cols} onChange={setSize} />
-          <PresetPicker onApply={applyPreset} />
+          <PresetPicker
+            onApply={applyPreset}
+            userPresets={userPresets}
+            onSaveCurrentAsPreset={saveCurrentAsPreset}
+            onRenameUserPreset={renameUserPreset}
+            onDeleteUserPreset={removeUserPreset}
+          />
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Pawn swap</h3>
             <p className="text-[11px] text-muted-foreground">

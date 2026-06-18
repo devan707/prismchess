@@ -29,6 +29,7 @@ function fillRow(row: number, ids: PieceId[], cols: number): Placement[] {
   // Center the back rank if shorter than cols; pad with empties.
   const start = Math.floor((cols - ids.length) / 2);
   ids.forEach((id, i) => {
+    if (!id) return; // empty slot — leave the square blank
     const c = start + i;
     if (c >= 0 && c < cols) out.push({ color: "w", pieceId: id, r: row, c });
   });
@@ -39,28 +40,40 @@ function fillCol(col: number, ids: PieceId[], rows: number): Placement[] {
   const out: Placement[] = [];
   const start = Math.floor((rows - ids.length) / 2);
   ids.forEach((id, i) => {
+    if (!id) return;
     const r = start + i;
     if (r >= 0 && r < rows) out.push({ color: "w" as const, pieceId: id, r, c: col });
   });
   return out;
 }
 
-function classicBackRank(cols: number): PieceId[] {
-  // Symmetric: R N B [...filler...] K Q B N R (Q on d-ish file)
-  if (cols >= 8) {
-    // Use standard chess ordering for 8 cols, otherwise pattern.
-    if (cols === 8) return ["R", "N", "B", "Q", "K", "B", "N", "R"];
-    // > 8: extend with extra Q/B/N pairs
-    const left: PieceId[] = ["R", "N", "B"];
-    const right: PieceId[] = ["B", "N", "R"];
-    const middle: PieceId[] = ["Q", "K"];
-    const fillers = cols - left.length - right.length - middle.length;
-    const extras: PieceId[] = [];
-    const pool: PieceId[] = ["N", "B", "Q"];
-    for (let i = 0; i < fillers; i++) extras.push(pool[i % pool.length]);
-    return [...left, ...extras.slice(0, Math.floor(extras.length / 2)), ...middle, ...extras.slice(Math.floor(extras.length / 2)), ...right];
+/** Take a fixed-width back-rank template and stretch it to `cols` columns by
+ *  keeping the outermost pieces hugging the edges (e.g. rooks in corners)
+ *  and centering the inner block, padding the gap symmetrically with blanks.
+ *  Returns a length-`cols` array where empty slots are the empty string. */
+function centerBackRank(template: PieceId[], cols: number): PieceId[] {
+  if (template.length === 0) return [];
+  if (cols <= template.length) return template;
+  if (template.length === 1) {
+    const out: PieceId[] = new Array(cols).fill("") as PieceId[];
+    out[Math.floor(cols / 2)] = template[0];
+    return out;
   }
-  // < 8 cols: progressively trim from the queen/extras
+  const out: PieceId[] = new Array(cols).fill("") as PieceId[];
+  out[0] = template[0];
+  out[cols - 1] = template[template.length - 1];
+  const inner = template.slice(1, template.length - 1);
+  const innerCols = cols - 2;
+  const start = 1 + Math.floor((innerCols - inner.length) / 2);
+  inner.forEach((id, i) => { out[start + i] = id; });
+  return out;
+}
+
+function classicBackRank(cols: number): PieceId[] {
+  if (cols >= 8) {
+    return centerBackRank(["R", "N", "B", "Q", "K", "B", "N", "R"], cols);
+  }
+  // < 8 cols: hand-tuned trims so the king + rooks always survive.
   const trims: Record<number, PieceId[]> = {
     3: ["R", "K", "R"],
     4: ["R", "K", "Q", "R"],
@@ -70,6 +83,7 @@ function classicBackRank(cols: number): PieceId[] {
   };
   return trims[cols] ?? trims[5];
 }
+
 
 export const PRESETS: Preset[] = [
   {
@@ -139,27 +153,15 @@ export const PRESETS: Preset[] = [
     build: (rows, cols) => {
       // Designed for an 8×8 board. Fall back to classic-ish on smaller boards.
       if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
-      // Back rank: Archer, Dragon, Wizard, Assassin, Regent/Lich King, Wizard, Dragon, Archer.
-      // Both sides field an Assassin in the queen slot. White is led by a Regent (G),
-      // Black by the Lich King (L) — mechanically identical royals.
-      const cKing = 4;
-      const cQueen = 3;
-      const whiteBack: PieceId[] = [];
-      const blackBack: PieceId[] = [];
-      for (let c = 0; c < cols; c++) {
-        let id: PieceId;
-        if (c === 0 || c === 7) id = "A";
-        else if (c === 1 || c === 6) id = "D";
-        else if (c === 2 || c === 5) id = "W";
-        else if (c === cQueen) id = "Z";
-        else if (c === cKing) id = "_K"; // sentinel, replaced per side
-        else id = "P";
-        whiteBack.push(id === "_K" ? "G" : id);
-        blackBack.push(id === "_K" ? "L" : id);
-      }
+      // Back rank (8-wide template): A D W Z _K W D A. _K is the side's royal:
+      // Regent (G) for White, Lich King (L) for Black.
+      const whiteTpl: PieceId[] = ["A", "D", "W", "Z", "G", "W", "D", "A"];
+      const blackTpl: PieceId[] = ["A", "D", "W", "Z", "L", "W", "D", "A"];
+      const whiteBack = centerBackRank(whiteTpl, cols);
+      const blackBack = centerBackRank(blackTpl, cols);
       const placements: Placement[] = [];
-      whiteBack.forEach((id, c) => placements.push({ color: "w", pieceId: id, r: 0, c }));
-      blackBack.forEach((id, c) => placements.push({ color: "b", pieceId: id, r: rows - 1, c }));
+      whiteBack.forEach((id, c) => { if (id) placements.push({ color: "w", pieceId: id, r: 0, c }); });
+      blackBack.forEach((id, c) => { if (id) placements.push({ color: "b", pieceId: id, r: rows - 1, c }); });
       // Shapeshifter pawns across rank 2 / second-to-last rank.
       for (let c = 0; c < cols; c++) {
         placements.push({ color: "w", pieceId: "S", r: 1, c });
@@ -168,6 +170,7 @@ export const PRESETS: Preset[] = [
       return placements;
     },
   },
+
   {
     id: "grand-menagerie",
     name: "Grand Menagerie (12×12)",
@@ -208,10 +211,12 @@ export const PRESETS: Preset[] = [
     description: "Classical chess with magical symmetry. Each side's Rooks become Twin Towers and Knights become Shadow Knights — every linked pair moves together as one. Familiar opening theory, completely different coordination.",
     build: (rows, cols) => {
       if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
-      // Back rank: V E B Q K B E V — Twin Towers on the corners, Shadow Knights inside.
-      const back: PieceId[] = ["V", "E", "B", "Q", "K", "B", "E", "V"];
+      // Back rank template (8-wide): V E B Q K B E V — Twin Towers on the corners,
+      // Shadow Knights inside. Stretched symmetrically on wider boards.
+      const back = centerBackRank(["V", "E", "B", "Q", "K", "B", "E", "V"], cols);
       const placements: Placement[] = [];
       back.forEach((id, c) => {
+        if (!id) return;
         placements.push({ color: "w", pieceId: id, r: 0, c });
         placements.push({ color: "b", pieceId: id, r: rows - 1, c });
       });
@@ -371,3 +376,102 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
   }
   return null;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// User-defined starting layouts (per-user, local-only)
+// ────────────────────────────────────────────────────────────────────────────
+
+const USER_PRESETS_KEY = "designer:userPresets";
+
+export interface UserPreset {
+  id: string;
+  name: string;
+  /** Back-rank template: piece ids with `""` for blanks. Centered on apply. */
+  backRank: PieceId[];
+  /** Piece id to fill the second rank with (usually "P" or "S"). null = none. */
+  pawnId: PieceId | null;
+}
+
+export function loadUserPresets(): UserPreset[] {
+  try {
+    const raw = localStorage.getItem(USER_PRESETS_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw) as UserPreset[];
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+export function saveUserPresets(list: UserPreset[]) {
+  try { localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(list)); } catch {}
+}
+
+export function upsertUserPreset(preset: UserPreset): UserPreset[] {
+  const list = loadUserPresets();
+  const idx = list.findIndex((p) => p.id === preset.id);
+  if (idx >= 0) list[idx] = preset; else list.push(preset);
+  saveUserPresets(list);
+  return list;
+}
+
+export function deleteUserPreset(id: string): UserPreset[] {
+  const list = loadUserPresets().filter((p) => p.id !== id);
+  saveUserPresets(list);
+  return list;
+}
+
+/** Apply a user preset on any board size. Pieces hug the outer files;
+ *  extra space is added symmetrically between them and the centered cluster. */
+export function buildUserPresetPlacements(preset: UserPreset, rows: number, cols: number): Placement[] {
+  if (rows < 2 || cols < 2) return [];
+  const wide = cols > rows;
+  if (wide) {
+    const back = centerBackRank(preset.backRank, rows);
+    const out: Placement[] = [];
+    back.forEach((i, r) => { if (i) out.push({ color: "w", pieceId: i, r, c: 0 }); });
+    if (preset.pawnId) {
+      for (let r = 0; r < rows; r++) out.push({ color: "w", pieceId: preset.pawnId, r, c: 1 });
+    }
+    return mirror(out, rows, cols);
+  }
+  const back = centerBackRank(preset.backRank, cols);
+  const out: Placement[] = [];
+  back.forEach((id, c) => { if (id) out.push({ color: "w", pieceId: id, r: 0, c }); });
+  if (preset.pawnId) {
+    for (let c = 0; c < cols; c++) out.push({ color: "w", pieceId: preset.pawnId, r: 1, c });
+  }
+  return mirror(out, rows, cols);
+}
+
+/** Inspect the current design and pull out a back rank + pawn row that can be
+ *  saved as a user preset. Reads White's row 0 (or col 0 on wide boards) and
+ *  picks the most common piece on rank 2 as the pawn. */
+export function extractPresetFromDesign(design: Design, name: string): UserPreset {
+  const wide = design.cols > design.rows;
+  const len = wide ? design.rows : design.cols;
+  const backRank: PieceId[] = new Array(len).fill("") as PieceId[];
+  for (const p of design.placements) {
+    if (p.color !== "w") continue;
+    if (wide && p.c === 0) backRank[p.r] = p.pieceId;
+    else if (!wide && p.r === 0) backRank[p.c] = p.pieceId;
+  }
+  // Trim leading/trailing blanks so the template can re-center on bigger boards.
+  let start = 0; while (start < backRank.length && !backRank[start]) start++;
+  let end = backRank.length; while (end > start && !backRank[end - 1]) end--;
+  const trimmed = backRank.slice(start, end);
+  const counts: Record<string, number> = {};
+  for (const p of design.placements) {
+    if (p.color !== "w") continue;
+    const onPawnRank = wide ? p.c === 1 : p.r === 1;
+    if (onPawnRank) counts[p.pieceId] = (counts[p.pieceId] ?? 0) + 1;
+  }
+  let pawnId: PieceId | null = null;
+  let max = 0;
+  for (const [id, n] of Object.entries(counts)) {
+    if (n > max) { max = n; pawnId = id as PieceId; }
+  }
+  const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return { id, name, backRank: trimmed, pawnId };
+}
+
