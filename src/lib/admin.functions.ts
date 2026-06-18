@@ -74,7 +74,7 @@ export const adminSetTopicFlags = createServerFn({ method: "POST" })
     const patch: Record<string, unknown> = {};
     if (data.isPinned !== undefined) patch.is_pinned = data.isPinned;
     if (data.isFeatured !== undefined) patch.is_featured = data.isFeatured;
-    const { error } = await context.supabase.from("forum_topics").update(patch).eq("id", data.topicId);
+    const { error } = await context.supabase.from("forum_topics").update(patch as never).eq("id", data.topicId);
     if (error) throw new Error(error.message);
     await log(context, "forum_topic.flags", "forum_topic", data.topicId, patch);
     return { ok: true };
@@ -107,7 +107,7 @@ export const adminSetPublishedGameFlags = createServerFn({ method: "POST" })
     const patch: Record<string, unknown> = {};
     if (data.isHidden !== undefined) patch.is_hidden = data.isHidden;
     if (data.isFeatured !== undefined) patch.is_featured = data.isFeatured;
-    const { error } = await context.supabase.from("published_games").update(patch).eq("id", data.gameId);
+    const { error } = await context.supabase.from("published_games").update(patch as never).eq("id", data.gameId);
     if (error) throw new Error(error.message);
     await log(context, "published_game.flags", "published_game", data.gameId, patch);
     return { ok: true };
@@ -139,7 +139,7 @@ export const adminSetCustomPieceFlags = createServerFn({ method: "POST" })
     const patch: Record<string, unknown> = {};
     if (data.isHidden !== undefined) patch.is_hidden = data.isHidden;
     if (data.isFeatured !== undefined) patch.is_featured = data.isFeatured;
-    const { error } = await context.supabase.from("custom_pieces").update(patch).eq("id", data.pieceId);
+    const { error } = await context.supabase.from("custom_pieces").update(patch as never).eq("id", data.pieceId);
     if (error) throw new Error(error.message);
     await log(context, "custom_piece.flags", "custom_piece", data.pieceId, patch);
     return { ok: true };
@@ -312,7 +312,7 @@ export const adminRenameUser = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const patch: Record<string, unknown> = { username: data.username };
     if (data.display_name) patch.display_name = data.display_name;
-    const { error } = await context.supabase.from("profiles").update(patch).eq("id", data.userId);
+    const { error } = await context.supabase.from("profiles").update(patch as never).eq("id", data.userId);
     if (error) {
       if (error.code === "23505") throw new Error("Username already taken");
       throw new Error(error.message);
