@@ -218,9 +218,6 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
   const handleSelectionChange = useCallback((sq: Square | null) => {
     setSelectedSquare(sq);
   }, []);
-  useEffect(() => {
-    try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
-  }, [tipsOn]);
 
   const selectedPiece = selectedSquare ? displayedState.board[selectedSquare.r][selectedSquare.c] : null;
   const selectedDef = selectedPiece ? displayedState.registry[selectedPiece.id] : null;
