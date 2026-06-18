@@ -98,7 +98,8 @@ export type MoveKind =
   | "normal" | "double" | "ep" | "drop"
   | "dragonAttack" | "archerShoot" | "portalSwap" | "resurrect" | "necroRaise"
   | "juggShift" | "juggCharge" | "juggExit"
-  | "castle" | "juggCastle" | "handPass" | "handDouble";
+  | "castle" | "juggCastle" | "handPass" | "handDouble"
+  | "shadowLink" | "twinLink";
 
 export interface Move {
   /** Null only for drops. */
@@ -128,6 +129,11 @@ export interface Move {
   /** Juggernaut castle: original + destination squares of both J halves. */
   juggFrom?: [Square, Square];
   juggTo?: [Square, Square];
+  /** Linked-piece partner move (shadowLink / twinLink). */
+  partnerFrom?: Square;
+  partnerTo?: Square;
+  partnerPiece?: Piece;
+  partnerCaptured?: Piece | null;
 }
 
 export type Reserves = Record<PieceId, number>;
