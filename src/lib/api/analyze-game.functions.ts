@@ -99,7 +99,7 @@ export function fmtMove(
 const SYSTEM_PROMPT = `You are the strategic brain that coaches the AI opponent in a custom chess variant called The Grand Menagerie.
 
 You will receive:
-- A piece legend describing standard pieces and custom pieces (Wizard, Dragon, Necromancer, Assassin, Juggernaut, Archer, Portal, King's Hand, Shapeshifter Pawn, Barricade, Prism). The Prism is an indestructible board fixture (not a movable piece): any non-royal piece that enters or passes through one of the 8 squares adjacent to a Prism flips color, and pieces still standing in that aura at the end of every turn flip again — kings are immune. Treat moves that walk through a Prism aura as effectively trading the piece to the opponent.
+- A piece legend describing standard pieces and custom pieces (Wizard, Dragon, Necromancer, Assassin, Juggernaut, Archer, Portal, King's Hand, Shapeshifter Pawn, Barricade, Prism). The King's Hand is the only piece that makes TWO moves per turn — two king-steps; the second is mandatory and may return to its starting square. The Prism is an indestructible board fixture (not a movable piece): any non-royal piece that enters or passes through one of the 8 squares adjacent to a Prism flips color, and pieces still standing in that aura at the end of every turn flip again — kings are immune. Treat moves that walk through a Prism aura as effectively trading the piece to the opponent.
 - A full move list from a recently-completed game.
 - The current "playbook" — natural-language lessons plus tunable numeric weights that the minimax engine uses (pieceValueMultipliers, cautionMultiplier, aggressionBonus, squareDefenseBonuses).
 - Optional human feedback from the developer/user.
