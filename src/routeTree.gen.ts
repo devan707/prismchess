@@ -13,6 +13,7 @@ import { Route as SandboxRouteImport } from './routes/sandbox'
 import { Route as PlayRouteImport } from './routes/play'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as CreateRouteImport } from './routes/create'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -56,6 +57,11 @@ const LobbyRoute = LobbyRouteImport.update({
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -190,6 +196,7 @@ const AuthenticatedMultiplayerJoinTokenRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/create': typeof CreateRoute
   '/help': typeof HelpRoute
   '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/create': typeof CreateRoute
   '/help': typeof HelpRoute
   '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/create': typeof CreateRoute
   '/help': typeof HelpRoute
   '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/create'
     | '/help'
     | '/lobby'
     | '/play'
@@ -307,6 +317,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/create'
     | '/help'
     | '/lobby'
     | '/play'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/create'
     | '/help'
     | '/lobby'
     | '/play'
@@ -365,6 +377,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CreateRoute: typeof CreateRoute
   HelpRoute: typeof HelpRoute
   LobbyRoute: typeof LobbyRoute
   PlayRoute: typeof PlayRoute
@@ -403,6 +416,13 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -656,6 +676,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CreateRoute: CreateRoute,
   HelpRoute: HelpRoute,
   LobbyRoute: LobbyRoute,
   PlayRoute: PlayRoute,
