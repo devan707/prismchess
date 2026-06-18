@@ -203,13 +203,13 @@ function Home() {
                   onClick={() => playBuiltin(g)}
                   className="w-44 shrink-0 snap-start text-left"
                 >
-                  <Card className="p-3 h-full flex flex-col bg-card/60 backdrop-blur border-white/10 hover:border-primary/60 transition">
-                    <div className="h-20 -mx-3 -mt-3 mb-2 rounded-t-md bg-[radial-gradient(circle_at_30%_30%,oklch(0.65_0.22_320/0.5),transparent_60%),radial-gradient(circle_at_70%_70%,oklch(0.7_0.2_200/0.5),transparent_60%)] flex items-center justify-center">
-                      <Sparkles className="h-7 w-7 text-white/90" />
+                  <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition">
+                    <div className="h-20 -mx-3 -mt-3 mb-2 rounded-t-sm bg-[linear-gradient(135deg,#ff4d6d_0%,#ff9a3c_18%,#ffe24d_36%,#4dff88_54%,#4dc4ff_72%,#8a4dff_88%,#ff4dd2_100%)] opacity-90 flex items-center justify-center">
+                      <span className="font-display font-black text-3xl text-card tracking-tight drop-shadow">{g.name.charAt(0)}</span>
                     </div>
                     <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 flex-1">{g.description}</p>
-                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                    <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
+                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
                       <Play className="h-3 w-3" /> Play
                     </div>
                   </Card>
