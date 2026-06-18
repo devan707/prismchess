@@ -50,7 +50,10 @@ export interface PieceBuilderInitial {
 
 interface Props {
   onSaved?: (pieceId: string, def: PieceDef) => void;
+  /** Pre-fill from an existing piece AND save back to that record (edit). */
   initial?: PieceBuilderInitial;
+  /** Pre-fill from an existing piece but save as a NEW piece (duplicate / "save as"). */
+  template?: PieceBuilderInitial;
 }
 
 const MAX_STEPS = 4;
