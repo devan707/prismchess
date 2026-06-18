@@ -20,7 +20,7 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   A: 4,    // Archer — fragile diagonal-only ranged specialist
   T: 5,    // Portal
   H: 4,    // King's Hand
-  Z: 6,    // Assassin
+  Z: 5,    // Assassin — 3-step infiltration only, no king-step adjacency
   W: 7,    // Wizard
   M: 7,    // Necromancer
   J: 8,    // Juggernaut
@@ -46,9 +46,7 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
     return d <= 1 || d === 7;
   };
   const out = new Set<string>();
-  // (a) Single king-step reach.
-  for (const [dr, dc] of DIRS_8) out.add(`${dr},${dc}`);
-  // (b) 3-step infiltration reach.
+  // 3-step infiltration reach only — the Assassin no longer has a king-step.
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       if (!turnOK(i, j)) continue;
@@ -63,6 +61,9 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
         const p3 = `${dr1 + dr2 + dr3},${dc1 + dc2 + dc3}`;
         const path = new Set(["0,0", p1, p2, p3]);
         if (path.size !== 4) continue;
+        // Final landing must not be adjacent to start (no king-step attacks).
+        const fr = dr1 + dr2 + dr3, fc = dc1 + dc2 + dc3;
+        if (Math.max(Math.abs(fr), Math.abs(fc)) <= 1) continue;
         out.add(p3);
       }
     }

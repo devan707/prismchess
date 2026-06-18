@@ -165,7 +165,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "assassin",
     builtinCustom: true,
-    description: "Stealth infiltrator. Each turn picks ONE of two options: (1) a basic king-step — move or capture exactly 1 square in any of the 8 directions, or (2) a 3-step infiltration — exactly 3 king-steps where the first 2 landings must be empty (no jumping), capture is only allowed on the 3rd step, no square may be revisited, the 3 steps cannot all go the same direction (no straight line of 3), and each consecutive turn between steps must be ≤ 45°. So NW → N → N is fine; N → E (a 90° turn) is not.",
+    description: "Stealth infiltrator. Each turn it performs a 3-step infiltration: exactly 3 king-steps where the first 2 landings must be empty (no jumping), capture is only allowed on the 3rd step, no square may be revisited, the 3 steps cannot all go the same direction (no straight line of 3), and each consecutive turn between steps must be ≤ 45°. It CANNOT move or capture onto adjacent squares — the final landing must be at least 2 squares away from where it started. So NW → N → N is fine; N → E (a 90° turn) is not.",
   },
   W: {
     id: "W",
