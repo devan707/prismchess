@@ -26,6 +26,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { MoveDiagram } from "@/components/chess/MoveDiagram";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
+import { AiThinkingIndicator } from "@/components/chess/AiThinkingIndicator";
 import { recordSoloGame } from "@/lib/history.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
