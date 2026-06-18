@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SandboxRouteImport } from './routes/sandbox'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -45,6 +46,11 @@ const SandboxRoute = SandboxRouteImport.update({
 const PlayRoute = PlayRouteImport.update({
   id: '/play',
   path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LobbyRoute = LobbyRouteImport.update({
+  id: '/lobby',
+  path: '/lobby',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/help': typeof HelpRoute
+  '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/help': typeof HelpRoute
+  '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/friends': typeof AuthenticatedFriendsRoute
@@ -240,6 +248,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/help': typeof HelpRoute
+  '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/help'
+    | '/lobby'
     | '/play'
     | '/sandbox'
     | '/forum'
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/help'
+    | '/lobby'
     | '/play'
     | '/sandbox'
     | '/friends'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/help'
+    | '/lobby'
     | '/play'
     | '/sandbox'
     | '/_authenticated/forum'
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   HelpRoute: typeof HelpRoute
+  LobbyRoute: typeof LobbyRoute
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
@@ -376,6 +389,13 @@ declare module '@tanstack/react-router' {
       path: '/play'
       fullPath: '/play'
       preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lobby': {
+      id: '/lobby'
+      path: '/lobby'
+      fullPath: '/lobby'
+      preLoaderRoute: typeof LobbyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -637,6 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   HelpRoute: HelpRoute,
+  LobbyRoute: LobbyRoute,
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
