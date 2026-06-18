@@ -155,6 +155,47 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
 
+/** Knight-vs-Juggernaut armor is judged by the final one-square leg of the
+ * L-shape, not only by where the knight started. A knight may finish its
+ * attack into an exposed outside side, or into the rear, but not through the
+ * paired half or into the front. */
+function knightCanCaptureJuggernaut(
+  board: Board,
+  from: Square,
+  target: Square,
+  targetColor: Color,
+  registry: Record<PieceId, PieceDef>,
+): boolean {
+  const wide = boardIsWide(board);
+  const partner = findJuggPartner(board, target, targetColor, registry);
+  const fAxis: "r" | "c" = wide ? "c" : "r";
+  const pAxis: "r" | "c" = wide ? "r" : "c";
+  const df = target[fAxis] - from[fAxis];
+  const dp = target[pAxis] - from[pAxis];
+  const aF = Math.abs(df);
+  const aP = Math.abs(dp);
+  if (!((aF === 2 && aP === 1) || (aF === 1 && aP === 2))) return false;
+
+  // Long leg forward/back, final short leg sideways: the knight must enter
+  // from the outside edge of the whole 2-square body, not through its partner.
+  if (aF === 2 && aP === 1 && partner) {
+    const targetP = target[pAxis];
+    const partnerP = partner[pAxis];
+    const fromP = from[pAxis];
+    const minP = Math.min(targetP, partnerP);
+    const maxP = Math.max(targetP, partnerP);
+    return (targetP === minP && fromP === minP - 1) || (targetP === maxP && fromP === maxP + 1);
+  }
+
+  // Long leg sideways, final short leg forward/back: only the rear is exposed.
+  if (aF === 1 && aP === 2) {
+    const preAttack = wide ? { r: target.r, c: from.c } : { r: from.r, c: target.c };
+    return !attackerInFrontArc(target, preAttack, targetColor, wide);
+  }
+
+  return !attackerInFrontArc(target, from, targetColor, wide);
+}
+
 /** True when the enemy piece at `occSq` is front-immune (juggernaut or
  *  immobile barricade) AND the attacker at `attackerSq` is approaching it
  *  from its front arc. Such an enemy can be neither captured nor moved
@@ -1596,22 +1637,13 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     const knightBypass = m.piece.id === "N";
     const trebuchetBypass = isTrebuchet(state.registry[m.piece.id]);
     // Front-arc immunity: a juggernaut cannot be captured from the front,
-    // except by a Trebuchet — the only siege weapon that can crack the front.
+    // except by a Trebuchet. Knights are special: judge their L-shape by the
+    // final attack leg, so a forward-then-side leap can hit an exposed side.
     if (m.captured && m.captured.id === "J" && m.from && !trebuchetBypass) {
-      if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
-    }
-    // Knight side-attack on a juggernaut: the knight must land on the
-    // exposed side of the targeted half (the side opposite the partner).
-    // It cannot leap across the pair to strike the far half.
-    if (m.captured && m.captured.id === "J" && m.from && m.piece.id === "N") {
-      const partner = findJuggPartner(state.board, m.to, m.captured.color, state.registry);
-      if (partner) {
-        const perpAxis: "r" | "c" = wide ? "r" : "c";
-        const tp = m.to[perpAxis];
-        const pp = partner[perpAxis];
-        const kp = m.from[perpAxis];
-        // If knight sits strictly on the partner's side of the target, reject.
-        if ((kp - tp) !== 0 && Math.sign(kp - tp) === Math.sign(pp - tp)) return false;
+      if (m.piece.id === "N") {
+        if (!knightCanCaptureJuggernaut(state.board, m.from, m.to, m.captured.color, state.registry)) return false;
+      } else if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) {
+        return false;
       }
     }
     // Front-arc immunity: a barricade cannot be captured from the front.
