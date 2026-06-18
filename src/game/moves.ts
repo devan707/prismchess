@@ -833,7 +833,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       const t = board[to.r][to.c];
       if (!t) continue;
       if (t.color === piece.color) continue;
-      if (isBarricade(t, state.registry)) continue;
+      if (isImmobileBarricade(t, state.registry) && !canDestroyBarricade(piece, state.registry)) continue;
       if (isFixture(t, state.registry)) continue;
       moves.push({ from, to, piece, captured: t, kind: "archerShoot" });
     }
