@@ -274,7 +274,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const to = { r: from.r + dr, c: from.c + dir };
         if (!inBoardBounds(board, to)) continue;
         const t = board[to.r][to.c];
-        if (t && t.color !== piece.color && !isBarricade(t, state.registry) && !isFixture(t, state.registry)) {
+        if (t && t.color !== piece.color && !isImmobileBarricade(t, state.registry) && !isFixture(t, state.registry)) {
           pushPawn(to, t);
         } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
           const capSq = { r: to.r, c: from.c };
