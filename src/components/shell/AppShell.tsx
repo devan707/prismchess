@@ -16,14 +16,15 @@ interface AppShellProps {
 
 export function AppShell({ children, showPlayCta = false, showTopBar = true }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="prism-aura min-h-screen text-foreground">
+      <div className="prism-aura-bg" aria-hidden />
       {showTopBar && (
-        <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-background/50 backdrop-blur-xl">
           <div className="max-w-3xl mx-auto px-3 h-12 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 group">
               <img src={logoUrl} alt="Prism Chess" width={28} height={28} className="h-7 w-7" />
-              <span className="font-display font-semibold text-sm tracking-tight hidden xs:inline">
-                Prism <span className="text-primary">Chess</span>
+              <span className="font-display font-bold text-sm tracking-[0.18em] uppercase hidden xs:inline">
+                Prism Chess
               </span>
             </Link>
             <UserMenu />
@@ -41,7 +42,7 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
             <Link to="/lobby" className="block">
               <Button
                 size="lg"
-                className="w-full h-14 text-base font-bold shadow-lg shadow-primary/20"
+                className="w-full h-14 text-base font-display font-bold tracking-[0.2em] uppercase shadow-lg shadow-primary/30"
               >
                 <Play className="h-5 w-5 mr-2 fill-current" />
                 Play
