@@ -36,6 +36,7 @@ import { PieceLibraryPanel } from "@/components/pieces/PieceLibraryPanel";
 export const Route = createFileRoute("/sandbox")({
   validateSearch: (search: Record<string, unknown>) => ({
     edit: typeof search.edit === "string" ? search.edit : undefined,
+    duplicate: typeof search.duplicate === "string" ? search.duplicate : undefined,
   }),
   head: () => ({
     meta: [
@@ -65,25 +66,34 @@ function Sandbox() {
   const [publishing, setPublishing] = useState(false);
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
 
-  // If ?edit=<gameId> is present, hydrate the sandbox from that published variant.
+  // If ?edit=<gameId> is present, hydrate the sandbox from that published variant
+  // and keep updating that same listing on Publish.
+  // If ?duplicate=<gameId> is present, hydrate from the source variant but save
+  // as a NEW listing (user must rename and/or tweak the design before publishing).
   useEffect(() => {
-    if (!search.edit) return;
+    const sourceId = search.edit ?? search.duplicate;
+    if (!sourceId) return;
+    const isDuplicate = !!search.duplicate;
     let cancelled = false;
     (async () => {
       try {
-        const row = await fetchMyGame({ data: { gameId: search.edit! } });
+        const row = await fetchMyGame({ data: { gameId: sourceId } });
         if (cancelled || !row) return;
         setDesign(row.design as unknown as Design);
-        setSaveName(row.name);
+        setSaveName(isDuplicate ? `${row.name} (copy)` : row.name);
         setDescription(row.description);
-        setPublishedGameId(row.id);
-        toast.info(`Editing "${row.name}" — Publish will update this listing.`);
+        setPublishedGameId(isDuplicate ? null : row.id);
+        toast.info(
+          isDuplicate
+            ? `Duplicating "${row.name}" — rename and tweak before publishing.`
+            : `Editing "${row.name}" — Publish will update this listing.`,
+        );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Couldn't load that game");
       }
     })();
     return () => { cancelled = true; };
-  }, [search.edit, fetchMyGame]);
+  }, [search.edit, search.duplicate, fetchMyGame]);
 
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);

@@ -12,7 +12,7 @@ import { saveCurrentMeta, saveDesign } from "@/game/design";
 import { listMyPublishedGames, unpublishGame, listMyLikedGames, toggleLike } from "@/lib/social.functions";
 import { listMyPieces, listMyLikedPieces, deletePiece, unlikePiece } from "@/lib/piece-builder.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Hammer, Sparkles, Play, Trash2, Crown, Share2, Heart, MessageSquare, Pencil, ExternalLink, LogIn } from "lucide-react";
+import { Hammer, Sparkles, Play, Trash2, Crown, Share2, Heart, MessageSquare, Pencil, ExternalLink, LogIn, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/create")({
@@ -229,6 +229,7 @@ function Create() {
                         </div>
                         <Link to="/g/$slug" params={{ slug: g.slug }}><Button size="sm" variant="ghost" aria-label="View"><ExternalLink className="h-3 w-3" /></Button></Link>
                         <Button size="sm" variant="ghost" onClick={() => editPublished(g)} aria-label="Edit"><Pencil className="h-3 w-3" /></Button>
+                        <Link to="/sandbox" search={{ duplicate: g.id }}><Button size="sm" variant="ghost" aria-label="Duplicate" title="Duplicate as a new variant"><Copy className="h-3 w-3" /></Button></Link>
                         <Button size="sm" variant="ghost" onClick={() => handleUnpublish(g)} aria-label="Unpublish"><Share2 className="h-3 w-3" /></Button>
                       </div>
                     ))}
@@ -265,6 +266,7 @@ function Create() {
                         </div>
                         <Link to="/pieces/$slug" params={{ slug: p.slug }}><Button size="sm" variant="ghost" aria-label="View"><ExternalLink className="h-3 w-3" /></Button></Link>
                         <Link to="/pieces/$slug/edit" params={{ slug: p.slug }}><Button size="sm" variant="ghost" aria-label="Edit"><Pencil className="h-3 w-3" /></Button></Link>
+                        <Link to="/pieces/new" search={{ from: p.slug }}><Button size="sm" variant="ghost" aria-label="Duplicate" title="Duplicate as a new piece"><Copy className="h-3 w-3" /></Button></Link>
                         <Button size="sm" variant="ghost" onClick={() => handleDeletePiece(p)} aria-label="Delete"><Trash2 className="h-3 w-3" /></Button>
                       </div>
                     );

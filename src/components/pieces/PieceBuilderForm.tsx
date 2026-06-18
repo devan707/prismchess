@@ -50,7 +50,10 @@ export interface PieceBuilderInitial {
 
 interface Props {
   onSaved?: (pieceId: string, def: PieceDef) => void;
+  /** Pre-fill from an existing piece AND save back to that record (edit). */
   initial?: PieceBuilderInitial;
+  /** Pre-fill from an existing piece but save as a NEW piece (duplicate / "save as"). */
+  template?: PieceBuilderInitial;
 }
 
 const MAX_STEPS = 4;
@@ -115,19 +118,22 @@ function summarizeOption(opt: MoveOption): string {
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
-export function PieceBuilderForm({ onSaved, initial }: Props) {
+export function PieceBuilderForm({ onSaved, initial, template }: Props) {
   const isEdit = !!initial;
-  const initDef = initial?.def;
+  const seed = initial ?? template;
+  const initDef = seed?.def;
   const initRangedSource = (initDef as unknown as { __rangedSource?: RangedAttack } | undefined)?.__rangedSource;
-  const hasUploadedImage = !!(initial?.imageUrl || initDef?.imageUrl);
-  const [name, setName] = useState(initial?.name ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
+  const hasUploadedImage = !!(seed?.imageUrl || initDef?.imageUrl);
+  const [name, setName] = useState(
+    initial?.name ?? (template ? `${template.name} (copy)` : ""),
+  );
+  const [description, setDescription] = useState(seed?.description ?? "");
   const [iconPrompt, setIconPrompt] = useState("");
   const [emoji, setEmoji] = useState(initDef && !hasUploadedImage ? (initDef.glyph || "") : "");
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [imageMode, setImageMode] = useState<"emoji" | "upload">(hasUploadedImage ? "upload" : "emoji");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(initial?.imageUrl ?? initDef?.imageUrl ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(seed?.imageUrl ?? initDef?.imageUrl ?? null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [options, setOptions] = useState<MoveOption[]>(
     initDef?.options && initDef.options.length > 0 ? initDef.options : [defaultOption()],
@@ -149,7 +155,8 @@ export function PieceBuilderForm({ onSaved, initial }: Props) {
   const uploadImage = useServerFn(uploadPieceImage);
   const submitAbility = useServerFn(requestPieceAbility);
 
-  const [id] = useState<string>(() => initDef?.id ?? genId());
+  // Edit reuses the original piece id; new pieces (including duplicates) get a fresh id.
+  const [id] = useState<string>(() => (isEdit && initDef?.id) ? initDef.id : genId());
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
 
