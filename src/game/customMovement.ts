@@ -33,15 +33,25 @@ export interface MoveStep {
 
 export type RangedTiming = "before" | "after" | "replace";
 
-export interface RangedAttack {
-  enabled: boolean;
+/** A single direction+range band of a ranged attack. */
+export interface RangedAttackOption {
   /** Absolute direction family. */
   direction: StepDirAbs;
-  /** Inclusive square-range, 1..4. */
+  /** Inclusive square-range, 1..10. */
   minDistance: number;
   maxDistance: number;
-  timing: RangedTiming;
 }
+
+export interface RangedAttack {
+  enabled: boolean;
+  timing: RangedTiming;
+  /** One or more direction+range bands. The union of all bands defines
+   *  the set of squares the piece can fire at. */
+  options: RangedAttackOption[];
+}
+
+export const RANGED_MAX_DISTANCE = 10;
+export const MAX_RANGED_OPTIONS = 4;
 
 export interface CompiledMovement {
   moveSpec: MovementSpec;
