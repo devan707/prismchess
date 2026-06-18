@@ -376,3 +376,102 @@ export function validateDesign(d: Design, registry: Record<PieceId, PieceDef>): 
   }
   return null;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// User-defined starting layouts (per-user, local-only)
+// ────────────────────────────────────────────────────────────────────────────
+
+const USER_PRESETS_KEY = "designer:userPresets";
+
+export interface UserPreset {
+  id: string;
+  name: string;
+  /** Back-rank template: piece ids with `""` for blanks. Centered on apply. */
+  backRank: PieceId[];
+  /** Piece id to fill the second rank with (usually "P" or "S"). null = none. */
+  pawnId: PieceId | null;
+}
+
+export function loadUserPresets(): UserPreset[] {
+  try {
+    const raw = localStorage.getItem(USER_PRESETS_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw) as UserPreset[];
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+export function saveUserPresets(list: UserPreset[]) {
+  try { localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(list)); } catch {}
+}
+
+export function upsertUserPreset(preset: UserPreset): UserPreset[] {
+  const list = loadUserPresets();
+  const idx = list.findIndex((p) => p.id === preset.id);
+  if (idx >= 0) list[idx] = preset; else list.push(preset);
+  saveUserPresets(list);
+  return list;
+}
+
+export function deleteUserPreset(id: string): UserPreset[] {
+  const list = loadUserPresets().filter((p) => p.id !== id);
+  saveUserPresets(list);
+  return list;
+}
+
+/** Apply a user preset on any board size. Pieces hug the outer files;
+ *  extra space is added symmetrically between them and the centered cluster. */
+export function buildUserPresetPlacements(preset: UserPreset, rows: number, cols: number): Placement[] {
+  if (rows < 2 || cols < 2) return [];
+  const wide = cols > rows;
+  if (wide) {
+    const back = centerBackRank(preset.backRank, rows);
+    const out: Placement[] = [];
+    back.forEach((i, r) => { if (i) out.push({ color: "w", pieceId: i, r, c: 0 }); });
+    if (preset.pawnId) {
+      for (let r = 0; r < rows; r++) out.push({ color: "w", pieceId: preset.pawnId, r, c: 1 });
+    }
+    return mirror(out, rows, cols);
+  }
+  const back = centerBackRank(preset.backRank, cols);
+  const out: Placement[] = [];
+  back.forEach((id, c) => { if (id) out.push({ color: "w", pieceId: id, r: 0, c }); });
+  if (preset.pawnId) {
+    for (let c = 0; c < cols; c++) out.push({ color: "w", pieceId: preset.pawnId, r: 1, c });
+  }
+  return mirror(out, rows, cols);
+}
+
+/** Inspect the current design and pull out a back rank + pawn row that can be
+ *  saved as a user preset. Reads White's row 0 (or col 0 on wide boards) and
+ *  picks the most common piece on rank 2 as the pawn. */
+export function extractPresetFromDesign(design: Design, name: string): UserPreset {
+  const wide = design.cols > design.rows;
+  const len = wide ? design.rows : design.cols;
+  const backRank: PieceId[] = new Array(len).fill("") as PieceId[];
+  for (const p of design.placements) {
+    if (p.color !== "w") continue;
+    if (wide && p.c === 0) backRank[p.r] = p.pieceId;
+    else if (!wide && p.r === 0) backRank[p.c] = p.pieceId;
+  }
+  // Trim leading/trailing blanks so the template can re-center on bigger boards.
+  let start = 0; while (start < backRank.length && !backRank[start]) start++;
+  let end = backRank.length; while (end > start && !backRank[end - 1]) end--;
+  const trimmed = backRank.slice(start, end);
+  const counts: Record<string, number> = {};
+  for (const p of design.placements) {
+    if (p.color !== "w") continue;
+    const onPawnRank = wide ? p.c === 1 : p.r === 1;
+    if (onPawnRank) counts[p.pieceId] = (counts[p.pieceId] ?? 0) + 1;
+  }
+  let pawnId: PieceId | null = null;
+  let max = 0;
+  for (const [id, n] of Object.entries(counts)) {
+    if (n > max) { max = n; pawnId = id as PieceId; }
+  }
+  const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return { id, name, backRank: trimmed, pawnId };
+}
+
