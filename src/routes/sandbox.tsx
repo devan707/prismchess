@@ -384,8 +384,8 @@ function Sandbox() {
           <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving || publishing} title="Save privately to your own library — only you can play it">
             <Save className="h-4 w-4 mr-1" /> {saving ? "Saving…" : "Save private"}
           </Button>
-          <Button onClick={handlePublish} variant="outline" size="sm" disabled={!!validationError || saving || publishing} title="Publish publicly to the community gallery so others can discover and play it">
-            <Share2 className="h-4 w-4 mr-1" /> {publishing ? "Publishing…" : "Publish public"}
+          <Button onClick={handlePublish} variant="outline" size="sm" disabled={!!validationError || saving || publishing} title={publishedGameId ? "Update your existing published listing instead of creating a new one" : "Publish publicly to the community gallery so others can discover and play it"}>
+            <Share2 className="h-4 w-4 mr-1" /> {publishing ? (publishedGameId ? "Updating…" : "Publishing…") : (publishedGameId ? "Update published" : "Publish public")}
           </Button>
           <Button onClick={startGame} size="sm" disabled={!!validationError}>
             <Play className="h-4 w-4 mr-1" /> Play
