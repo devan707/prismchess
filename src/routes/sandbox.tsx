@@ -87,7 +87,7 @@ function Sandbox() {
           if (res?.game) row = { id: res.game.id, name: res.game.name, description: res.game.description, design: res.game.design };
         } else if (sourceId) {
           const mine = await fetchMyGame({ data: { gameId: sourceId } });
-          if (mine) row = mine as typeof row;
+          if (mine) row = mine as unknown as typeof row;
         }
         if (cancelled || !row) return;
         setDesign(row.design as unknown as Design);
