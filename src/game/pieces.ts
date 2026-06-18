@@ -12,26 +12,9 @@ const KNIGHT_OFFSETS: Offset[] = [
   { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
   { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
 ];
-// Archer: ranged specialist. Moves one square orthogonally OR jumps 1-3
-// squares diagonally (cannot capture by moving). Attacks by firing diagonally
-// at range 2 or 3 only, arcing over every piece in between. Captures by
-// occupying the target square.
-const ARCHER_MOVE_OFFSETS: Offset[] = [
-  // orthogonal range 1
-  { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
-  // diagonal range 1
-  { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
-  // diagonal range 2 (jumps over pieces)
-  { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
-  // diagonal range 3 (jumps over pieces)
-  { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
-];
-const ARCHER_ATTACK_OFFSETS: Offset[] = [
-  // diagonal range 2
-  { dr: 2, dc: 2 }, { dr: 2, dc: -2 }, { dr: -2, dc: 2 }, { dr: -2, dc: -2 },
-  // diagonal range 3
-  { dr: 3, dc: 3 }, { dr: 3, dc: -3 }, { dr: -3, dc: 3 }, { dr: -3, dc: -3 },
-];
+// Archer: handled by `special: "archer"` in moves.ts. Movement = 1 king-step
+// (no capture). Melee = 1 king-step capture. Ranged = diagonal-only shot at
+// range 2 or 3 (jumps over intervening pieces, archer stays in place).
 
 export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
   K: {
@@ -116,10 +99,9 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     name: "Archer",
     glyph: "🏹",
     emoji: true,
-    movement: { leaps: ARCHER_MOVE_OFFSETS },
-    capture: { leaps: ARCHER_ATTACK_OFFSETS },
+    special: "archer",
     builtinCustom: true,
-    description: "Fragile ranged specialist. MOVES one square orthogonally OR jumps 1, 2, or 3 squares diagonally to an empty square (leaping over any pieces in between) — cannot capture by moving. ATTACKS by firing along diagonals at exactly 2 or 3 squares, arcing over every piece in between (friend or foe). A successful attack captures the target and the Archer occupies that square. Cannot attack adjacent squares, orthogonals, or with knight-jumps.",
+    description: "Fragile ranged specialist. MOVES exactly one square in any of the 8 directions to an empty square. MELEE: may capture any adjacent enemy (any of the 8 directions), moving onto the captured square — a dagger strike at close quarters. RANGED: instead of moving, fires an arrow exactly 2 or 3 squares along a diagonal (↖ ↗ ↙ ↘). Arrows arc over every intervening piece (friend or foe) — only the target square matters. The Archer stays in place when firing. Cannot perform ranged attacks orthogonally or against adjacent squares.",
   },
   D: {
     id: "D",

@@ -61,7 +61,7 @@ export interface PieceDef {
   /** Optional separate capture pattern. */
   capture?: MovementSpec;
   /** Special hand-coded behavior. */
-  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter" | "juggernaut" | "assassin" | "wizard" | "prism";
+  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter" | "juggernaut" | "assassin" | "wizard" | "prism" | "archer";
   /** Royal: loss of all royal pieces of a color = game over. */
   royal?: boolean;
   /** Cannot move; blocks travel; cannot be captured. */
@@ -78,7 +78,7 @@ export interface PieceDef {
 
 export type MoveKind =
   | "normal" | "double" | "ep" | "drop"
-  | "dragonAttack" | "portalSwap" | "resurrect" | "necroRaise"
+  | "dragonAttack" | "archerShoot" | "portalSwap" | "resurrect" | "necroRaise"
   | "juggShift" | "juggCharge" | "juggExit"
   | "castle" | "juggCastle" | "handPass" | "handDouble";
 

@@ -563,6 +563,45 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     return moves;
   }
 
+  if (def.special === "archer") {
+    // MOVE: 1 king-step to an empty square. No capture by moving.
+    // MELEE: 1 king-step capture of an adjacent enemy (archer moves to the square).
+    // RANGED: diagonal-only shot at exactly range 2 or 3. Archer STAYS in place
+    //   (kind "archerShoot"); arrows arc over any intervening pieces.
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const to = { r: from.r + dr, c: from.c + dc };
+        if (!inBoardBounds(board, to)) continue;
+        const t = board[to.r][to.c];
+        if (!t) {
+          moves.push({ from, to, piece, captured: null, kind: "normal" });
+        } else if (
+          t.color !== piece.color &&
+          !isBarricade(t, state.registry) &&
+          !isFixture(t, state.registry)
+        ) {
+          moves.push({ from, to, piece, captured: t, kind: "normal" });
+        }
+      }
+    }
+    const DIAG_4: Offset[] = [
+      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 },
+    ];
+    for (const d of DIAG_4) {
+      for (const k of [2, 3]) {
+        const to = { r: from.r + d.dr * k, c: from.c + d.dc * k };
+        if (!inBoardBounds(board, to)) continue;
+        const t = board[to.r][to.c];
+        if (!t) continue; // ranged is capture-only
+        if (t.color === piece.color) continue;
+        if (isBarricade(t, state.registry)) continue;
+        if (isFixture(t, state.registry)) continue;
+        moves.push({ from, to, piece, captured: t, kind: "archerShoot" });
+      }
+    }
+    return moves;
+  }
 
 
   // Generic data-driven piece
@@ -792,6 +831,11 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   }
   if (move.kind === "dragonAttack") {
     // Dragon stays; enemy removed.
+    b[move.to.r][move.to.c] = null;
+    return b;
+  }
+  if (move.kind === "archerShoot") {
+    // Archer stays in place; target enemy is removed (true ranged attack).
     b[move.to.r][move.to.c] = null;
     return b;
   }
