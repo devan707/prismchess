@@ -3,6 +3,7 @@ import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/ga
 import { allLegalMoves, legalMovesFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
 import { requestMove as engineRequestMove, cancel as engineCancel } from "@/game/ai/engine";
+import { loadPlaybook } from "@/game/ai/playbook";
 import { loadCurrentMeta } from "@/game/design";
 import { recordVariantPlay } from "@/lib/variant-stats.functions";
 import type { Color, Design, Difficulty, GameState, Move, PieceId, Square } from "@/game/types";
@@ -152,7 +153,10 @@ export function useGame(opts: UseGameOptions) {
     setAiThinkingSince(Date.now());
     let cancelled = false;
     // Off-thread AI: worker keeps UI responsive (spinner animates, Nudge works).
-    engineRequestMove(state, opts.difficulty, { hardTimeoutMs: 20000 })
+    // Snapshot this variant's playbook so the worker's evaluate() actually sees it.
+    const variantId = typeof window !== "undefined" ? loadCurrentMeta()?.id : undefined;
+    const playbook = loadPlaybook(variantId ?? undefined);
+    engineRequestMove(state, opts.difficulty, { hardTimeoutMs: 30000, playbook })
       .then((move) => {
         if (cancelled) return;
         if (move) {
