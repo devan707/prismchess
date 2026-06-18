@@ -174,6 +174,19 @@ function SharedGamePage() {
                       {c.author_id === meId && (
                         <Button size="icon" variant="ghost" onClick={() => handleDelete(c.id)}><Trash2 className="h-3 w-3" /></Button>
                       )}
+                      {isModOrAdmin && c.author_id !== meId && (
+                        <Button
+                          size="icon" variant="ghost"
+                          title="Admin delete"
+                          onClick={async () => {
+                            if (!window.confirm("Delete this comment (admin)?")) return;
+                            try { await adminDelCmt({ data: { commentId: c.id } }); setComments((p) => p.filter((x) => x.id !== c.id)); }
+                            catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{c.body}</p>
