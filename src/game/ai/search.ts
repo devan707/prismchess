@@ -2,18 +2,23 @@
  * Iterative-deepening search with a wall-clock time budget. Designed to run
  * inside a Web Worker (see ./worker.ts) so the UI thread stays responsive.
  *
- * The shape mirrors what real engines do (Stockfish / Lichess): keep
- * deepening until either the depth cap or the time budget is hit, and always
- * return the best move found at the deepest *completed* iteration.
+ * Beyond plain negamax + alpha-beta, this includes:
+ *   - Killer-move + history-heuristic ordering for non-captures
+ *   - Recapture-loss penalty in ordering (don't grab a pawn with a wizard)
+ *   - Check extensions (search 1 ply deeper when in check)
+ *   - Deeper quiescence (8 plies) that includes all "loud" move kinds
+ *
+ * The shape mirrors what real engines do: keep deepening until either the
+ * depth cap or the time budget is hit, and always return the best move found
+ * at the deepest *completed* iteration.
  */
-import type { Difficulty, GameState, Move } from "../types";
-import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
+import type { Color, Difficulty, GameState, Move, Square } from "../types";
+import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 import { evaluate, valueFor } from "./evaluate";
 
 export interface SearchOptions {
   difficulty: Difficulty;
   budgetMs: number;
-  /** Hard cap on depth — protects from runaway on tiny positions. */
   maxDepth: number;
 }
 
@@ -25,20 +30,74 @@ export interface SearchResult {
   elapsedMs: number;
 }
 
-/** Thrown when the time budget elapses mid-search. Caught at the root. */
 class TimeUp extends Error {}
 
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/** Cheap move-ordering score. Captures, promotions and shape-shifts first. */
+function moveKey(m: Move): string {
+  const f = m.from ? `${m.from.r},${m.from.c}` : "x";
+  return `${f}>${m.to.r},${m.to.c}:${m.piece.id}:${m.kind ?? "n"}`;
+}
+
+function sameMove(a: Move, b: Move): boolean {
+  if (a.to.r !== b.to.r || a.to.c !== b.to.c) return false;
+  if (a.kind !== b.kind) return false;
+  const af = a.from, bf = b.from;
+  if (!af && !bf) return a.piece.id === b.piece.id;
+  if (!af || !bf) return false;
+  return af.r === bf.r && af.c === bf.c && a.piece.id === b.piece.id;
+}
+
+function isLoud(m: Move): boolean {
+  return !!(
+    m.captured ||
+    m.promotion ||
+    m.shapeshiftTo ||
+    (m.juggTrampled && m.juggTrampled.length)
+  );
+}
+
+/**
+ * Cheap recapture-loss heuristic: after we move to m.to, can the opponent
+ * recapture us with a piece worth less than what we'd lose? Returns a
+ * positive penalty in centipawns (the expected material we'd hang).
+ */
+function recaptureLoss(state: GameState, m: Move): number {
+  if (m.kind === "juggCharge" || m.kind === "juggExit" || m.kind === "juggShift") return 0;
+  if (m.kind === "resurrect" || m.kind === "necroRaise" || m.kind === "portalSwap" || m.kind === "drop") return 0;
+  const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
+  const movingValue = valueFor(movingId, state.registry[movingId]);
+  const next = applyMoveToState(state, m);
+  const us = m.piece.color;
+  const opp: Color = us === "w" ? "b" : "w";
+  const sq: Square = m.to;
+  const attacked = isSquareAttacked(next, sq, opp);
+  if (!attacked) return 0;
+  const board = next.board;
+  const resident = board[sq.r][sq.c];
+  if (!resident) return 0;
+  // Are we defended? Test by flipping the resident piece's colour so friendly
+  // recapturers show up as attackers.
+  board[sq.r][sq.c] = { id: resident.id, color: opp };
+  const defended = isSquareAttacked(next, sq, us);
+  board[sq.r][sq.c] = resident;
+  const victimValue = m.captured ? valueFor(m.captured.id, state.registry[m.captured.id]) : 0;
+  // Undefended: we hang the whole moving piece (minus what we just grabbed).
+  if (!defended) return Math.max(0, movingValue - victimValue);
+  // Defended: only a problem if their attacker is worth less than ours.
+  // Approximate: half the difference.
+  return Math.max(0, (movingValue - victimValue) * 0.35);
+}
+
+/** Move-ordering score. Captures by MVV-LVA, promotions, shape-shifts,
+ *  juggernaut trample, minus a recapture-loss penalty. */
 function orderingScore(state: GameState, m: Move): number {
   let s = 0;
   if (m.captured) {
     const victim = valueFor(m.captured.id, state.registry[m.captured.id]);
     const attacker = valueFor(m.piece.id, state.registry[m.piece.id]);
-    // MVV-LVA: high-value victim taken by low-value attacker scores highest.
     s += victim * 10 - attacker;
   }
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) * 5;
@@ -46,11 +105,8 @@ function orderingScore(state: GameState, m: Move): number {
   if (m.juggTrampled) {
     for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]) * 6;
   }
+  s -= recaptureLoss(state, m);
   return s;
-}
-
-function isLoud(m: Move): boolean {
-  return !!(m.captured || m.promotion || m.shapeshiftTo || (m.juggTrampled && m.juggTrampled.length));
 }
 
 class Searcher {
@@ -59,17 +115,44 @@ class Searcher {
   bestMoveAtRoot: Move | null = null;
   bestScoreAtRoot = -Infinity;
   tiesAtRoot: Move[] = [];
+  /** killers[depth] = [primary, secondary] non-capture moves that caused a cutoff. */
+  killers: Array<[Move | null, Move | null]> = [];
+  /** history[moveKey] cumulative cutoff bonus. */
+  history = new Map<string, number>();
 
   constructor(deadline: number) {
     this.deadline = deadline;
   }
 
   checkTime(): void {
-    // Sampled every 1024 nodes so Date.now() isn't called per-node.
     if ((this.nodes & 1023) === 0 && Date.now() > this.deadline) throw new TimeUp();
   }
 
-  /** Quiescence search: only loud moves past the horizon. */
+  recordKiller(depth: number, m: Move): void {
+    if (isLoud(m)) return;
+    const slot = (this.killers[depth] ??= [null, null]);
+    if (slot[0] && sameMove(slot[0], m)) return;
+    slot[1] = slot[0];
+    slot[0] = m;
+  }
+
+  bumpHistory(m: Move, depth: number): void {
+    if (isLoud(m)) return;
+    const k = moveKey(m);
+    this.history.set(k, (this.history.get(k) ?? 0) + depth * depth);
+  }
+
+  scoreFor(state: GameState, m: Move, depth: number, ttBest: Move | null): number {
+    if (ttBest && sameMove(ttBest, m)) return 1_000_000;
+    if (isLoud(m)) return 500_000 + orderingScore(state, m);
+    const k = this.killers[depth];
+    if (k) {
+      if (k[0] && sameMove(k[0], m)) return 400_000;
+      if (k[1] && sameMove(k[1], m)) return 300_000;
+    }
+    return this.history.get(moveKey(m)) ?? 0;
+  }
+
   qsearch(state: GameState, alpha: number, beta: number, depthLeft: number): number {
     this.nodes++;
     this.checkTime();
@@ -91,8 +174,7 @@ class Searcher {
     return alpha;
   }
 
-  /** Negamax with alpha-beta. */
-  search(state: GameState, depth: number, alpha: number, beta: number): number {
+  search(state: GameState, depth: number, alpha: number, beta: number, ttBest: Move | null): number {
     this.nodes++;
     this.checkTime();
     const moves = allLegalMoves(state);
@@ -100,29 +182,37 @@ class Searcher {
       if (inCheck(state, state.turn)) return -100000 - depth;
       return 0;
     }
-    if (depth === 0) return this.qsearch(state, alpha, beta, 4);
-    moves.sort((a, b) => orderingScore(state, b) - orderingScore(state, a));
+    // Check extension: don't drop into qsearch while in check.
+    const isInCheck = inCheck(state, state.turn);
+    if (depth === 0) {
+      if (isInCheck) depth = 1;
+      else return this.qsearch(state, alpha, beta, 8);
+    }
+    moves.sort((a, b) => this.scoreFor(state, b, depth, ttBest) - this.scoreFor(state, a, depth, ttBest));
     let best = -Infinity;
+    let bestMove: Move | null = null;
     for (const m of moves) {
       const next = applyMoveToState(state, m);
-      const score = -this.search(next, depth - 1, -beta, -alpha);
-      if (score > best) best = score;
+      // Single-ply check extension when our move puts them in check.
+      const gaveCheck = inCheck(next, next.turn);
+      const ext = gaveCheck ? 1 : 0;
+      const score = -this.search(next, depth - 1 + ext, -beta, -alpha, null);
+      if (score > best) { best = score; bestMove = m; }
       if (best > alpha) alpha = best;
-      if (alpha >= beta) break;
+      if (alpha >= beta) {
+        this.recordKiller(depth, m);
+        this.bumpHistory(m, depth);
+        break;
+      }
     }
+    if (bestMove) this.bumpHistory(bestMove, depth);
     return best;
   }
 
-  /** One root iteration at a given depth. Updates bestMoveAtRoot. */
   rootIteration(state: GameState, depth: number, prevBest: Move | null): void {
     const moves = allLegalMoves(state);
     if (moves.length === 0) return;
-    // Put previous best first so alpha-beta cutoffs kick in earlier.
-    moves.sort((a, b) => {
-      if (prevBest && a.from && prevBest.from && a.from.r === prevBest.from.r && a.from.c === prevBest.from.c && a.to.r === prevBest.to.r && a.to.c === prevBest.to.c) return -1;
-      if (prevBest && b.from && prevBest.from && b.from.r === prevBest.from.r && b.from.c === prevBest.from.c && b.to.r === prevBest.to.r && b.to.c === prevBest.to.c) return 1;
-      return orderingScore(state, b) - orderingScore(state, a);
-    });
+    moves.sort((a, b) => this.scoreFor(state, b, depth, prevBest) - this.scoreFor(state, a, depth, prevBest));
     let alpha = -Infinity;
     const beta = Infinity;
     let bestScore = -Infinity;
@@ -130,7 +220,9 @@ class Searcher {
     const ties: Move[] = [];
     for (const m of moves) {
       const next = applyMoveToState(state, m);
-      const score = -this.search(next, depth - 1, -beta, -alpha);
+      const gaveCheck = inCheck(next, next.turn);
+      const ext = gaveCheck ? 1 : 0;
+      const score = -this.search(next, depth - 1 + ext, -beta, -alpha, null);
       if (score > bestScore + 0.5) {
         bestScore = score;
         bestMove = m;
@@ -160,20 +252,17 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
       searcher.rootIteration(state, d, prevBest);
       depthReached = d;
       prevBest = searcher.bestMoveAtRoot;
-      // Bail early if we're way past budget (don't start an iteration we
-      // know we can't finish — but we've completed `d`, so we can return it).
-      if (Date.now() > deadline) break;
+      // If we have enough time for another iteration we'll do it; otherwise
+      // commit to what we have. Heuristic: if 65% of budget is gone, stop.
+      const elapsed = Date.now() - start;
+      if (elapsed > opts.budgetMs * 0.65) break;
     }
   } catch (err) {
     if (!(err instanceof TimeUp)) throw err;
-    // Time ran out partway through an iteration — keep the previous depth's
-    // best move (already stored on the searcher).
   }
-  // Pick a tie randomly to vary play.
   let chosen = searcher.bestMoveAtRoot;
   if (searcher.tiesAtRoot.length > 1) chosen = pickRandom(searcher.tiesAtRoot);
-  // Easy difficulty: 25% of the time, pick a slightly worse legal move so
-  // beginners aren't crushed by the same engine that powers hard mode.
+  // Easy: 25% chance to play a random legal move so beginners can win.
   if (opts.difficulty === "easy" && chosen && Math.random() < 0.25) {
     const all = allLegalMoves(state);
     if (all.length > 1) chosen = pickRandom(all);
@@ -199,18 +288,20 @@ export function paramsFor(state: GameState, difficulty: Difficulty): { budgetMs:
       if (sp === "dragon" || sp === "portal") heavyBranching = true;
     }
   }
-  // Scale factor for big or branchy boards — keep total time bounded.
-  const sizePenalty = area > 144 ? 0.55 : area > 100 ? 0.75 : area > 64 ? 0.9 : 1;
-  const branchPenalty = heavyBranching ? 0.7 : 1;
+  const sizePenalty = area > 144 ? 0.5 : area > 100 ? 0.7 : area > 64 ? 0.85 : 1;
+  const branchPenalty = heavyBranching ? 0.65 : 1;
   if (difficulty === "easy") {
-    return { budgetMs: Math.round(200 * sizePenalty), maxDepth: 2 };
+    return { budgetMs: Math.round(300 * sizePenalty), maxDepth: 3 };
   }
   if (difficulty === "medium") {
-    return { budgetMs: Math.round(800 * sizePenalty * branchPenalty), maxDepth: 4 };
+    return {
+      budgetMs: Math.round(1500 * sizePenalty * branchPenalty),
+      maxDepth: heavyBranching ? 4 : area > 100 ? 4 : 5,
+    };
   }
   // hard
   return {
-    budgetMs: Math.round(3000 * sizePenalty * branchPenalty),
-    maxDepth: heavyBranching ? 5 : area > 100 ? 5 : 6,
+    budgetMs: Math.round(6000 * sizePenalty * branchPenalty),
+    maxDepth: heavyBranching ? 6 : area > 100 ? 6 : 8,
   };
 }

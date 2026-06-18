@@ -1,6 +1,6 @@
 import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
 import { isSquareAttacked } from "../moves";
-import { loadPlaybook } from "./playbook";
+import { getActivePlaybook } from "./playbook";
 
 
 
@@ -77,7 +77,7 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
 const PAWN_UNIT = 100;
 
 export function valueFor(id: PieceId, def: PieceDef | undefined): number {
-  const pb = loadPlaybook();
+  const pb = getActivePlaybook();
   const mult = pb.pieceValueMultipliers[id] ?? 1;
   const v = PIECE_VALUES_PAWNS[id];
   if (v != null) return v * PAWN_UNIT * mult;
@@ -359,15 +359,50 @@ export function evaluate(state: GameState, toMove: Color): number {
   score += dynamicBonus(state, toMove);
   score -= dynamicBonus(state, toMove === "w" ? "b" : "w");
   // Hanging-piece penalty, scaled by the learned caution multiplier.
-  const pb = loadPlaybook();
+  const pb = getActivePlaybook();
   score += hangingTerm(state, toMove) * pb.cautionMultiplier;
   score -= hangingTerm(state, toMove === "w" ? "b" : "w") * pb.cautionMultiplier;
+  // Threats we can execute on our next move — pushes the AI to actually take
+  // free/winning pieces the opponent left available.
+  score += threatTerm(state, toMove);
+  score -= threatTerm(state, toMove === "w" ? "b" : "w");
   // Learned tactical squares — defend the ones the AI lost to last game.
   score += squareControlTerm(state, toMove, pb.squareDefenseBonuses);
   // Anti-shuffle: discourage repeatedly moving the same piece without capturing.
   score += shuffleTerm(state, toMove);
   score -= shuffleTerm(state, toMove === "w" ? "b" : "w");
   return score;
+}
+
+/**
+ * Sum of (a fraction of) each enemy piece value that `color` currently
+ * attacks where it would win material on capture (attacker cheaper than
+ * victim, OR victim is undefended). Cheap heuristic — close enough to push
+ * the search toward grabbing hanging pieces.
+ */
+function threatTerm(state: GameState, color: Color): number {
+  const board = state.board;
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+  const opp: Color = color === "w" ? "b" : "w";
+  let total = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = board[r][c];
+      if (!p || p.color !== opp) continue;
+      const def = state.registry[p.id];
+      if (def?.immobile) continue;
+      // Is the enemy piece attacked by us?
+      if (!isSquareAttacked(state, { r, c }, color)) continue;
+      const victim = valueFor(p.id, def);
+      // Defended? Then it's a trade — only counts if their defenders are
+      // worth more than the cheapest attacker available; approximate by
+      // calling it "half value" instead of doing a full SEE here.
+      const defended = isSquareAttacked(state, { r, c }, opp);
+      total += defended ? victim * 0.08 : victim * 0.35;
+    }
+  }
+  return total;
 }
 
 /**
@@ -440,9 +475,8 @@ function squareControlTerm(state: GameState, color: Color, bonuses: Record<strin
 
 /**
  * Approximate the static-exchange "hanging" value of each piece of `color`.
- * Cheap two-tier check: attacked + undefended ⇒ ~90% of value already lost;
- * attacked + defended ⇒ small risk discount. Only evaluated for pieces worth
- * at least a knight so it stays fast on 12×12 boards.
+ * Covers every piece (even pawns/archers) so the AI stops blundering small
+ * material into defended squares — pawns add up.
  */
 function hangingTerm(state: GameState, color: Color): number {
   const board = state.board;
@@ -454,9 +488,11 @@ function hangingTerm(state: GameState, color: Color): number {
     for (let c = 0; c < cols; c++) {
       const p = board[r][c];
       if (!p || p.color !== color) continue;
-      const v = valueFor(p.id, state.registry[p.id]);
-      if (v < 250) continue; // skip pawns / barricades — noise vs. cost
-      if (state.registry[p.id]?.special === "juggernaut") continue; // huge & special-cased
+      const def = state.registry[p.id];
+      if (def?.immobile) continue; // Prism / Barricade-style fixtures
+      if (def?.special === "juggernaut") continue; // huge & special-cased
+      const v = valueFor(p.id, def);
+      if (v < 50) continue;
       const attacked = isSquareAttacked(state, { r, c }, opp);
       if (!attacked) continue;
       // Test "defended" by temporarily flipping the resident piece's colour so
@@ -466,7 +502,7 @@ function hangingTerm(state: GameState, color: Color): number {
       board[r][c] = { id: p.id, color: opp };
       const defended = isSquareAttacked(state, { r, c }, color);
       board[r][c] = saved;
-      penalty -= defended ? v * 0.2 : v * 0.85;
+      penalty -= defended ? v * 0.25 : v * 0.9;
     }
   }
   return penalty;

@@ -1,28 +1,25 @@
 /**
  * Persistent "playbook" the AI uses across games. Lessons are natural-language
  * reminders that future analysis chats see; tweaks are numeric weights that
- * the minimax evaluator applies on every move. Stored in localStorage so it
- * carries across sessions in the same browser without any backend.
+ * the minimax evaluator applies on every move.
+ *
+ * v2: keyed per-variant in localStorage so what the AI learns playing
+ * Menagerie doesn't bleed into Grand Menagerie / sandbox / custom boards.
+ * v1 → v2 migration runs once per browser; the legacy global blob is
+ * dropped into whatever variant is loaded the first time the page boots.
  */
 export interface Playbook {
   lessons: string[];
-  /** Multipliers applied to PIECE_VALUES_PAWNS (clamped to [0.3, 2.5]). */
   pieceValueMultipliers: Record<string, number>;
-  /** Multiplier on the hanging-piece penalty. Higher = more cautious. */
   cautionMultiplier: number;
-  /** Bonus added to every capture (in centipawns). Higher = more aggressive. */
   aggressionBonus: number;
-  /** Map of algebraic square (e.g. "g12") → centipawn weight. Positive = the
-   *  AI should bias toward defending/occupying that square (e.g. a discovered
-   *  checkmate landing square). Negative = avoid letting our king sit there.
-   *  Applied symmetrically: the side whose turn it is gains when it defends
-   *  one of these squares and loses when the opponent attacks it undefended. */
   squareDefenseBonuses: Record<string, number>;
-  /** Number of games the AI has reviewed (purely informational). */
   gamesReviewed: number;
 }
 
-const KEY = "menagerie.ai.playbook.v1";
+const V1_KEY = "menagerie.ai.playbook.v1";
+const V2_PREFIX = "menagerie.ai.playbook.v2:";
+const DEFAULT_VARIANT = "__default__";
 
 export const DEFAULT_PLAYBOOK: Playbook = {
   lessons: [],
@@ -70,34 +67,103 @@ export function normalizePlaybook(p: Partial<Playbook> | null | undefined): Play
   return base;
 }
 
-let cached: Playbook | null = null;
-
-export function loadPlaybook(): Playbook {
-  if (cached) return cached;
-  if (typeof window === "undefined") return DEFAULT_PLAYBOOK;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    cached = normalizePlaybook(raw ? JSON.parse(raw) : null);
-  } catch {
-    cached = { ...DEFAULT_PLAYBOOK };
-  }
-  return cached;
+function keyFor(variantKey?: string | null): string {
+  const k = (variantKey ?? DEFAULT_VARIANT).trim() || DEFAULT_VARIANT;
+  return V2_PREFIX + k;
 }
 
-export function savePlaybook(p: Playbook): void {
-  cached = normalizePlaybook(p);
+/** One-time migration of the old global playbook into the currently-loaded variant. */
+function migrateLegacyOnce(targetVariant: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(cached));
+    const legacy = window.localStorage.getItem(V1_KEY);
+    if (!legacy) return;
+    const tgtKey = keyFor(targetVariant);
+    if (!window.localStorage.getItem(tgtKey)) {
+      window.localStorage.setItem(tgtKey, legacy);
+    }
+    window.localStorage.removeItem(V1_KEY);
+  } catch { /* noop */ }
+}
+
+const cache = new Map<string, Playbook>();
+
+/** Resolve current variant from session storage (set by the design loader). */
+function currentVariantKey(): string {
+  if (typeof window === "undefined") return DEFAULT_VARIANT;
+  try {
+    const raw = window.sessionStorage.getItem("designer:currentMeta");
+    if (!raw) return DEFAULT_VARIANT;
+    const meta = JSON.parse(raw) as { id?: string };
+    return meta?.id || DEFAULT_VARIANT;
+  } catch { return DEFAULT_VARIANT; }
+}
+
+export function loadPlaybook(variantKey?: string): Playbook {
+  const vk = variantKey ?? currentVariantKey();
+  if (cache.has(vk)) return cache.get(vk)!;
+  migrateLegacyOnce(vk);
+  if (typeof window === "undefined") return DEFAULT_PLAYBOOK;
+  try {
+    const raw = window.localStorage.getItem(keyFor(vk));
+    const pb = normalizePlaybook(raw ? JSON.parse(raw) : null);
+    cache.set(vk, pb);
+    return pb;
   } catch {
-    /* ignore quota errors */
+    const pb = { ...DEFAULT_PLAYBOOK };
+    cache.set(vk, pb);
+    return pb;
   }
 }
 
-export function resetPlaybook(): Playbook {
-  cached = { ...DEFAULT_PLAYBOOK, pieceValueMultipliers: {} };
+export function savePlaybook(p: Playbook, variantKey?: string): void {
+  const vk = variantKey ?? currentVariantKey();
+  const normalized = normalizePlaybook(p);
+  cache.set(vk, normalized);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(keyFor(vk), JSON.stringify(normalized));
+  } catch { /* ignore quota */ }
+}
+
+export function resetPlaybook(variantKey?: string): Playbook {
+  const vk = variantKey ?? currentVariantKey();
+  const fresh = { ...DEFAULT_PLAYBOOK, pieceValueMultipliers: {}, squareDefenseBonuses: {} };
+  cache.set(vk, fresh);
   if (typeof window !== "undefined") {
-    try { window.localStorage.removeItem(KEY); } catch { /* noop */ }
+    try { window.localStorage.removeItem(keyFor(vk)); } catch { /* noop */ }
   }
-  return cached;
+  return fresh;
+}
+
+/** Wipe every per-variant playbook. */
+export function resetAllPlaybooks(): void {
+  cache.clear();
+  if (typeof window === "undefined") return;
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && (k.startsWith(V2_PREFIX) || k === V1_KEY)) toRemove.push(k);
+    }
+    for (const k of toRemove) window.localStorage.removeItem(k);
+  } catch { /* noop */ }
+}
+
+// ---------- worker snapshot plumbing ----------
+//
+// The search runs in a Web Worker (no window/localStorage), so the main
+// thread snapshots the current variant's playbook before each request and the
+// worker calls setActivePlaybookSnapshot() on receipt. evaluate() reads
+// through getActivePlaybook(), which prefers the snapshot when one is set.
+
+let activeSnapshot: Playbook | null = null;
+
+export function setActivePlaybookSnapshot(p: Playbook | null): void {
+  activeSnapshot = p ? normalizePlaybook(p) : null;
+}
+
+export function getActivePlaybook(): Playbook {
+  if (activeSnapshot) return activeSnapshot;
+  return loadPlaybook();
 }

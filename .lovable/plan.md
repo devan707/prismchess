@@ -1,130 +1,69 @@
-## App shell redesign — chess.com-inspired structure
 
-The core insight from the chess.com screenshots: **the home page isn't a directory of every feature**. It's a scrollable feed of contextual cards. Everything else lives behind a small bottom tab bar plus a dedicated "More" sheet. We adapt that to Prism's actual features (variants, sandbox, custom pieces, community) — we are not copying their content.
+## What's actually wrong with the AI
 
-### Visual reset (do this first)
+While exploring `src/game/ai/*`, I found four problems that together explain why "hard" plays like a beginner. The first one is a real bug, not just tuning.
 
-- **Theme**: revert to the existing light parchment theme. Delete the dark wrapper / aurora / rainbow buttons I added.
-- **Logo**: keep the crest, but **stop rendering the embedded "PRISM CHESS" text from the PNG** by generating a new mark-only asset (crest + crown + prism, no wordmark). Wordmark becomes real type next to the crest where needed (e.g. "More" tab header). On the Home tab we don't need a wordmark at all — the app chrome speaks for itself, like chess.com.
-- **Buttons**: shadcn defaults. Primary = emerald solid. Secondary = outline / ghost. No gradient borders. No prism shimmer.
-- **Cards**: existing rounded card style. Soft shadow, parchment surface.
+1. **The playbook is silently ignored during search.** `evaluate()` calls `loadPlaybook()`, which reads from `window.localStorage`. But the search runs inside a Web Worker (`src/game/ai/worker.ts`) where `window` doesn't exist, so `loadPlaybook()` short-circuits to `DEFAULT_PLAYBOOK`. Every "lesson" we ever stored — caution multiplier, piece-value tweaks, square-defense bonuses — has been having **zero effect on actual moves**. The post-game analysis was writing to a memory the engine never read.
 
-### App shell
+2. **The search itself is weak.** `search.ts` is plain negamax + alpha-beta + a 4-ply quiescence. No transposition table, no killer/history heuristics, no SEE-based ordering, no check extensions, no null-move pruning. On hard with a 3 s budget it typically only finishes depth 3–4, which is why it misses 2-move tactics ("if I take, you take back, and I'm up a piece").
 
-A new persistent layout that wraps Home / Play / Create / Discover / More:
+3. **It doesn't see threats against its own pieces well.** `hangingTerm` only penalises pieces worth ≥ a knight, so hung pawns/archers/barricades are invisible. And because qsearch only extends captures, a quiet move by the opponent that *creates* a threat isn't refuted until the threat is actually executed — by then it's too late in the search tree.
 
-```text
-┌─────────────────────────────────────────┐
-│ [crest 28px]   …notif/profile chip      │  top bar (compact)
-├─────────────────────────────────────────┤
-│                                         │
-│         tab content (scrollable)        │
-│                                         │
-├─────────────────────────────────────────┤
-│  [ ▶  PLAY ]                            │  sticky primary CTA (only on Home/Discover)
-├─────────────────────────────────────────┤
-│  Home   Play   Create   Discover   More │  bottom tab bar
-└─────────────────────────────────────────┘
-```
+4. **One global memory across every variant.** Lessons learned playing Menagerie get applied to Grand Menagerie, sandbox creations, custom boards, etc. That's noisy and counter-productive.
 
-- Bottom tabs: **Home · Play · Create · Discover · More**. Five tabs max, all real destinations.
-- The big sticky **Play** button (chess.com's signature) sits above the tab bar on Home and Discover only. Tapping it navigates to the Play tab. (On the Play tab itself it would be redundant.)
-- The top bar is intentionally tiny: crest on the left (taps → Home), profile avatar / sign-in on the right. No wordmark here; the app branding is the crest.
+## Plan
 
-### Tab 1 — Home (the feed)
+### A. Per-variant memory (with a reset)
 
-Vertical scroll, each card is one action. Order is contextual — skip cards with no data.
+- Change `src/game/ai/playbook.ts` to key off the current variant: `menagerie.ai.playbook.v2:<variantKey>`. Public API stays the same but `loadPlaybook()` / `savePlaybook()` / `resetPlaybook()` take an optional `variantKey` (falling back to `loadCurrentMeta().id`).
+- Migrate the existing v1 blob once into the slot for whatever variant is currently loaded, so users don't lose progress on their main game.
+- Pipe `variantKey` through the worker message so search-side `evaluate()` can pass it to `loadPlaybook()`.
+- Add a "Reset AI memory for this variant" action in the post-game analysis panel and on the variant page (small button, with confirm). A global "Reset all AI memory" lives in `more.tsx`.
 
-1. **Resume**: shown only if the user has an active multiplayer match or a last-played variant in localStorage. Two row cards: "Resume vs X (your move)" and "Continue Mini Chess".
-2. **Quick play**: featured built-in variant of the week (rotates by date). Single hero card with thumbnail + "Play vs AI".
-3. **Friends online** (horizontal scroll, chess.com pattern): each friend = small card with avatar, name, "Challenge" button. Shown only if the user has friends; empty state hidden.
-4. **New from the community**: horizontal scroll of the 10 newest published variants. "Show all →" links to Discover tab.
-5. **Popular pieces**: horizontal scroll of top custom pieces. "Show all →" links to Discover · Pieces.
-6. **Recent activity**: compact list of the user's last 5 finished games (from existing `history.functions`).
+### B. Fix the worker/playbook plumbing
 
-Empty-state philosophy: a brand-new user sees only Quick play, New from community, and Popular pieces — not a wall of "you have nothing yet".
+- `WorkerRequest` gains `playbook: Playbook` (serialized snapshot, taken on the main thread at request time). Worker stashes it in a module-level `currentPlaybook` and `evaluate.ts` reads from there instead of calling `loadPlaybook()`. This makes the playbook actually influence search.
+- `loadPlaybook()` keeps working on the main thread (UI/menus). The worker path becomes pure "use the snapshot you were handed."
 
-### Tab 2 — Play (chess.com's "New Game" screen)
+### C. Stronger search (`src/game/ai/search.ts`)
 
-Single focused screen, vertical list of large action rows:
+Drop-in upgrades, in order of bang-for-buck:
 
-1. **Time control** picker (for multiplayer).
-2. **Start Multiplayer Game** (big primary button, mirrors chess.com's green Start Game).
-3. **Play a Friend** → challenge flow.
-4. **Play vs AI** → opens a sheet with the variant picker (built-in + your saved). This replaces today's "pick a game" grid as the front door.
-5. **Open Challenges** → existing lobby.
+1. **Transposition table** keyed by a Zobrist-style 64-bit hash of `(board, turn, reserves, pendingHand)`. Stores `{depth, score, flag: exact|lower|upper, bestMove}`. Lets us re-order siblings with the previous best and short-circuit re-searched positions.
+2. **Killer moves + history heuristic** for non-capture ordering — the standard pair that makes alpha-beta actually cut.
+3. **SEE (Static Exchange Evaluation)** for capture ordering, replacing pure MVV-LVA so the engine stops "winning" a pawn by hanging a wizard.
+4. **Check extensions**: when the move gives check, search one ply deeper. This alone fixes a lot of "missed mate / missed fork" complaints.
+5. **Null-move pruning** at depth ≥ 3, disabled when the side to move is in check or has only royal-class material on the board (to avoid zugzwang issues with our weird pieces).
+6. **Deeper qsearch** (8 plies) and include `juggCharge`-with-trample and shape-shift captures as loud moves.
+7. **Bigger time budgets**: easy 250 ms / depth 3, medium 1.5 s / depth 5, hard 6 s / depth 8 — and raise the worker hard-timeout in `useGame.ts` to 30 s. Big/heavy-branching boards still scale down with the existing penalties, just from a higher base.
 
-### Tab 3 — Create
+### D. Better evaluation
 
-Two big tiles, top-aligned, plus a list of the user's drafts.
+- `hangingTerm` covers every piece (not just ≥ knight) and uses the new SEE function so the score reflects "if they take, I retake, …" instead of a flat 90 % of value.
+- Add a small **threat term**: for each enemy piece the side to move could capture next ply with a winning SEE, add a fraction of its value. This is what makes the AI *take* the free piece you offered instead of doing something else.
+- Add a small **king-safety term** for normal kings (count enemy attackers within 2 squares of the royal piece, weighted by attacker value). Royals like Regent/Lich King already have their own bonus pathway; this adds the missing one for plain `K`.
 
-- **Design a Game** → /sandbox
-- **Design a Piece** → /pieces/new
-- **Your drafts**: saved variants list with Edit / Play / Delete (what's on Home today).
+### E. Wire-up + UX
 
-### Tab 4 — Discover
+- `useGame.ts`: send the current playbook snapshot in every request; raise `hardTimeoutMs`.
+- `engine.ts`: include `playbook` in the postMessage payload.
+- `AiThinkingIndicator`: unchanged, but it'll now sit longer on hard — that's expected.
+- Post-game analysis: the "lesson saved" toast becomes "lesson saved for <variant name>".
 
-Tabbed within: **Games | Pieces | Forum**.
+## Files I expect to touch
 
-- **Games**: New / Popular / Archive (already built — just lifted out of Home).
-- **Pieces**: New / Popular (already at /pieces — re-route into this tab so it's discoverable).
-- **Forum**: latest threads preview + "Open community →" linking to /forum.
+- `src/game/ai/playbook.ts` — per-variant keys, v1→v2 migration, snapshot helper.
+- `src/game/ai/worker.ts` — receive + stash playbook, pass to search.
+- `src/game/ai/search.ts` — TT, killers/history, SEE, check extensions, null-move, deeper qsearch, new time/depth table.
+- `src/game/ai/evaluate.ts` — playbook from snapshot, hanging/threat/king-safety upgrades.
+- `src/game/ai/engine.ts` — include playbook in request.
+- `src/hooks/useGame.ts` — load playbook for current variant, pass it, raise timeout.
+- `src/lib/analyze-game.functions.ts` / post-game analysis UI — save lessons against the current variant key, add reset button.
+- `src/routes/more.tsx` — global reset.
 
-### Tab 5 — More (chess.com's "More" sheet)
+## Out of scope (worth flagging)
 
-Vertical list of grouped rows with icons (this is exactly the chess.com More screen pattern):
+- I'm **not** replacing this with a Stockfish-style NNUE or a remote engine. For custom variants with pieces like Wizard/Necromancer/Juggernaut/Prism, off-the-shelf engines don't apply; the right move is to make our own search competent, which is what the plan above does.
+- I'm not changing piece values or any rules — only the engine and its memory.
 
-- **Account**: Profile, History, Sign in / Sign out.
-- **Social**: Friends, Messages, Forum.
-- **Settings**: Notifications, Theme (future), Help & support.
-
-This is where Help finally lives — not on the home page.
-
-### Information architecture summary
-
-| Feature        | Before                 | After                              |
-| -------------- | ---------------------- | ---------------------------------- |
-| Multiplayer    | Top button             | Play tab + sticky Play CTA         |
-| Play vs AI     | Pick built-in on Home  | Play tab → "Play vs AI" sheet      |
-| Built-in games | Big grid on Home       | Surfaced via Play → vs AI picker   |
-| Saved games    | List on Home           | Create tab → Your drafts           |
-| Sandbox        | Top button             | Create tab → Design a Game         |
-| Piece builder  | Buried at /pieces/new  | Create tab → Design a Piece        |
-| Community games| Section on Home        | Home preview + Discover · Games    |
-| Custom pieces  | /pieces page only      | Home preview + Discover · Pieces   |
-| Forum          | Top button             | Discover · Forum + More            |
-| Friends        | Top button             | Home (online row) + More           |
-| Messages       | Top button             | More                               |
-| History        | Top button             | Home (recent activity) + More      |
-| Help           | Top button             | More                               |
-
-### Technical plan
-
-- **New route**: `src/routes/_app.tsx` — pathless layout route that renders top bar, `<Outlet />`, sticky Play CTA, bottom tab bar. (Avoids touching `_authenticated/` gate; Home/Play/Discover work signed out.)
-- **Move existing routes into `_app/`** by renaming, so they render inside the shell:
-  - `src/routes/index.tsx` → `src/routes/_app/index.tsx` (Home feed)
-  - `src/routes/sandbox.tsx` → stays standalone (full-screen builder shouldn't have the shell)
-  - `src/routes/pieces.index.tsx` → stays, linked to from Discover
-- **New routes**:
-  - `src/routes/_app/play.tsx` — New Game screen.
-  - `src/routes/_app/create.tsx` — Create hub.
-  - `src/routes/_app/discover.tsx` — Discover hub with `?tab=games|pieces|forum`.
-  - `src/routes/_app/more.tsx` — More sheet.
-- **New components**:
-  - `src/components/shell/AppShell.tsx` — top bar, sticky CTA, bottom tabs.
-  - `src/components/shell/BottomTabs.tsx`.
-  - `src/components/home/ResumeCard.tsx`, `FriendsOnlineRow.tsx`, `FeaturedVariantCard.tsx`, `RecentActivity.tsx`, `HorizontalCardScroll.tsx`.
-- **Data**: reuse existing `listDiscoveryGames`, `listMyMatches`, `listFriends`, `getVariantStats`, `loadSavedGames`, `listHistory`. No new server functions, no schema changes.
-- **Logo asset**: generate `src/assets/logo-mark.png` (transparent, no text) via imagegen premium for crisp use at small sizes.
-- **Cleanup**: remove `home-aurora-*`, `home-panel*`, `prism-button*` utilities from `src/styles.css`.
-
-### What I'm explicitly not doing
-
-- No copying chess.com's puzzles / lessons / coach / awards / membership — we don't have those features.
-- No bot levels or rating system in this pass.
-- No tournaments tile (we have no tournaments yet; would be a placeholder).
-- Sandbox, /play, /multiplayer, /forum internals untouched — only their entry points and chrome change.
-
-### One quick confirmation before I build
-
-Do you want **Watch** as a tab (chess.com has it for live games — we'd repurpose it as "Spectate ongoing public matches"), or is **Discover** (community variants + pieces + forum) the better fifth tab? My recommendation is **Discover** — we don't have spectator infrastructure yet, and discovery of custom content is more central to Prism's identity. I'll proceed with Discover unless you say otherwise.
+After this lands, hard mode should reliably see 2-move tactics (recaptures, simple forks, hanging-piece refutations), respond to threats by moving/defending/counter-attacking, and stop blundering pieces into obviously-defended squares.
