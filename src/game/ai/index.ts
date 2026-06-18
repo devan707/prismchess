@@ -112,7 +112,7 @@ function prismFlipDelta(state: GameState, m: Move): number {
 
 function moveScore(state: GameState, m: Move): number {
   let s = 0;
-  const pb = getActivePlaybook();
+  const pb = loadPlaybook();
   if (m.captured) s += valueFor(m.captured.id, state.registry[m.captured.id]) + pb.aggressionBonus;
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) - 100;
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) - 140;
