@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listTopics, toggleLike } from "@/lib/forum.functions";
 import { getMyRole } from "@/lib/profile.functions";
+import { adminDeleteForumTopic, adminSetTopicFlags } from "@/lib/admin.functions";
+import { AdminMenu } from "@/components/admin/AdminMenu";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2, Play } from "lucide-react";
 import { toast } from "sonner";
