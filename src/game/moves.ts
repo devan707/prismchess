@@ -1133,8 +1133,10 @@ export function attackSquaresFrom(state: GameState, from: Square): Square[] {
         ? legalMovesFrom(probeState, from)
         : pseudoMovesFrom(probeState, from);
       const hits = moves.some((m) => {
-        if (m.to.r !== r || m.to.c !== c) return false;
-        if (!m.captured) return false;
+        const ownHit = m.to.r === r && m.to.c === c && !!m.captured;
+        const partnerHit = (m.kind === "shadowLink" || m.kind === "twinLink") &&
+          !!m.partnerTo && m.partnerTo.r === r && m.partnerTo.c === c && !!m.partnerCaptured;
+        if (!ownHit && !partnerHit) return false;
         if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") return false;
         if (m.kind === "juggShift" || m.kind === "juggExit") return false;
         return true;
