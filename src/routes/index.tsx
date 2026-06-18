@@ -280,6 +280,60 @@ function Home() {
             </div>
           )}
         </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-xl font-semibold inline-flex items-center gap-2">
+              <Clock className="h-5 w-5" /> New from the community
+            </h2>
+            <Link to="/sandbox">
+              <Button size="sm" variant="ghost">
+                <Sparkles className="h-4 w-4 mr-1" /> Publish your own
+              </Button>
+            </Link>
+          </div>
+          {!discovery ? (
+            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : discovery.newest.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">
+              No public games yet. Design one in the sandbox and publish it!
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {discovery.newest.map(renderCommunityCard)}
+            </div>
+          )}
+        </section>
+
+        {discovery && discovery.popular.length > 0 && (
+          <section>
+            <h2 className="font-display text-xl font-semibold mb-3 inline-flex items-center gap-2">
+              <Flame className="h-5 w-5" /> Popular
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {discovery.popular.map(renderCommunityCard)}
+            </div>
+          </section>
+        )}
+
+        {discovery && discovery.archive.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-xl font-semibold inline-flex items-center gap-2">
+                <Archive className="h-5 w-5" /> Archive
+                <span className="text-xs text-muted-foreground font-normal">({discovery.archive.length})</span>
+              </h2>
+              <Button size="sm" variant="ghost" onClick={() => setShowArchive((v) => !v)}>
+                {showArchive ? "Hide" : "Show"}
+              </Button>
+            </div>
+            {showArchive && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {discovery.archive.map(renderCommunityCard)}
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );
