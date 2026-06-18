@@ -18,9 +18,12 @@ interface BoardProps {
   disabled?: boolean;
   /** Notified whenever the on-board selection changes (or clears). */
   onSelectionChange?: (sq: Square | null) => void;
+  /** Allow clicking an opponent piece to inspect its move/attack pattern.
+   *  Only enabled in PvComputer (and analysis); disabled in PvP matches. */
+  allowEnemyInspect?: boolean;
 }
 
-export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange }: BoardProps) {
+export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange, allowEnemyInspect = false }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
 
