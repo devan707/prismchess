@@ -586,7 +586,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   // move is owed (otherwise the second step is a normal 1-square leap).
   // Requires the intermediate square to be empty and the landing square to
   // be empty or hold a capturable enemy.
-  if (piece.id === "H" && !state.pendingHand) {
+  if ((piece.id === "H" || piece.id === "G") && !state.pendingHand) {
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
         if (dr === 0 && dc === 0) continue;
