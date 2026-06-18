@@ -34,7 +34,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { requestPieceAbility, savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
+import { requestPieceAbility, savePiece, suggestPieceEmoji, updatePiece, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,9 +50,11 @@ export interface PieceBuilderInitial {
 
 interface Props {
   onSaved?: (pieceId: string, def: PieceDef) => void;
-  /** Pre-fill from an existing piece. Always saves as a NEW piece — custom
-   *  pieces are immutable once created so they can't break other people's
-   *  games that already use them. */
+  /** Pre-fill from an existing piece AND save back to that same record (edit
+   *  in place). The user's own published games that embed this piece are
+   *  auto-refreshed server-side; other people's games stay frozen. */
+  initial?: PieceBuilderInitial;
+  /** Pre-fill from an existing piece but save as a brand-new piece (duplicate). */
   template?: PieceBuilderInitial;
 }
 
