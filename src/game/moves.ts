@@ -14,11 +14,31 @@ function isFriendly(p: Piece | null, color: Color): boolean {
 }
 
 function isBarricade(_p: Piece | null, _registry: Record<PieceId, PieceDef>): boolean {
-  // Barricades behave like ordinary pieces for blocking and capture — they
-  // simply can't move themselves (enforced by def.immobile in pseudoMovesFrom).
-  // Returning false here lets sliders stop on them, leapers capture them,
-  // pawns take them diagonally, and juggernauts trample them like anything else.
+  // Legacy hook: returning false here keeps the engine treating barricades as
+  // ordinary capturable pieces. Specific restrictions (pawn/archer can't kill
+  // them, front-arc immunity, etc.) live in dedicated filters below.
   return false;
+}
+
+/** A barricade-style piece: immobile (cannot move on its own). */
+function isImmobileBarricade(p: Piece | null, registry: Record<PieceId, PieceDef>): boolean {
+  return !!p && registry[p.id]?.immobile === true;
+}
+
+/** Pawns and Archers are too small to break a barricade. */
+function canDestroyBarricade(piece: Piece, registry: Record<PieceId, PieceDef>): boolean {
+  const def = registry[piece.id];
+  if (!def) return false;
+  if (piece.id === "P" || def.special === "pawn") return false;
+  if (def.special === "archer") return false;
+  return true;
+}
+
+/** A "trebuchet" is any custom siege piece whose name contains "trebuchet".
+ *  Trebuchets are the only attackers that can crack a juggernaut's front arc. */
+function isTrebuchet(def: PieceDef | undefined): boolean {
+  if (!def) return false;
+  return /trebuchet/i.test(def.name ?? "");
 }
 
 /** True for board fixtures (currently: the Prism) — impassable AND uncapturable.
@@ -41,8 +61,14 @@ function emitFromSpec(
   const inB = (r: number, c: number) => r >= 0 && r < rows && c >= 0 && c < cols;
 
   const accept = (target: Square, occ: Piece | null) => {
-    if (isBarricade(occ, registry)) return false;
     if (isFixture(occ, registry)) return false;
+    if (isImmobileBarricade(occ, registry)) {
+      // Barricades can never be moved THROUGH/onto an empty square — they
+      // can only be captured (friendly fire included), and only by pieces
+      // that aren't pawns or archers.
+      if (mode === "move") return false;
+      return canDestroyBarricade(piece, registry);
+    }
     if (occ === null) return mode === "move" || mode === "both";
     if (isFriendly(occ, piece.color)) return false;
     // enemy
@@ -66,7 +92,12 @@ function emitFromSpec(
       let steps = 0;
       while (inB(r, c) && steps < max) {
         const t = board[r][c];
-        if (isBarricade(t, registry)) break;
+        if (isImmobileBarricade(t, registry)) {
+          // Barricade halts the slide. If we can break it, this square is a
+          // valid capture target; otherwise the slide just stops short.
+          if (mode !== "move" && canDestroyBarricade(piece, registry)) out.push({ r, c });
+          break;
+        }
         if (isFixture(t, registry)) break;
         if (!t) {
           if (mode !== "capture") out.push({ r, c });
@@ -243,7 +274,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const to = { r: from.r + dr, c: from.c + dir };
         if (!inBoardBounds(board, to)) continue;
         const t = board[to.r][to.c];
-        if (t && t.color !== piece.color && !isBarricade(t, state.registry) && !isFixture(t, state.registry)) {
+        if (t && t.color !== piece.color && !isImmobileBarricade(t, state.registry) && !isFixture(t, state.registry)) {
           pushPawn(to, t);
         } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
           const capSq = { r: to.r, c: from.c };
@@ -270,7 +301,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const to = { r: from.r + dir, c: from.c + dc };
         if (!inBoardBounds(board, to)) continue;
         const t = board[to.r][to.c];
-        if (t && t.color !== piece.color && !isBarricade(t, state.registry) && !isFixture(t, state.registry)) {
+        if (t && t.color !== piece.color && !isImmobileBarricade(t, state.registry) && !isFixture(t, state.registry)) {
           pushPawn(to, t);
         } else if (!t && state.enPassant && state.enPassant.r === to.r && state.enPassant.c === to.c) {
           const capSq = { r: from.r, c: to.c };
@@ -779,7 +810,15 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
     for (const t of captureTargets) {
       const occ = board[t.r][t.c];
-      if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
+      if (!occ) continue;
+      const targetIsBarricade = isImmobileBarricade(occ, state.registry);
+      if (targetIsBarricade) {
+        // Friendly fire on barricades is allowed for pieces that can break
+        // them (not pawns, not archers). Front-arc immunity is enforced later.
+        if (canDestroyBarricade(piece, state.registry)) {
+          moves.push({ from, to: t, piece, captured: occ });
+        }
+      } else if (occ.color !== piece.color) {
         moves.push({ from, to: t, piece, captured: occ });
       }
     }
@@ -794,7 +833,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       const t = board[to.r][to.c];
       if (!t) continue;
       if (t.color === piece.color) continue;
-      if (isBarricade(t, state.registry)) continue;
+      if (isImmobileBarricade(t, state.registry) && !canDestroyBarricade(piece, state.registry)) continue;
       if (isFixture(t, state.registry)) continue;
       moves.push({ from, to, piece, captured: t, kind: "archerShoot" });
     }
@@ -1512,11 +1551,14 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
-    // Knights leap onto their target — they strike the square directly and
-    // bypass front-arc immunity on juggernauts and barricades.
-    const attackerBypassesFrontArc = m.piece.id === "N";
-    // Front-arc immunity: a juggernaut cannot be captured from the front.
-    if (m.captured && m.captured.id === "J" && m.from && !attackerBypassesFrontArc) {
+    // Knights leap onto their target — they bypass front-arc immunity on
+    // BARRICADES only. Juggernauts can only be hit from the front by a
+    // Trebuchet (any custom siege piece named "Trebuchet").
+    const knightBypass = m.piece.id === "N";
+    const trebuchetBypass = isTrebuchet(state.registry[m.piece.id]);
+    // Front-arc immunity: a juggernaut cannot be captured from the front,
+    // except by a Trebuchet — the only siege weapon that can crack the front.
+    if (m.captured && m.captured.id === "J" && m.from && !trebuchetBypass) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Knight side-attack on a juggernaut: the knight must land on the
@@ -1534,7 +1576,8 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
       }
     }
     // Front-arc immunity: a barricade cannot be captured from the front.
-    if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !attackerBypassesFrontArc) {
+    // Knights and trebuchets bypass this (trebuchets crack any front armor).
+    if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !knightBypass && !trebuchetBypass) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Juggernaut charges that would trample a front-protected barricade are also blocked.
