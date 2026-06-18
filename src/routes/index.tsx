@@ -183,7 +183,40 @@ function Home() {
           </Card>
         </section>
 
+        {/* SIGNATURE GAMES (built-in) */}
+        <section className="space-y-2">
+          <div className="flex items-end justify-between px-1">
+            <h2 className="text-[11px] font-display font-bold uppercase tracking-[0.22em] text-foreground/80">Signature Games</h2>
+            <Link to="/lobby" className="text-xs font-semibold text-primary inline-flex items-center gap-0.5">
+              All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
+            <div className="flex gap-3 pb-2 snap-x">
+              {BUILTIN_GAMES.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => playBuiltin(g)}
+                  className="w-44 shrink-0 snap-start text-left"
+                >
+                  <Card className="p-3 h-full flex flex-col bg-card/60 backdrop-blur border-white/10 hover:border-primary/60 transition">
+                    <div className="h-20 -mx-3 -mt-3 mb-2 rounded-t-md bg-[radial-gradient(circle_at_30%_30%,oklch(0.65_0.22_320/0.5),transparent_60%),radial-gradient(circle_at_70%_70%,oklch(0.7_0.2_200/0.5),transparent_60%)] flex items-center justify-center">
+                      <Sparkles className="h-7 w-7 text-white/90" />
+                    </div>
+                    <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 flex-1">{g.description}</p>
+                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                      <Play className="h-3 w-3" /> Play
+                    </div>
+                  </Card>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* NEW FROM COMMUNITY */}
+
         <section className="space-y-2">
           <div className="flex items-end justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New from the community</h2>
