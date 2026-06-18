@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Gamepad2, Heart, Pin, Play, Star } from "lucide-react";
 import { toast } from "sonner";
 import { saveDesign } from "@/game/design";
-import type { Design } from "@/game/types";
+import type { Design, PieceDef } from "@/game/types";
+import { PieceById } from "@/components/chess/PieceGlyph";
 
 export const Route = createFileRoute("/_authenticated/forum/$topicId")({
   head: () => ({ meta: [{ title: "Topic — Prism Chess" }] }),
