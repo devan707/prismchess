@@ -795,6 +795,13 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.rookTo.r][move.rookTo.c] = { id: "R", color: move.piece.color };
     return b;
   }
+  if (move.kind === "juggCastle" && move.from && move.juggFrom && move.juggTo) {
+    b[move.from.r][move.from.c] = null;
+    for (const s of move.juggFrom) b[s.r][s.c] = null;
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    for (const s of move.juggTo) b[s.r][s.c] = { id: "J", color: move.piece.color };
+    return b;
+  }
   if (move.kind === "portalSwap" && move.from) {
     const friendly = b[move.to.r][move.to.c];
     b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
