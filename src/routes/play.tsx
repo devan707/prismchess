@@ -140,6 +140,12 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   useEffect(() => {
     try { localStorage.setItem("play:takeback", takebackOn ? "1" : "0"); } catch {}
   }, [takebackOn]);
+  const [enemyInspect, setEnemyInspect] = useState<boolean>(() => {
+    try { return localStorage.getItem("play:enemyInspect") !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("play:enemyInspect", enemyInspect ? "1" : "0"); } catch {}
+  }, [enemyInspect]);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [overlayHost, setOverlayHost] = useState<HTMLElement | null>(null);
 
