@@ -300,12 +300,12 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
             markerKind = null; // juggernaut footprint paints its own overlay
           } else if (isEnemyInspect) {
             if (isAttackPattern && piece && piece.color === humanColor) markerKind = "capture";
-            else if (isEnemyMoveOnly && !piece) markerKind = "move";
             else if (isAttackPattern && !piece) markerKind = "attack";
+            else if (isEnemyMoveOnly && !piece) markerKind = "move";
           } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
             if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
-            else if (isLegalRaw && !piece) markerKind = "move";
             else if (isAttackPattern && !piece) markerKind = "attack";
+            else if (isLegalRaw && !piece) markerKind = "move";
           }
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
