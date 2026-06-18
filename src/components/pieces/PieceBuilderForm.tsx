@@ -22,7 +22,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { savePiece, suggestPieceEmoji } from "@/lib/piece-builder.functions";
+import { savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +72,10 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [iconPrompt, setIconPrompt] = useState("");
   const [emoji, setEmoji] = useState("");
   const [emojiBusy, setEmojiBusy] = useState(false);
+  const [imageMode, setImageMode] = useState<"emoji" | "upload">("emoji");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [steps, setSteps] = useState<MoveStep[]>([defaultStep()]);
   const [ranged, setRanged] = useState<RangedAttack>(defaultRangedAttack());
   const [overrideEnabled, setOverrideEnabled] = useState(false);
@@ -79,6 +83,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
+  const uploadImage = useServerFn(uploadPieceImage);
 
   const id = useMemo(() => genId(), []);
 
@@ -86,12 +91,14 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
   const validation = useMemo(() => {
     if (!name.trim()) return "Name your piece.";
-    if (!emoji) return "Pick or generate an icon (emoji).";
+    if (imageMode === "emoji" && !emoji) return "Pick or generate an emoji icon (or upload an image).";
+    if (imageMode === "upload" && !imageFile) return "Upload a 300×300 PNG with a transparent background (or use an emoji).";
+    if (imageError) return imageError;
     const c = compileMovement(steps);
     if (c.error) return c.error;
     if (compiledRanged.error) return compiledRanged.error;
     return null;
-  }, [name, emoji, steps, compiledRanged]);
+  }, [name, emoji, imageMode, imageFile, imageError, steps, compiledRanged]);
 
   const compiledMove = useMemo(() => compileMovement(steps), [steps]);
 
@@ -100,6 +107,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
     name: name || "New piece",
     glyph: emoji || "❓",
     emoji: true,
+    imageUrl: imageMode === "upload" ? imagePreview ?? undefined : undefined,
     movement: compiledMove.moveSpec,
     capture: compiledMove.captureSpec,
     description,
@@ -149,10 +157,46 @@ export function PieceBuilderForm({ onSaved }: Props) {
     }
   };
 
+  const handleFile = (file: File | null) => {
+    setImageError(null);
+    setImageFile(null);
+    setImagePreview(null);
+    if (!file) return;
+    if (file.type !== "image/png") {
+      setImageError("Image must be a PNG.");
+      return;
+    }
+    if (file.size > 1_000_000) {
+      setImageError("Image must be under 1 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        if (img.width !== 300 || img.height !== 300) {
+          setImageError(`Image must be exactly 300×300 (got ${img.width}×${img.height}).`);
+          return;
+        }
+        setImageFile(file);
+        setImagePreview(url);
+      };
+      img.onerror = () => setImageError("Couldn't read the image.");
+      img.src = url;
+    };
+    reader.onerror = () => setImageError("Couldn't read the image.");
+    reader.readAsDataURL(file);
+  };
+
   const doSave = async (visibility: "private" | "public") => {
     if (validation) { toast.error(validation); return; }
+    // For uploaded images we use a single-character placeholder glyph so the
+    // legacy emoji renderer never sees an empty string; PieceGlyph prefers
+    // `imageUrl` when present anyway.
+    const effectiveEmoji = imageMode === "upload" ? "🖼️" : emoji;
     const def = buildPieceDef({
-      id, name: name.trim(), description: description.trim(), emoji, steps, ranged,
+      id, name: name.trim(), description: description.trim(), emoji: effectiveEmoji, steps, ranged,
       pointsOverride: overrideEnabled ? overridePts : undefined,
     });
     if ("error" in def) { toast.error(def.error); return; }
@@ -166,6 +210,16 @@ export function PieceBuilderForm({ onSaved }: Props) {
           visibility,
         },
       });
+
+      // After the row exists, upload the image (RLS keys on the row id).
+      if (imageMode === "upload" && imageFile) {
+        const fd = new FormData();
+        fd.set("pieceId", row.id);
+        fd.set("file", imageFile, "piece.png");
+        const res = await uploadImage({ data: fd });
+        def.imageUrl = res.imageUrl;
+      }
+
       toast.success(
         visibility === "public"
           ? `Published "${name.trim()}" to the community library`
@@ -174,6 +228,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
       onSaved?.(row.id, def);
       // Reset
       setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
+      setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
       setSteps([defaultStep()]);
       setRanged(defaultRangedAttack());
       setOverrideEnabled(false);
@@ -206,22 +261,68 @@ export function PieceBuilderForm({ onSaved }: Props) {
         {/* Icon */}
         <section className="rounded-lg border bg-card p-4 space-y-3">
           <h2 className="font-display text-lg font-semibold">2. Icon</h2>
-          <p className="text-xs text-muted-foreground">
-            Describe what the piece looks like — the AI picks one emoji. It will be rendered in the same black-and-white style as built-in pieces.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              value={iconPrompt}
-              onChange={(e) => setIconPrompt(e.target.value)}
-              placeholder="a coiled snake with bright fangs"
-              maxLength={200}
-              className="flex-1"
-            />
-            <Button onClick={handleEmoji} disabled={emojiBusy} variant="outline">
-              <Wand2 className="h-4 w-4 mr-1" /> {emojiBusy ? "Picking…" : emoji ? "Regenerate" : "Generate"}
-            </Button>
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setImageMode("emoji")}
+              className={`px-3 py-1 rounded-md border ${imageMode === "emoji" ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+            >
+              AI emoji
+            </button>
+            <button
+              type="button"
+              onClick={() => setImageMode("upload")}
+              className={`px-3 py-1 rounded-md border ${imageMode === "upload" ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+            >
+              Upload PNG
+            </button>
           </div>
+
+          {imageMode === "emoji" ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Describe what the piece looks like — the AI picks one emoji rendered in the same black-and-white style as built-in pieces.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={iconPrompt}
+                  onChange={(e) => setIconPrompt(e.target.value)}
+                  placeholder="a coiled snake with bright fangs"
+                  maxLength={200}
+                  className="flex-1"
+                />
+                <Button onClick={handleEmoji} disabled={emojiBusy} variant="outline">
+                  <Wand2 className="h-4 w-4 mr-1" /> {emojiBusy ? "Picking…" : emoji ? "Regenerate" : "Generate"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Upload your own art. Required: <strong>PNG</strong>, exactly <strong>300×300 pixels</strong>,{" "}
+                <strong>transparent background</strong>. Max 1 MB. It will be rendered in your side's color (silhouette filter).
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                  className="text-xs"
+                />
+                {imageFile && (
+                  <Button size="sm" variant="ghost" onClick={() => handleFile(null)}>Clear</Button>
+                )}
+              </div>
+              {imageError && <p className="text-xs text-destructive">{imageError}</p>}
+              {imagePreview && !imageError && (
+                <p className="text-xs text-muted-foreground">
+                  Ready: <span className="font-mono">{imageFile?.name}</span> · {(imageFile!.size / 1024).toFixed(0)} KB
+                </p>
+              )}
+            </>
+          )}
         </section>
+
 
         {/* Movement */}
         <section className="rounded-lg border bg-card p-4 space-y-3">

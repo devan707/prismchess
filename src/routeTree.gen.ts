@@ -21,6 +21,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PiecesIndexRouteImport } from './routes/pieces.index'
 import { Route as PiecesNewRouteImport } from './routes/pieces.new'
+import { Route as PiecesSlugRouteImport } from './routes/pieces.$slug'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -42,6 +43,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminStatsRouteImport } from './routes/_authenticated/admin.stats'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as ApiPublicPieceImgSplatRouteImport } from './routes/api/public/piece-img/$'
 import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
 import { Route as AuthenticatedMultiplayerJoinTokenRouteImport } from './routes/_authenticated/multiplayer.join.$token'
 
@@ -102,6 +104,11 @@ const PiecesIndexRoute = PiecesIndexRouteImport.update({
 const PiecesNewRoute = PiecesNewRouteImport.update({
   id: '/pieces/new',
   path: '/pieces/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PiecesSlugRoute = PiecesSlugRouteImport.update({
+  id: '/pieces/$slug',
+  path: '/pieces/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GSlugRoute = GSlugRouteImport.update({
@@ -217,6 +224,11 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicPieceImgSplatRoute = ApiPublicPieceImgSplatRouteImport.update({
+  id: '/api/public/piece-img/$',
+  path: '/api/public/piece-img/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksCleanupStaleChallengesRoute =
   ApiPublicHooksCleanupStaleChallengesRouteImport.update({
     id: '/api/public/hooks/cleanup-stale-challenges',
@@ -248,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -265,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
+  '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -281,6 +295,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces': typeof PiecesIndexRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -298,6 +313,7 @@ export interface FileRoutesByTo {
   '/multiplayer': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
+  '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -319,6 +335,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -336,6 +353,7 @@ export interface FileRoutesById {
   '/_authenticated/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/_authenticated/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
+  '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -357,6 +375,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/g/$slug'
+    | '/pieces/$slug'
     | '/pieces/new'
     | '/pieces/'
     | '/admin/audit'
@@ -374,6 +393,7 @@ export interface FileRouteTypes {
     | '/multiplayer/'
     | '/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
+    | '/api/public/piece-img/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -390,6 +410,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/g/$slug'
+    | '/pieces/$slug'
     | '/pieces/new'
     | '/pieces'
     | '/admin/audit'
@@ -407,6 +428,7 @@ export interface FileRouteTypes {
     | '/multiplayer'
     | '/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
+    | '/api/public/piece-img/$'
   id:
     | '__root__'
     | '/'
@@ -427,6 +449,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/g/$slug'
+    | '/pieces/$slug'
     | '/pieces/new'
     | '/pieces/'
     | '/_authenticated/admin/audit'
@@ -444,6 +467,7 @@ export interface FileRouteTypes {
     | '/_authenticated/multiplayer/'
     | '/_authenticated/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
+    | '/api/public/piece-img/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -458,9 +482,11 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
+  PiecesSlugRoute: typeof PiecesSlugRoute
   PiecesNewRoute: typeof PiecesNewRoute
   PiecesIndexRoute: typeof PiecesIndexRoute
   ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
+  ApiPublicPieceImgSplatRoute: typeof ApiPublicPieceImgSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -547,6 +573,13 @@ declare module '@tanstack/react-router' {
       path: '/pieces/new'
       fullPath: '/pieces/new'
       preLoaderRoute: typeof PiecesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pieces/$slug': {
+      id: '/pieces/$slug'
+      path: '/pieces/$slug'
+      fullPath: '/pieces/$slug'
+      preLoaderRoute: typeof PiecesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$slug': {
@@ -696,6 +729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/piece-img/$': {
+      id: '/api/public/piece-img/$'
+      path: '/api/public/piece-img/$'
+      fullPath: '/api/public/piece-img/$'
+      preLoaderRoute: typeof ApiPublicPieceImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/cleanup-stale-challenges': {
       id: '/api/public/hooks/cleanup-stale-challenges'
       path: '/api/public/hooks/cleanup-stale-challenges'
@@ -809,10 +849,12 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
+  PiecesSlugRoute: PiecesSlugRoute,
   PiecesNewRoute: PiecesNewRoute,
   PiecesIndexRoute: PiecesIndexRoute,
   ApiPublicHooksCleanupStaleChallengesRoute:
     ApiPublicHooksCleanupStaleChallengesRoute,
+  ApiPublicPieceImgSplatRoute: ApiPublicPieceImgSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

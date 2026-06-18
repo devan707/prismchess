@@ -60,11 +60,25 @@ export const getTopic = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: topic, error } = await context.supabase
       .from("forum_topics")
-      .select("id, title, body, author_id, reply_count, like_count, created_at, is_featured, is_pinned, shared_design, shared_design_name")
+      .select("id, title, body, author_id, reply_count, like_count, created_at, is_featured, is_pinned, shared_design, shared_design_name, shared_piece_id, is_showcase")
       .eq("id", data.topicId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!topic) throw new Error("Topic not found.");
+
+    // Resolve the linked custom piece, if any.
+    let sharedPiece: {
+      id: string; slug: string; name: string; description: string;
+      def: unknown; image_url: string | null;
+    } | null = null;
+    if (topic.shared_piece_id) {
+      const { data: p } = await context.supabase
+        .from("custom_pieces")
+        .select("id, slug, name, description, def, image_url")
+        .eq("id", topic.shared_piece_id)
+        .maybeSingle();
+      if (p) sharedPiece = p as unknown as typeof sharedPiece;
+    }
 
     const { data: replies, error: rErr } = await context.supabase
       .from("forum_replies")
@@ -91,7 +105,7 @@ export const getTopic = createServerFn({ method: "GET" })
     const likedReply = new Set((likes ?? []).filter((l) => l.target_type === "reply").map((l) => l.target_id));
 
     return {
-      topic: { ...topic, author: map[topic.author_id] ?? null, liked_by_me: likedTopic.has(topic.id) },
+      topic: { ...topic, author: map[topic.author_id] ?? null, liked_by_me: likedTopic.has(topic.id), shared_piece: sharedPiece },
       replies: (replies ?? []).map((r) => ({
         ...r,
         author: map[r.author_id] ?? null,

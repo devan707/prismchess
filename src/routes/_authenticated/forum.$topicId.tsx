@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Gamepad2, Heart, Pin, Play, Star } from "lucide-react";
 import { toast } from "sonner";
 import { saveDesign } from "@/game/design";
-import type { Design } from "@/game/types";
+import type { Design, PieceDef } from "@/game/types";
+import { PieceById } from "@/components/chess/PieceGlyph";
 
 export const Route = createFileRoute("/_authenticated/forum/$topicId")({
   head: () => ({ meta: [{ title: "Topic — Prism Chess" }] }),
@@ -97,6 +98,27 @@ function TopicPage() {
               </Button>
             </div>
           )}
+          {topic.shared_piece && (() => {
+            const sp = topic.shared_piece as { id: string; slug: string; name: string; description: string; def: unknown; image_url: string | null };
+            const baseDef = (sp.def ?? {}) as PieceDef;
+            const def: PieceDef = { ...baseDef, imageUrl: sp.image_url ?? baseDef.imageUrl };
+            return (
+              <Link
+                to="/pieces/$slug"
+                params={{ slug: sp.slug }}
+                className="mt-4 rounded-lg border border-primary/40 bg-primary/5 p-3 flex items-center gap-3 hover:bg-primary/10 transition"
+              >
+                <div className="w-12 h-12 rounded bg-stone-200 dark:bg-stone-700 flex items-center justify-center shrink-0">
+                  <PieceById id={def.id} color="w" def={def} className="text-3xl" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold truncate">{sp.name}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-1">{sp.description || "View this custom piece"}</div>
+                </div>
+                <span className="text-xs text-primary font-medium">Open →</span>
+              </Link>
+            );
+          })()}
           <div className="mt-4">
             <button
               onClick={() => onLike("topic", topic.id)}
