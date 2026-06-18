@@ -183,17 +183,21 @@ function Home() {
       </div>
 
       <header className="max-w-5xl mx-auto px-4 pt-2 pb-8 text-center">
-        <img
-          src={logoUrl}
-          alt="Prism Chess"
-          width={320}
-          height={320}
-          className="mx-auto h-44 w-44 sm:h-56 sm:w-56 drop-shadow-[0_8px_30px_rgba(201,168,76,0.25)]"
-        />
-        <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#c9a84c]/80 font-medium">
+        <div className="relative mx-auto w-fit">
+          <div aria-hidden className="absolute inset-0 -m-8 rounded-full bg-[radial-gradient(circle,rgba(245,235,255,0.18),transparent_65%)] blur-xl" />
+          <img
+            src={logoUrl}
+            alt="Prism Chess"
+            width={320}
+            height={320}
+            className="relative mx-auto h-44 w-44 sm:h-56 sm:w-56 drop-shadow-[0_0_30px_rgba(200,160,255,0.45)]"
+          />
+        </div>
+        <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#d4baff]/80 font-medium">
           The Ultimate Variant Sandbox
         </p>
       </header>
+
 
       <main className="max-w-5xl mx-auto px-4 pb-32 space-y-10">
         {/* Primary actions */}
