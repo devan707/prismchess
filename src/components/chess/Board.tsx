@@ -21,9 +21,11 @@ interface BoardProps {
   /** Allow clicking an opponent piece to inspect its move/attack pattern.
    *  Only enabled in PvComputer (and analysis); disabled in PvP matches. */
   allowEnemyInspect?: boolean;
+  /** When false, hides the legal-move dots for your own selected piece. */
+  showHints?: boolean;
 }
 
-export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange, allowEnemyInspect = false }: BoardProps) {
+export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange, allowEnemyInspect = false, showHints = true }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
 
@@ -310,9 +312,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
             else if (isAttackPattern && !piece) markerKind = "attack";
             else if (isEnemyMoveOnly && !piece) markerKind = "move";
           } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
-            if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
-            else if (isAttackPattern && !piece) markerKind = "attack";
-            else if (isLegalRaw && !piece) markerKind = "move";
+            if (showHints) {
+              if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
+              else if (isAttackPattern && !piece) markerKind = "attack";
+              else if (isLegalRaw && !piece) markerKind = "move";
+            }
           }
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);

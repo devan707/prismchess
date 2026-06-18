@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { ArrowLeft } from "lucide-react";
+import { PlayPrefsForm } from "@/components/chess/PlayPrefsForm";
+import { DEFAULT_PREFS, loadDefaultPrefs, saveDefaultPrefs, type PlayPrefs } from "@/lib/play-prefs";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "Your profile — Prism Chess" }] }),
@@ -20,6 +22,7 @@ function ProfilePage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [prefs, setPrefs] = useState<PlayPrefs>(DEFAULT_PREFS);
 
   useEffect(() => {
     fetchProfile({}).then((p) => {
@@ -28,7 +31,11 @@ function ProfilePage() {
         setDisplayName(p.display_name ?? p.username);
       }
     }).catch((e) => toast.error(e.message));
+    setPrefs(loadDefaultPrefs());
   }, [fetchProfile]);
+
+  const updatePrefs = (next: PlayPrefs) => { setPrefs(next); saveDefaultPrefs(next); };
+
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +81,15 @@ function ProfilePage() {
           </div>
           <Button type="submit" disabled={busy}>Save profile</Button>
         </form>
+
+        <section className="mt-10">
+          <h2 className="font-display text-lg font-semibold mb-1">Default game settings</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Used as the starting values when you begin a new game against the computer. You can still change them per game.
+          </p>
+          <PlayPrefsForm value={prefs} onChange={updatePrefs} />
+          <p className="text-[11px] text-muted-foreground mt-2">Saved automatically.</p>
+        </section>
       </main>
     </div>
   );

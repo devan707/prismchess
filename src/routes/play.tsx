@@ -14,6 +14,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { PlayPrefsForm } from "@/components/chess/PlayPrefsForm";
+import { loadDefaultPrefs, type PlayPrefs } from "@/lib/play-prefs";
 import { loadDesign, loadCurrentMeta, type CurrentGameMeta } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
@@ -84,43 +89,87 @@ function PlayRoute() {
 
 function Play({ design }: { design: Design }) {
   const [humanColor, setHumanColor] = useState<Color>("w");
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  // Initialise from saved defaults so the user's profile prefs apply on first render.
+  const initialPrefs = useMemo(() => loadDefaultPrefs(), []);
+  const [difficulty, setDifficulty] = useState<Difficulty>(initialPrefs.difficulty);
+  const [showHints, setShowHints] = useState<boolean>(initialPrefs.showHints);
+  const [tipsOn, setTipsOn] = useState<boolean>(initialPrefs.showTips);
   const [flipped, setFlipped] = useState(false);
   const [muted, setMuted] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  // Pre-game settings dialog — shown each time a fresh game starts.
+  const [preGameOpen, setPreGameOpen] = useState(true);
+  const [pendingPrefs, setPendingPrefs] = useState<PlayPrefs>(initialPrefs);
   const designMemo = useMemo(() => design, [design]);
 
+  const openPreGame = () => {
+    setPendingPrefs({ difficulty, showHints, showTips: tipsOn });
+    setPreGameOpen(true);
+  };
+  const confirmPreGame = () => {
+    setDifficulty(pendingPrefs.difficulty);
+    setShowHints(pendingPrefs.showHints);
+    setTipsOn(pendingPrefs.showTips);
+    setPreGameOpen(false);
+  };
+
   return (
-    <GameView
-      key={resetKey}
-      humanColor={humanColor}
-      difficulty={difficulty}
-      design={designMemo}
-      flipped={flipped}
-      muted={muted}
-      setHumanColor={(c) => { setHumanColor(c); setResetKey((k) => k + 1); }}
-      setDifficulty={setDifficulty}
-      setFlipped={setFlipped}
-      setMuted={(m) => { sfx.setMuted(m); setMuted(m); }}
-      onNewGame={() => setResetKey((k) => k + 1)}
-    />
+    <>
+      <GameView
+        key={resetKey}
+        humanColor={humanColor}
+        difficulty={difficulty}
+        showHints={showHints}
+        tipsOn={tipsOn}
+        design={designMemo}
+        flipped={flipped}
+        muted={muted}
+        setHumanColor={(c) => { setHumanColor(c); setResetKey((k) => k + 1); openPreGame(); }}
+        setDifficulty={setDifficulty}
+        setShowHints={setShowHints}
+        setTipsOn={setTipsOn}
+        setFlipped={setFlipped}
+        setMuted={(m) => { sfx.setMuted(m); setMuted(m); }}
+        onNewGame={() => { setResetKey((k) => k + 1); openPreGame(); }}
+      />
+      <Dialog open={preGameOpen} onOpenChange={setPreGameOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ready to play?</DialogTitle>
+            <DialogDescription>
+              Confirm your settings for this game. These start from your profile defaults — hit OK to continue or tweak them just for this match.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">
+            <PlayPrefsForm value={pendingPrefs} onChange={setPendingPrefs} />
+          </div>
+          <DialogFooter className="mt-4">
+            <Button onClick={confirmPreGame}>OK, start game</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 interface GVProps {
   humanColor: Color;
   difficulty: Difficulty;
+  showHints: boolean;
+  tipsOn: boolean;
   design: Design;
   flipped: boolean;
   muted: boolean;
   setHumanColor: (c: Color) => void;
   setDifficulty: (d: Difficulty) => void;
+  setShowHints: (v: boolean) => void;
+  setTipsOn: (v: boolean) => void;
   setFlipped: (f: boolean) => void;
   setMuted: (m: boolean) => void;
   onNewGame: () => void;
 }
 
-function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColor, setDifficulty, setFlipped, setMuted, onNewGame }: GVProps) {
+function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, muted, setHumanColor, setDifficulty, setShowHints, setTipsOn, setFlipped, setMuted, onNewGame }: GVProps) {
   const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
@@ -131,9 +180,8 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [tipsOn, setTipsOn] = useState<boolean>(() => {
-    try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
-  });
+  // tipsOn and showHints come from the parent (driven by profile defaults / pre-game dialog).
+
   const [takebackOn, setTakebackOn] = useState<boolean>(() => {
     try { return localStorage.getItem("play:takeback") === "1"; } catch { return false; }
   });
@@ -170,9 +218,6 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
   const handleSelectionChange = useCallback((sq: Square | null) => {
     setSelectedSquare(sq);
   }, []);
-  useEffect(() => {
-    try { localStorage.setItem("play:tips", tipsOn ? "1" : "0"); } catch {}
-  }, [tipsOn]);
 
   const selectedPiece = selectedSquare ? displayedState.board[selectedSquare.r][selectedSquare.c] : null;
   const selectedDef = selectedPiece ? displayedState.registry[selectedPiece.id] : null;
@@ -288,7 +333,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
             size="icon"
             aria-label={tipsOn ? "Hide piece tips" : "Show piece tips"}
             aria-pressed={tipsOn}
-            onClick={() => setTipsOn((v) => !v)}
+            onClick={() => setTipsOn(!tipsOn)}
           >
             <Info className="h-4 w-4" />
           </Button>
@@ -387,6 +432,20 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
                     Click an opponent piece to preview its moves and attack pattern.
                   </p>
                 </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-2.5">
+                  <div className="min-w-0">
+                    <Label className="text-sm">Show move possibilities</Label>
+                    <p className="text-[11px] text-muted-foreground">Highlight legal squares for the piece you select.</p>
+                  </div>
+                  <Switch checked={showHints} onCheckedChange={setShowHints} />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md border p-2.5">
+                  <div className="min-w-0">
+                    <Label className="text-sm">Show piece info window</Label>
+                    <p className="text-[11px] text-muted-foreground">Show the description panel below the board.</p>
+                  </div>
+                  <Switch checked={tipsOn} onCheckedChange={setTipsOn} />
+                </div>
                 <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -458,6 +517,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           disabled={viewingPast || terminal}
           onSelectionChange={handleSelectionChange}
           allowEnemyInspect={enemyInspect}
+          showHints={showHints}
         />
 
         {takebackOn && state.history.length > 0 && !terminal && !viewingPast && (
