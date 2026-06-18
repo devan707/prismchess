@@ -1551,11 +1551,14 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
-    // Knights leap onto their target — they strike the square directly and
-    // bypass front-arc immunity on juggernauts and barricades.
-    const attackerBypassesFrontArc = m.piece.id === "N";
-    // Front-arc immunity: a juggernaut cannot be captured from the front.
-    if (m.captured && m.captured.id === "J" && m.from && !attackerBypassesFrontArc) {
+    // Knights leap onto their target — they bypass front-arc immunity on
+    // BARRICADES only. Juggernauts can only be hit from the front by a
+    // Trebuchet (any custom siege piece named "Trebuchet").
+    const knightBypass = m.piece.id === "N";
+    const trebuchetBypass = isTrebuchet(state.registry[m.piece.id]);
+    // Front-arc immunity: a juggernaut cannot be captured from the front,
+    // except by a Trebuchet — the only siege weapon that can crack the front.
+    if (m.captured && m.captured.id === "J" && m.from && !trebuchetBypass) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Knight side-attack on a juggernaut: the knight must land on the
@@ -1573,7 +1576,8 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
       }
     }
     // Front-arc immunity: a barricade cannot be captured from the front.
-    if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !attackerBypassesFrontArc) {
+    // Knights and trebuchets bypass this (trebuchets crack any front armor).
+    if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !knightBypass && !trebuchetBypass) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
     // Juggernaut charges that would trample a front-protected barricade are also blocked.
