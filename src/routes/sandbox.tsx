@@ -30,10 +30,13 @@ import { ArrowLeft, Play, Save, Sparkles, Wand2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
-import { publishGame } from "@/lib/social.functions";
+import { publishGame, getMyPublishedGame } from "@/lib/social.functions";
 import { PieceLibraryPanel } from "@/components/pieces/PieceLibraryPanel";
 
 export const Route = createFileRoute("/sandbox")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    edit: typeof search.edit === "string" ? search.edit : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Sandbox — Design Your Own Chess" },
