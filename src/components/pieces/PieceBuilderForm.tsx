@@ -29,6 +29,7 @@ import {
   type StepDirRel,
 } from "@/game/customMovement";
 import { PieceReachPreview } from "./PieceReachPreview";
+import { PieceTestBoard } from "./PieceTestBoard";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
@@ -570,6 +571,18 @@ export function PieceBuilderForm({ onSaved }: Props) {
           <div>
             <p className="text-xs text-muted-foreground mb-1">Reach from a center cell</p>
             <PieceReachPreview
+              options={options}
+              rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
+            />
+          </div>
+
+          <div className="border-t pt-3">
+            <p className="text-xs font-semibold mb-1">Playtest</p>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Drop allies/enemies, then click your piece to see legal moves and try captures, blocks, and slides.
+            </p>
+            <PieceTestBoard
+              def={previewDef}
               options={options}
               rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
             />
