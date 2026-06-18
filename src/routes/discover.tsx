@@ -5,6 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AppShell } from "@/components/shell/AppShell";
 import { listDiscoveryGames } from "@/lib/social.functions";
+import { adminSetPublishedGameFlags, adminDeletePublishedGame } from "@/lib/admin.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { AdminMenu } from "@/components/admin/AdminMenu";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Play, Heart, MessageSquare, Crown, MessagesSquare, Hammer } from "lucide-react";
 
 export const Route = createFileRoute("/discover")({
