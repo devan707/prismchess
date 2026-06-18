@@ -1,6 +1,7 @@
 import type { Color, Piece, PieceDef } from "@/game/types";
 import { NecromancerGlyph } from "./NecromancerGlyph";
 import { PrismGlyph } from "./PrismGlyph";
+import juggernautArt from "@/assets/juggernaut-top.png";
 
 interface Props {
   piece: Piece;
