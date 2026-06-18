@@ -84,43 +84,87 @@ function PlayRoute() {
 
 function Play({ design }: { design: Design }) {
   const [humanColor, setHumanColor] = useState<Color>("w");
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  // Initialise from saved defaults so the user's profile prefs apply on first render.
+  const initialPrefs = useMemo(() => loadDefaultPrefs(), []);
+  const [difficulty, setDifficulty] = useState<Difficulty>(initialPrefs.difficulty);
+  const [showHints, setShowHints] = useState<boolean>(initialPrefs.showHints);
+  const [tipsOn, setTipsOn] = useState<boolean>(initialPrefs.showTips);
   const [flipped, setFlipped] = useState(false);
   const [muted, setMuted] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  // Pre-game settings dialog — shown each time a fresh game starts.
+  const [preGameOpen, setPreGameOpen] = useState(true);
+  const [pendingPrefs, setPendingPrefs] = useState<PlayPrefs>(initialPrefs);
   const designMemo = useMemo(() => design, [design]);
 
+  const openPreGame = () => {
+    setPendingPrefs({ difficulty, showHints, showTips: tipsOn });
+    setPreGameOpen(true);
+  };
+  const confirmPreGame = () => {
+    setDifficulty(pendingPrefs.difficulty);
+    setShowHints(pendingPrefs.showHints);
+    setTipsOn(pendingPrefs.showTips);
+    setPreGameOpen(false);
+  };
+
   return (
-    <GameView
-      key={resetKey}
-      humanColor={humanColor}
-      difficulty={difficulty}
-      design={designMemo}
-      flipped={flipped}
-      muted={muted}
-      setHumanColor={(c) => { setHumanColor(c); setResetKey((k) => k + 1); }}
-      setDifficulty={setDifficulty}
-      setFlipped={setFlipped}
-      setMuted={(m) => { sfx.setMuted(m); setMuted(m); }}
-      onNewGame={() => setResetKey((k) => k + 1)}
-    />
+    <>
+      <GameView
+        key={resetKey}
+        humanColor={humanColor}
+        difficulty={difficulty}
+        showHints={showHints}
+        tipsOn={tipsOn}
+        design={designMemo}
+        flipped={flipped}
+        muted={muted}
+        setHumanColor={(c) => { setHumanColor(c); setResetKey((k) => k + 1); openPreGame(); }}
+        setDifficulty={setDifficulty}
+        setShowHints={setShowHints}
+        setTipsOn={setTipsOn}
+        setFlipped={setFlipped}
+        setMuted={(m) => { sfx.setMuted(m); setMuted(m); }}
+        onNewGame={() => { setResetKey((k) => k + 1); openPreGame(); }}
+      />
+      <Dialog open={preGameOpen} onOpenChange={setPreGameOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ready to play?</DialogTitle>
+            <DialogDescription>
+              Confirm your settings for this game. These start from your profile defaults — hit OK to continue or tweak them just for this match.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">
+            <PlayPrefsForm value={pendingPrefs} onChange={setPendingPrefs} />
+          </div>
+          <DialogFooter className="mt-4">
+            <Button onClick={confirmPreGame}>OK, start game</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 interface GVProps {
   humanColor: Color;
   difficulty: Difficulty;
+  showHints: boolean;
+  tipsOn: boolean;
   design: Design;
   flipped: boolean;
   muted: boolean;
   setHumanColor: (c: Color) => void;
   setDifficulty: (d: Difficulty) => void;
+  setShowHints: (v: boolean) => void;
+  setTipsOn: (v: boolean) => void;
   setFlipped: (f: boolean) => void;
   setMuted: (m: boolean) => void;
   onNewGame: () => void;
 }
 
-function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColor, setDifficulty, setFlipped, setMuted, onNewGame }: GVProps) {
+function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, muted, setHumanColor, setDifficulty, setShowHints, setTipsOn, setFlipped, setMuted, onNewGame }: GVProps) {
   const navigate = useNavigate();
   const game = useGame({ humanColor, difficulty, design });
   const {
