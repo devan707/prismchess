@@ -26,12 +26,30 @@ export interface MoveStep {
     | { kind: "relative"; rel: StepDirRel };
   distance: number | "unlimited";  // 1..3 or "unlimited"
   jumps: boolean;                  // ignore intervening pieces
+  /** Whether this step can capture an enemy on the landing square.
+   *  For multi-step chains, only the final step's flag is used. */
+  captures: boolean;
+}
+
+export type RangedTiming = "before" | "after" | "replace";
+
+export interface RangedAttack {
+  enabled: boolean;
+  /** Absolute direction family. */
+  direction: StepDirAbs;
+  /** Inclusive square-range, 1..4. */
+  minDistance: number;
+  maxDistance: number;
+  timing: RangedTiming;
 }
 
 export interface CompiledMovement {
-  spec: MovementSpec;
+  moveSpec: MovementSpec;
+  /** Set only when captures differ from movement (e.g. last step has captures=false). */
+  captureSpec?: MovementSpec;
   error?: string;
 }
+
 
 // ---------- direction helpers ----------
 
