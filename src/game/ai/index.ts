@@ -65,6 +65,51 @@ function recentShuffleCount(state: GameState, sq: Square, color: Color, window =
   return count;
 }
 
+/**
+ * Net material the Prism aura flips on this move. Positive = we gain pieces
+ * (enemies flipped to our side), negative = we lose pieces (our own flipped
+ * to the enemy, including the mover itself if it ends in the aura or crosses
+ * it). The search naturally sees this via applyMoveToState + evaluate, but
+ * easy mode and move ordering only look one ply, so without this the AI will
+ * happily walk its Queen through prism light.
+ */
+function prismFlipDelta(state: GameState, m: Move): number {
+  // Cheap early-out when there are no prisms on the board.
+  let anyPrism = false;
+  for (const row of state.board) {
+    for (const cell of row) {
+      if (cell && state.registry[cell.id]?.special === "prism") { anyPrism = true; break; }
+    }
+    if (anyPrism) break;
+  }
+  if (!anyPrism) return 0;
+  const us = m.piece.color;
+  const opp: Color = us === "w" ? "b" : "w";
+  const next = applyMoveToState(state, m);
+  let delta = 0;
+  // Stationary pieces whose colour changed between pre- and post-move boards.
+  for (let r = 0; r < next.board.length; r++) {
+    for (let c = 0; c < next.board[0].length; c++) {
+      if (m.from && r === m.from.r && c === m.from.c) continue;
+      if (r === m.to.r && c === m.to.c) continue;
+      const before = state.board[r][c];
+      const after = next.board[r][c];
+      if (!before || !after || before.id !== after.id) continue;
+      if (before.color === after.color) continue;
+      const v = valueFor(after.id, state.registry[after.id]);
+      delta += after.color === us ? v : -v;
+    }
+  }
+  // The mover itself — if it ended up enemy-coloured (passed through aura or
+  // is standing in it), we've effectively donated the piece.
+  const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
+  const landed = next.board[m.to.r]?.[m.to.c];
+  if (landed && landed.id === movingId && landed.color === opp) {
+    delta -= valueFor(movingId, state.registry[movingId]);
+  }
+  return delta;
+}
+
 function moveScore(state: GameState, m: Move): number {
   let s = 0;
   const pb = loadPlaybook();
@@ -90,6 +135,7 @@ function moveScore(state: GameState, m: Move): number {
       s -= shuffles * weight;
     }
   }
+  s += prismFlipDelta(state, m);
   s -= recaptureLoss(state, m);
   return s;
 }
