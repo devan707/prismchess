@@ -699,6 +699,10 @@ export function dropMoves(state: GameState, color: Color): Move[] {
 
 export function applyMoveToBoard(board: Board, move: Move): Board {
   const b = cloneBoard(board);
+  if (move.kind === "handPass") {
+    // Turn-ending no-op when the King's Hand has no legal second step.
+    return b;
+  }
   if (move.kind === "drop") {
     b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
     return b;
@@ -1008,20 +1012,32 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       (cp) => !(cp.square.r === move.to.r && cp.square.c === move.to.c),
     );
   }
+  // King's Hand makes two king-steps per turn. The first move keeps the
+  // turn with the same player; the second (or a handPass) flips it. End-of-
+  // turn effects (prism aura sweep, enPassant clearing) only run when the
+  // turn actually flips.
+  const isHand = move.piece.id === "H" && (move.kind === "normal" || move.kind === undefined);
+  const wasPending = !!state.pendingHand;
+  const isFirstHandMove = isHand && !wasPending;
+  const flipTurn = !isFirstHandMove;
+  const nextPendingHand = isFirstHandMove ? { r: move.to.r, c: move.to.c } : null;
   const next: GameState = {
     ...state,
     board,
     reserves,
     captured,
     corpses: nextCorpses,
-    enPassant: move.kind === "double" && move.from
-      ? (move.from.r !== move.to.r
-          ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
-          : { r: move.from.r, c: (move.from.c + move.to.c) / 2 })
-      : null,
-    turn: state.turn === "w" ? "b" : "w",
+    enPassant: flipTurn
+      ? (move.kind === "double" && move.from
+          ? (move.from.r !== move.to.r
+              ? { r: (move.from.r + move.to.r) / 2, c: move.from.c }
+              : { r: move.from.r, c: (move.from.c + move.to.c) / 2 })
+          : null)
+      : state.enPassant,
+    turn: flipTurn ? (state.turn === "w" ? "b" : "w") : state.turn,
+    pendingHand: nextPendingHand,
   };
-  applyPrismFlips(next.board, move, state.registry);
+  applyPrismFlips(next.board, move, state.registry, flipTurn);
   return next;
 }
 
@@ -1064,16 +1080,17 @@ function flipPieceAt(board: Board, r: number, c: number, registry: Record<PieceI
   board[r][c] = { ...p, color: p.color === "w" ? "b" : "w" };
 }
 
-function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, PieceDef>) {
+function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, PieceDef>, endOfTurn: boolean = true) {
   const aura = prismAuraCells(board, registry);
   if (aura.size === 0) return;
   const inAura = (r: number, c: number) => aura.has(`${r},${c}`);
-  // Prism light is a unified field — crossing one or many aura squares only
-  // flips a piece once. Pass-through: a linear move that crossed the aura and
-  // ended outside it flips the mover a single time here. Pieces that end
-  // inside the aura are flipped by the end-of-turn sweep below (also once).
+  // Pass-through flip on a linear move that crossed the aura and ended
+  // outside it. Always applies (even on the King's Hand first step), but
+  // a 1-square king leap never has intermediate squares so this is a no-op
+  // for KH in practice.
   if (move.from && move.kind !== "drop" && move.kind !== "portalSwap" &&
       move.kind !== "necroRaise" && move.kind !== "resurrect" &&
+      move.kind !== "handPass" &&
       move.kind !== "juggShift" && move.kind !== "juggCharge" && move.kind !== "juggExit") {
     const dr = move.to.r - move.from.r;
     const dc = move.to.c - move.from.c;
@@ -1092,7 +1109,8 @@ function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, Pie
       }
     }
   }
-  // End-of-turn sweep: every non-royal piece currently in the aura flips once.
+  // End-of-turn sweep — only when the turn actually ends.
+  if (!endOfTurn) return;
   for (const key of aura) {
     const [r, c] = key.split(",").map(Number);
     flipPieceAt(board, r, c, registry);
@@ -1102,6 +1120,12 @@ function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, Pie
 export function legalMovesFrom(state: GameState, from: Square): Move[] {
   const p = state.board[from.r][from.c];
   if (!p || p.color !== state.turn) return [];
+  // King's Hand mid-turn lock: only the KH that just moved may move, and
+  // only with another single king-step.
+  if (state.pendingHand) {
+    if (from.r !== state.pendingHand.r || from.c !== state.pendingHand.c) return [];
+    if (p.id !== "H") return [];
+  }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
     // Knights leap onto their target — they strike the square directly and
@@ -1119,35 +1143,26 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     if (m.juggTrampled && m.from) {
       for (const tp of m.juggTrampled) {
         if (state.registry[tp.id]?.immobile) {
-          // Determine that trampled barricade's square along the charge path.
-          // Simple approximation: if attacker direction matches barricade's color forward, that's its front.
           const dir = m.piece.color === "w" ? 1 : -1;
           const bDir = tp.color === "w" ? 1 : -1;
           if (m.piece.color !== tp.color && dir === -bDir) {
-            // Head-on charge attacks the barricade's front → illegal.
             return false;
           }
         }
       }
     }
-    // Juggernaut charge trampling also obeys front-arc immunity for any enemy J in path.
     if (m.juggTrampled && m.juggTrampled.some((p) => p.id === "J") && m.from) {
-      // The juggernaut chargers come head-on (their forward = enemy J's front) — so
-      // a charge tramples an enemy J only if approaching from the rear arc. Reject head-on.
       const enemyColor = m.juggTrampled.find((p) => p.id === "J")!.color;
       const dir = m.piece.color === "w" ? 1 : -1;
       if (m.piece.color !== enemyColor && dir === (enemyColor === "w" ? 1 : -1)) {
-        // same direction means they face same way — possible (e.g. both white). Different
-        // colors charging head-on would always be front-arc for the defender. Block it.
         return false;
       }
-      // Different-color juggernauts always face opposite — head-on charge would be front-arc, illegal.
       if (m.piece.color !== enemyColor) return false;
     }
-    // Evaluate own-king safety on the post-move board BEFORE prism aura flips.
-    // Otherwise stepping a piece (e.g. the queen) into the rainbow aura would
-    // instantly flip it to the enemy color and falsely "check" your own king,
-    // making legal moves into the aura impossible.
+    // First-of-two King's Hand move: defer own-king safety to the second
+    // step. Otherwise enforce it now (board pre-prism-flip).
+    const isFirstHand = !state.pendingHand && m.piece.id === "H";
+    if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
   });
@@ -1155,6 +1170,19 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
 
 export function allLegalMoves(state: GameState): Move[] {
   const out: Move[] = [];
+  if (state.pendingHand) {
+    const ph = state.pendingHand;
+    out.push(...legalMovesFrom(state, ph));
+    // If the KH has no legal second step (extremely rare — surrounded), allow
+    // a forced pass so the turn can still end.
+    if (out.length === 0) {
+      const p = state.board[ph.r]?.[ph.c];
+      if (p && p.id === "H" && p.color === state.turn) {
+        out.push({ from: ph, to: ph, piece: p, kind: "handPass" });
+      }
+    }
+    return out;
+  }
   for (let r = 0; r < state.board.length; r++) {
     for (let c = 0; c < state.board[0].length; c++) {
       const p = state.board[r][c];

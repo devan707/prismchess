@@ -88,7 +88,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     movement: { leaps: KING_OFFSETS },
     builtinCustom: true,
-    description: "The king's right hand. Moves one square in any direction like a king, but is NOT royal — capturing it doesn't end the game, and it can step into attacked squares.",
+    description: "The king's right hand. Takes TWO king-steps per turn (one square in any direction, like a king). The second step is mandatory — it may return to its original square. Not royal: capturing it doesn't end the game, and it can step into attacked squares.",
   },
   A: {
     id: "A",
