@@ -12,8 +12,9 @@ import {
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import { getVariantStats, type VariantStats } from "@/lib/variant-stats.functions";
+import { listDiscoveryGames } from "@/lib/social.functions";
 import { PlayCount } from "@/components/chess/PlayCount";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail, Heart, MessageSquare, Flame, Clock, Archive } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
@@ -37,8 +38,20 @@ function Home() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState<SavedGame[]>([]);
   const [stats, setStats] = useState<Record<string, VariantStats>>({});
+  type DiscoveryRes = Awaited<ReturnType<typeof listDiscoveryGames>>;
+  type DiscoveryGame = DiscoveryRes["newest"][number];
+  const [discovery, setDiscovery] = useState<DiscoveryRes | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
 
   useEffect(() => { setSaved(loadSavedGames()); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listDiscoveryGames()
+      .then((d) => { if (!cancelled) setDiscovery(d); })
+      .catch(() => { /* best-effort */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const variantKeys = useMemo(() => [
     ...BUILTIN_GAMES.map((g) => `builtin:${g.id}`),
@@ -81,6 +94,67 @@ function Home() {
     deleteSavedGame(id);
     setSaved(loadSavedGames());
   };
+
+  const playPublished = async (g: DiscoveryGame) => {
+    // Discovery payload doesn't include the design — fetch it on demand.
+    const { getPublishedGame } = await import("@/lib/social.functions");
+    const res = await getPublishedGame({ data: { slug: g.slug } });
+    if (!res) return;
+    const { saveDesign: sd, saveCurrentMeta: scm } = await import("@/game/design");
+    sd(res.game.design as never);
+    scm({
+      id: `published:${res.game.id}`,
+      name: res.game.name,
+      description: res.game.description,
+      tutorial: (res.game.tutorial as never) ?? undefined,
+    });
+    navigate({ to: "/play" });
+  };
+
+  const renderCommunityCard = (g: DiscoveryGame) => (
+    <div key={g.id} className="relative rounded-xl border bg-card p-4 pb-3 flex flex-col">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <h3 className="font-display font-semibold truncate">{g.name}</h3>
+        {g.rows && g.cols && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+            {g.rows}×{g.cols}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-1 truncate">
+        by{" "}
+        {g.author ? (
+          <Link to="/u/$username" params={{ username: g.author.username }} className="hover:underline">
+            {g.author.display_name ?? g.author.username}
+          </Link>
+        ) : "unknown"}
+      </p>
+      <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{g.description}</p>
+      <div className="mt-auto flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1" title="Likes">
+            <Heart className="h-3 w-3" /> {g.like_count}
+          </span>
+          <Link
+            to="/g/$slug"
+            params={{ slug: g.slug }}
+            className="inline-flex items-center gap-1 hover:text-foreground"
+            title="View comments"
+          >
+            <MessageSquare className="h-3 w-3" /> {g.comment_count}
+          </Link>
+        </div>
+        <div className="flex items-center gap-1">
+          <Link to="/g/$slug" params={{ slug: g.slug }}>
+            <Button size="sm" variant="ghost">Details</Button>
+          </Link>
+          <Button size="sm" onClick={() => playPublished(g)}>
+            <Play className="h-3 w-3 mr-1" /> Play
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -206,6 +280,60 @@ function Home() {
             </div>
           )}
         </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-xl font-semibold inline-flex items-center gap-2">
+              <Clock className="h-5 w-5" /> New from the community
+            </h2>
+            <Link to="/sandbox">
+              <Button size="sm" variant="ghost">
+                <Sparkles className="h-4 w-4 mr-1" /> Publish your own
+              </Button>
+            </Link>
+          </div>
+          {!discovery ? (
+            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : discovery.newest.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center text-sm text-muted-foreground">
+              No public games yet. Design one in the sandbox and publish it!
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {discovery.newest.map(renderCommunityCard)}
+            </div>
+          )}
+        </section>
+
+        {discovery && discovery.popular.length > 0 && (
+          <section>
+            <h2 className="font-display text-xl font-semibold mb-3 inline-flex items-center gap-2">
+              <Flame className="h-5 w-5" /> Popular
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {discovery.popular.map(renderCommunityCard)}
+            </div>
+          </section>
+        )}
+
+        {discovery && discovery.archive.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-xl font-semibold inline-flex items-center gap-2">
+                <Archive className="h-5 w-5" /> Archive
+                <span className="text-xs text-muted-foreground font-normal">({discovery.archive.length})</span>
+              </h2>
+              <Button size="sm" variant="ghost" onClick={() => setShowArchive((v) => !v)}>
+                {showArchive ? "Hide" : "Show"}
+              </Button>
+            </div>
+            {showArchive && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {discovery.archive.map(renderCommunityCard)}
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );
