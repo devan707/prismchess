@@ -1233,24 +1233,15 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
     const targetPool = state.turn === "w" ? w : b;
-    if (move.partnerCaptured) {
-      targetPool.push(move.partnerCaptured);
-    }
-    // fallthrough — outer block re-opens below
-  }
-  if (move.captured || move.partnerCaptured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
-    const w = [...state.captured.w];
-    const b = [...state.captured.b];
-    const targetPool = state.turn === "w" ? w : b;
-    const w = [...state.captured.w];
-    const b = [...state.captured.b];
-    const targetPool = state.turn === "w" ? w : b;
     // For juggCharge/juggShift, `captured` is also the first entry in juggTrampled — don't double-count.
     if (move.captured && move.kind !== "juggCharge" && move.kind !== "juggShift") {
       targetPool.push(move.captured as Piece);
       if (move.captured.id === "J") {
         targetPool.push({ id: "J", color: move.captured.color });
       }
+    }
+    if (move.partnerCaptured) {
+      targetPool.push(move.partnerCaptured);
     }
     if (move.juggTrampled) {
       for (const p of move.juggTrampled) {
