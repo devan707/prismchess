@@ -69,7 +69,7 @@ function SharedGamePage() {
   if (data === null) return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>;
   if (!data) return <div className="min-h-screen flex flex-col items-center justify-center gap-3"><p className="text-sm text-muted-foreground">Game not found.</p><Link to="/"><Button size="sm">Home</Button></Link></div>;
 
-  const { game, author } = data;
+  const { game, author, remixedFrom } = data;
 
   const handlePlay = () => {
     saveDesign(game.design as unknown as Design);
