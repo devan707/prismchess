@@ -327,11 +327,26 @@ function CreateChallengeButton({ onCreated }: { onCreated: () => void }) {
                 <Select value={timeControl} onValueChange={(v) => setTimeControl(v as typeof timeControl)}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="2min">Blitz · 2 min</SelectItem>
                     <SelectItem value="10min">10 min</SelectItem>
                     <SelectItem value="30min">30 min</SelectItem>
                     <SelectItem value="3day">3 days / move</SelectItem>
+                    <SelectItem value="custom">Custom…</SelectItem>
                   </SelectContent>
                 </Select>
+                {timeControl === "custom" && (
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground">Minutes per player</Label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={customMinutes}
+                      onChange={(e) => setCustomMinutes(Number(e.target.value))}
+                      className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Play as</Label>
