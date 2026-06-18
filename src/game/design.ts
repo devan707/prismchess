@@ -153,27 +153,15 @@ export const PRESETS: Preset[] = [
     build: (rows, cols) => {
       // Designed for an 8×8 board. Fall back to classic-ish on smaller boards.
       if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
-      // Back rank: Archer, Dragon, Wizard, Assassin, Regent/Lich King, Wizard, Dragon, Archer.
-      // Both sides field an Assassin in the queen slot. White is led by a Regent (G),
-      // Black by the Lich King (L) — mechanically identical royals.
-      const cKing = 4;
-      const cQueen = 3;
-      const whiteBack: PieceId[] = [];
-      const blackBack: PieceId[] = [];
-      for (let c = 0; c < cols; c++) {
-        let id: PieceId;
-        if (c === 0 || c === 7) id = "A";
-        else if (c === 1 || c === 6) id = "D";
-        else if (c === 2 || c === 5) id = "W";
-        else if (c === cQueen) id = "Z";
-        else if (c === cKing) id = "_K"; // sentinel, replaced per side
-        else id = "P";
-        whiteBack.push(id === "_K" ? "G" : id);
-        blackBack.push(id === "_K" ? "L" : id);
-      }
+      // Back rank (8-wide template): A D W Z _K W D A. _K is the side's royal:
+      // Regent (G) for White, Lich King (L) for Black.
+      const whiteTpl: PieceId[] = ["A", "D", "W", "Z", "G", "W", "D", "A"];
+      const blackTpl: PieceId[] = ["A", "D", "W", "Z", "L", "W", "D", "A"];
+      const whiteBack = centerBackRank(whiteTpl, cols);
+      const blackBack = centerBackRank(blackTpl, cols);
       const placements: Placement[] = [];
-      whiteBack.forEach((id, c) => placements.push({ color: "w", pieceId: id, r: 0, c }));
-      blackBack.forEach((id, c) => placements.push({ color: "b", pieceId: id, r: rows - 1, c }));
+      whiteBack.forEach((id, c) => { if (id) placements.push({ color: "w", pieceId: id, r: 0, c }); });
+      blackBack.forEach((id, c) => { if (id) placements.push({ color: "b", pieceId: id, r: rows - 1, c }); });
       // Shapeshifter pawns across rank 2 / second-to-last rank.
       for (let c = 0; c < cols; c++) {
         placements.push({ color: "w", pieceId: "S", r: 1, c });
@@ -182,6 +170,7 @@ export const PRESETS: Preset[] = [
       return placements;
     },
   },
+
   {
     id: "grand-menagerie",
     name: "Grand Menagerie (12×12)",
