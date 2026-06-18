@@ -312,13 +312,15 @@ export const CONDITION_OPTIONS: { value: MoveCondition; label: string }[] = [
   { value: "from-starting-square", label: "Only from starting square" },
 ];
 
+export function defaultRangedAttackOption(): RangedAttackOption {
+  return { direction: "any-diag", minDistance: 2, maxDistance: 3 };
+}
+
 export function defaultRangedAttack(): RangedAttack {
   return {
     enabled: false,
-    direction: "any-diag",
-    minDistance: 2,
-    maxDistance: 3,
     timing: "replace",
+    options: [defaultRangedAttackOption()],
   };
 }
 
