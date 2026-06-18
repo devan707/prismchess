@@ -305,8 +305,8 @@ export const submitMove = createServerFn({ method: "POST" })
     const now = Date.now();
     const lastAt = match.last_clock_update_at ? new Date(match.last_clock_update_at).getTime() : now;
     const elapsed = Math.max(0, now - lastAt);
-    const budget = TC_BUDGET_MS[match.time_control] ?? TC_BUDGET_MS["10min"];
-    const perMove = TC_PER_MOVE[match.time_control] ?? false;
+    const budget = budgetMsFor(match.time_control);
+    const perMove = isPerMove(match.time_control);
 
     const remainingBefore = meColor === "w" ? match.white_time_ms : match.black_time_ms;
     const remainingAfter = Math.max(0, remainingBefore - elapsed);
