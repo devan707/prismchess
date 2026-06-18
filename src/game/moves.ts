@@ -1229,7 +1229,19 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
   let captured = state.captured;
-  if (move.captured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
+  if (move.captured || move.partnerCaptured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
+    const w = [...state.captured.w];
+    const b = [...state.captured.b];
+    const targetPool = state.turn === "w" ? w : b;
+    if (move.partnerCaptured) {
+      targetPool.push(move.partnerCaptured);
+    }
+    // fallthrough — outer block re-opens below
+  }
+  if (move.captured || move.partnerCaptured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
+    const w = [...state.captured.w];
+    const b = [...state.captured.b];
+    const targetPool = state.turn === "w" ? w : b;
     const w = [...state.captured.w];
     const b = [...state.captured.b];
     const targetPool = state.turn === "w" ? w : b;
