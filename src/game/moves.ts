@@ -678,9 +678,11 @@ function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
     });
   }
 
-  // Juggernaut castle: King jumps 2 squares toward an un-moved Juggernaut
-  // pair on the same rank; the Juggernaut slides into the King's original
-  // square + the square the King crossed. Same safety rules as castling.
+  // Juggernaut castle: King jumps 3 squares toward an un-moved Juggernaut
+  // pair on the same rank; the Juggernaut slides into the two squares the
+  // King crossed (origin+1 and origin+2). King lands on origin+3, which
+  // must be one of the Juggernaut's vacated squares. Same safety rules as
+  // castling.
   for (const o of lateralOffsets) {
     let r = from.r + o.dr;
     let c = from.c + o.dc;
@@ -697,31 +699,32 @@ function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
       c += o.dc;
     }
     if (!juggInner) continue;
-    // Must be at least 2 squares away so king can move 2 without colliding.
-    const dist = Math.abs(juggInner.r - from.r) + Math.abs(juggInner.c - from.c);
-    if (dist < 2) continue;
-    // Locate the partner half (must exist on same rank, adjacent perpendicularly
-    // OR along the same lateral axis — for our castle we require the pair to
-    // lie on the King's back rank, side-by-side along the castling axis).
     const partner = findJuggPartner(board, juggInner, king.color, state.registry);
     if (!partner) continue;
-    // Pair must sit on the King's rank (i.e. partner offset is along the same
-    // axis as the castling direction). If perpendicular offset puts partner
-    // off the king's rank, we still allow it as long as the pair occupies the
-    // back rank and the path between K and inner-J is clear.
+    // Partner must lie along the castling axis, farther from king than inner.
+    const innerDist = Math.abs(juggInner.r - from.r) + Math.abs(juggInner.c - from.c);
+    const partnerDist = Math.abs(partner.r - from.r) + Math.abs(partner.c - from.c);
+    if (partnerDist !== innerDist + 1) continue; // pair not aligned outward
+    // King's destination = origin + 3*offset. Must equal inner or partner.
+    const kingTo: Square = { r: from.r + 3 * o.dr, c: from.c + 3 * o.dc };
+    const isOnJugg =
+      (kingTo.r === juggInner.r && kingTo.c === juggInner.c) ||
+      (kingTo.r === partner.r && kingTo.c === partner.c);
+    if (!isOnJugg) continue;
     // Has either juggernaut half moved?
     const juggMoved = state.history.some(
       (m) => m.piece.color === king.color && m.piece.id === "J",
     );
     if (juggMoved) continue;
-    // Path between king and inner J must be empty (already true from scan).
-    const kingTo: Square = { r: from.r + 2 * o.dr, c: from.c + 2 * o.dc };
-    const passSq: Square = { r: from.r + o.dr, c: from.c + o.dc };
-    // King may not pass through or land on an attacked square.
-    if (isSquareAttacked(state, passSq, opp)) continue;
+    // Squares strictly between king and inner J must be empty (true from scan).
+    // Pass squares (king walks through): origin+1, origin+2, origin+3.
+    const pass1: Square = { r: from.r + o.dr, c: from.c + o.dc };
+    const pass2: Square = { r: from.r + 2 * o.dr, c: from.c + 2 * o.dc };
+    // King must not pass through or land on an attacked square.
+    if (isSquareAttacked(state, pass1, opp)) continue;
+    if (isSquareAttacked(state, pass2, opp)) continue;
     if (isSquareAttacked(state, kingTo, opp)) continue;
-    // Juggernaut ends on { from (King's origin), passSq }. Outer J half
-    // takes king's origin; inner J half takes passSq.
+    // Juggernaut ends on pass1 + pass2.
     out.push({
       from,
       to: kingTo,
@@ -729,7 +732,7 @@ function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
       captured: null,
       kind: "juggCastle",
       juggFrom: [juggInner, partner],
-      juggTo: [passSq, { r: from.r, c: from.c }],
+      juggTo: [pass1, pass2],
     });
   }
   return out;
