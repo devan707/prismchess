@@ -16,6 +16,9 @@ export function useGame(opts: UseGameOptions) {
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [selectedDrop, setSelectedDrop] = useState<PieceId | null>(null);
   const aiThinkingRef = useRef(false);
+  const [aiThinking, setAiThinking] = useState(false);
+  const [aiThinkingSince, setAiThinkingSince] = useState<number | null>(null);
+  const [aiNudge, setAiNudge] = useState(0);
 
   const status = gameStatus(state);
   const gameOver = status.kind === "checkmate" || status.kind === "stalemate" || status.kind === "royal-loss";
