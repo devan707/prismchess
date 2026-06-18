@@ -28,6 +28,8 @@ function TopicPage() {
   const [data, setData] = useState<TopicData | null>(null);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const { isModOrAdmin } = useIsAdmin();
+  const delReply = useServerFn(adminDeleteForumReply);
 
   const load = () => fetchTopic({ data: { topicId } }).then(setData).catch((e) => toast.error(e.message));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [topicId]);
