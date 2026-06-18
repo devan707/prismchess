@@ -34,7 +34,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { requestPieceAbility, savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
+import { requestPieceAbility, savePiece, suggestPieceEmoji, updatePiece, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,9 +50,11 @@ export interface PieceBuilderInitial {
 
 interface Props {
   onSaved?: (pieceId: string, def: PieceDef) => void;
-  /** Pre-fill from an existing piece. Always saves as a NEW piece — custom
-   *  pieces are immutable once created so they can't break other people's
-   *  games that already use them. */
+  /** Pre-fill from an existing piece AND save back to that same record (edit
+   *  in place). The user's own published games that embed this piece are
+   *  auto-refreshed server-side; other people's games stay frozen. */
+  initial?: PieceBuilderInitial;
+  /** Pre-fill from an existing piece but save as a brand-new piece (duplicate). */
   template?: PieceBuilderInitial;
 }
 
@@ -118,18 +120,22 @@ function summarizeOption(opt: MoveOption): string {
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
-export function PieceBuilderForm({ onSaved, template }: Props) {
-  const initDef = template?.def;
+export function PieceBuilderForm({ onSaved, initial, template }: Props) {
+  const isEdit = !!initial;
+  const seed = initial ?? template;
+  const initDef = seed?.def;
   const initRangedSource = (initDef as unknown as { __rangedSource?: RangedAttack } | undefined)?.__rangedSource;
-  const hasUploadedImage = !!(template?.imageUrl || initDef?.imageUrl);
-  const [name, setName] = useState(template ? `${template.name} (copy)` : "");
-  const [description, setDescription] = useState(template?.description ?? "");
+  const hasUploadedImage = !!(seed?.imageUrl || initDef?.imageUrl);
+  const [name, setName] = useState(
+    initial?.name ?? (template ? `${template.name} (copy)` : ""),
+  );
+  const [description, setDescription] = useState(seed?.description ?? "");
   const [iconPrompt, setIconPrompt] = useState("");
   const [emoji, setEmoji] = useState(initDef && !hasUploadedImage ? (initDef.glyph || "") : "");
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [imageMode, setImageMode] = useState<"emoji" | "upload">(hasUploadedImage ? "upload" : "emoji");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(template?.imageUrl ?? initDef?.imageUrl ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(seed?.imageUrl ?? initDef?.imageUrl ?? null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [options, setOptions] = useState<MoveOption[]>(
     initDef?.options && initDef.options.length > 0 ? initDef.options : [defaultOption()],
@@ -147,11 +153,12 @@ export function PieceBuilderForm({ onSaved, template }: Props) {
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
+  const update = useServerFn(updatePiece);
   const uploadImage = useServerFn(uploadPieceImage);
   const submitAbility = useServerFn(requestPieceAbility);
 
-  // Always a fresh id — pieces are immutable once published into the library.
-  const [id] = useState<string>(() => genId());
+  // Edit reuses the original piece id; new pieces (including duplicates) get a fresh id.
+  const [id] = useState<string>(() => (isEdit && initDef?.id) ? initDef.id : genId());
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
 
@@ -277,14 +284,24 @@ export function PieceBuilderForm({ onSaved, template }: Props) {
     if ("error" in def) { toast.error(def.error); return; }
     setSaving(true);
     try {
-      const row = await save({
-        data: {
-          name: name.trim(),
-          description: description.trim(),
-          def: def as unknown as Record<string, unknown>,
-          visibility,
-        },
-      });
+      const row = isEdit
+        ? await update({
+            data: {
+              pieceId: initial!.pieceId,
+              name: name.trim(),
+              description: description.trim(),
+              def: def as unknown as Record<string, unknown>,
+              visibility,
+            },
+          })
+        : await save({
+            data: {
+              name: name.trim(),
+              description: description.trim(),
+              def: def as unknown as Record<string, unknown>,
+              visibility,
+            },
+          });
 
       if (imageMode === "upload" && imageFile) {
         const fd = new FormData();
@@ -303,20 +320,31 @@ export function PieceBuilderForm({ onSaved, template }: Props) {
         }
       }
 
-      toast.success(
-        visibility === "public"
-          ? `Published "${name.trim()}" to the community library`
-          : `Saved "${name.trim()}" to your library`,
-      );
+      if (isEdit) {
+        const refreshed = (row as { refreshedGames?: number }).refreshedGames ?? 0;
+        toast.success(
+          refreshed > 0
+            ? `Saved "${name.trim()}" — also refreshed in ${refreshed} of your published variant${refreshed === 1 ? "" : "s"}.`
+            : `Saved changes to "${name.trim()}". Other people's games keep their original snapshot.`,
+        );
+      } else {
+        toast.success(
+          visibility === "public"
+            ? `Published "${name.trim()}" to the community library`
+            : `Saved "${name.trim()}" to your library`,
+        );
+      }
       onSaved?.(row.id, def);
-      // Reset for the next piece.
-      setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
-      setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
-      setOptions([defaultOption()]);
-      setRanged(defaultRangedAttack());
-      setOverrideEnabled(false);
-      setOverridePts(3);
-      setAbilityRequest("");
+      if (!isEdit) {
+        // Reset for the next piece (creation mode only).
+        setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
+        setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
+        setOptions([defaultOption()]);
+        setRanged(defaultRangedAttack());
+        setOverrideEnabled(false);
+        setOverridePts(3);
+        setAbilityRequest("");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the piece.");
     } finally {
@@ -663,10 +691,10 @@ export function PieceBuilderForm({ onSaved, template }: Props) {
               </p>
             )}
             <Button className="w-full" variant="outline" disabled={!!validation || saving} onClick={() => doSave("private")}>
-              Save private
+              {isEdit ? "Save changes (private)" : "Save private"}
             </Button>
             <Button className="w-full" disabled={!!validation || saving} onClick={() => doSave("public")}>
-              Publish public
+              {isEdit ? "Save changes (public)" : "Publish public"}
             </Button>
           </div>
         </div>
