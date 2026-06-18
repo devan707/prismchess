@@ -165,8 +165,6 @@
   border: 1.5px solid transparent;
   color: #f5f3ff;
   overflow: hidden;
-}
-@utility prism-button {
   &::before {
     content: "";
     position: absolute;
@@ -186,8 +184,7 @@
     linear-gradient(135deg, #ff4d6d, #ffb347, #ffe66d, #6dffa1, #4dd0ff, #8a6dff, #ff4dff) border-box;
   border: 2px solid transparent;
   color: #ffffff;
-}
-@utility prism-button-primary {
+  overflow: hidden;
   &::before {
     content: "";
     position: absolute;
@@ -199,5 +196,6 @@
   }
   &:hover::before { opacity: 1; }
 }
+
 
 
