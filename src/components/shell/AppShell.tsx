@@ -61,8 +61,8 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
               to="/lobby"
               className="prism-border prism-border-hover flex h-14 items-center justify-center gap-2 shadow-lg shadow-black/20 sm:rounded-sm"
             >
-              <Play className="h-5 w-5 fill-current text-white/85" />
-              <span className="prism-text font-display font-bold text-base tracking-[0.22em] uppercase">
+              <PrismPlayIcon className="h-6 w-6" />
+              <span className="font-display font-bold text-base tracking-[0.22em] uppercase text-white">
                 Play
               </span>
             </Link>
