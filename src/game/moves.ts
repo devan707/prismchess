@@ -1120,6 +1120,12 @@ function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, Pie
 export function legalMovesFrom(state: GameState, from: Square): Move[] {
   const p = state.board[from.r][from.c];
   if (!p || p.color !== state.turn) return [];
+  // King's Hand mid-turn lock: only the KH that just moved may move, and
+  // only with another single king-step.
+  if (state.pendingHand) {
+    if (from.r !== state.pendingHand.r || from.c !== state.pendingHand.c) return [];
+    if (p.id !== "H") return [];
+  }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
     // Knights leap onto their target — they strike the square directly and
@@ -1137,35 +1143,26 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     if (m.juggTrampled && m.from) {
       for (const tp of m.juggTrampled) {
         if (state.registry[tp.id]?.immobile) {
-          // Determine that trampled barricade's square along the charge path.
-          // Simple approximation: if attacker direction matches barricade's color forward, that's its front.
           const dir = m.piece.color === "w" ? 1 : -1;
           const bDir = tp.color === "w" ? 1 : -1;
           if (m.piece.color !== tp.color && dir === -bDir) {
-            // Head-on charge attacks the barricade's front → illegal.
             return false;
           }
         }
       }
     }
-    // Juggernaut charge trampling also obeys front-arc immunity for any enemy J in path.
     if (m.juggTrampled && m.juggTrampled.some((p) => p.id === "J") && m.from) {
-      // The juggernaut chargers come head-on (their forward = enemy J's front) — so
-      // a charge tramples an enemy J only if approaching from the rear arc. Reject head-on.
       const enemyColor = m.juggTrampled.find((p) => p.id === "J")!.color;
       const dir = m.piece.color === "w" ? 1 : -1;
       if (m.piece.color !== enemyColor && dir === (enemyColor === "w" ? 1 : -1)) {
-        // same direction means they face same way — possible (e.g. both white). Different
-        // colors charging head-on would always be front-arc for the defender. Block it.
         return false;
       }
-      // Different-color juggernauts always face opposite — head-on charge would be front-arc, illegal.
       if (m.piece.color !== enemyColor) return false;
     }
-    // Evaluate own-king safety on the post-move board BEFORE prism aura flips.
-    // Otherwise stepping a piece (e.g. the queen) into the rainbow aura would
-    // instantly flip it to the enemy color and falsely "check" your own king,
-    // making legal moves into the aura impossible.
+    // First-of-two King's Hand move: defer own-king safety to the second
+    // step. Otherwise enforce it now (board pre-prism-flip).
+    const isFirstHand = !state.pendingHand && m.piece.id === "H";
+    if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
   });
@@ -1173,6 +1170,19 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
 
 export function allLegalMoves(state: GameState): Move[] {
   const out: Move[] = [];
+  if (state.pendingHand) {
+    const ph = state.pendingHand;
+    out.push(...legalMovesFrom(state, ph));
+    // If the KH has no legal second step (extremely rare — surrounded), allow
+    // a forced pass so the turn can still end.
+    if (out.length === 0) {
+      const p = state.board[ph.r]?.[ph.c];
+      if (p && p.id === "H" && p.color === state.turn) {
+        out.push({ from: ph, to: ph, piece: p, kind: "handPass" });
+      }
+    }
+    return out;
+  }
   for (let r = 0; r < state.board.length; r++) {
     for (let c = 0; c < state.board[0].length; c++) {
       const p = state.board[r][c];
