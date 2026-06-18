@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listTopics, toggleLike } from "@/lib/forum.functions";
 import { getMyRole } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2, Play } from "lucide-react";
 import { toast } from "sonner";
+import { saveDesign } from "@/game/design";
+import type { Design } from "@/game/types";
 
 export const Route = createFileRoute("/_authenticated/forum/")({
   head: () => ({
