@@ -1186,6 +1186,8 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.partnerFrom.r][move.partnerFrom.c] = null;
     b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
     b[move.partnerTo.r][move.partnerTo.c] = { id: move.partnerPiece.id, color: move.partnerPiece.color };
+    if (move.captured) killMirrorTwin(b, move.to, move.captured);
+    if (move.partnerCaptured) killMirrorTwin(b, move.partnerTo, move.partnerCaptured);
     return b;
   }
   if (move.kind === "resurrect" && move.resurrectPieceId) {
