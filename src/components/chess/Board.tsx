@@ -29,6 +29,13 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
 
   useEffect(() => { onSelectionChange?.(selected); }, [selected, onSelectionChange]);
 
+  // King's Hand mid-turn: auto-select the piece so the player sees that a
+  // second king-step is still required (and the legal targets are painted).
+  useEffect(() => {
+    const ph = state.pendingHand;
+    if (ph) setSelected({ r: ph.r, c: ph.c });
+  }, [state.pendingHand?.r, state.pendingHand?.c]);
+
 
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
