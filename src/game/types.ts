@@ -80,7 +80,7 @@ export type MoveKind =
   | "normal" | "double" | "ep" | "drop"
   | "dragonAttack" | "portalSwap" | "resurrect" | "necroRaise"
   | "juggShift" | "juggCharge" | "juggExit"
-  | "castle" | "handPass" | "handDouble";
+  | "castle" | "juggCastle" | "handPass" | "handDouble";
 
 export interface Move {
   /** Null only for drops. */
