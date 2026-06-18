@@ -12,8 +12,9 @@ import {
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import { getVariantStats, type VariantStats } from "@/lib/variant-stats.functions";
+import { listDiscoveryGames } from "@/lib/social.functions";
 import { PlayCount } from "@/components/chess/PlayCount";
-import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail } from "lucide-react";
+import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail, Heart, MessageSquare, Flame, Clock, Archive } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
 
