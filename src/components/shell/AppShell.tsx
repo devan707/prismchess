@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/UserMenu";
 import { BottomTabs } from "./BottomTabs";
 import logoUrl from "@/assets/logo.png";
@@ -8,9 +7,7 @@ import type { ReactNode } from "react";
 
 interface AppShellProps {
   children: ReactNode;
-  /** Show the sticky big Play CTA above the bottom nav (Home + Discover) */
   showPlayCta?: boolean;
-  /** Show top bar (defaults true). Set false for screens that have their own header. */
   showTopBar?: boolean;
 }
 
@@ -19,11 +16,11 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
     <div className="prism-aura min-h-screen text-foreground">
       <div className="prism-aura-bg" aria-hidden />
       {showTopBar && (
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-background/50 backdrop-blur-xl">
-          <div className="max-w-3xl mx-auto px-3 h-12 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 group">
-              <img src={logoUrl} alt="Prism Chess" width={28} height={28} className="h-7 w-7" />
-              <span className="font-display font-bold text-sm tracking-[0.18em] uppercase hidden xs:inline">
+        <header className="sticky top-0 z-30 border-b border-foreground/10 bg-background/60 backdrop-blur-xl">
+          <div className="max-w-3xl mx-auto px-3 h-16 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-3 group">
+              <img src={logoUrl} alt="Prism Chess" width={44} height={44} className="h-11 w-11" />
+              <span className="font-display font-bold text-lg tracking-[0.22em] uppercase text-foreground">
                 Prism Chess
               </span>
             </Link>
@@ -39,14 +36,12 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
       {showPlayCta && (
         <div className="fixed left-0 right-0 bottom-14 z-30 pointer-events-none">
           <div className="max-w-3xl mx-auto px-4 pointer-events-auto">
-            <Link to="/lobby" className="block">
-              <Button
-                size="lg"
-                className="w-full h-14 text-base font-display font-bold tracking-[0.2em] uppercase shadow-lg shadow-primary/30"
-              >
-                <Play className="h-5 w-5 mr-2 fill-current" />
-                Play
-              </Button>
+            <Link
+              to="/lobby"
+              className="prism-border prism-border-hover flex h-14 items-center justify-center gap-2 font-display font-bold text-base tracking-[0.22em] uppercase shadow-lg shadow-black/20"
+            >
+              <Play className="h-5 w-5 fill-current" />
+              Play
             </Link>
           </div>
         </div>

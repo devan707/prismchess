@@ -13,7 +13,7 @@ import { listDiscoveryGames } from "@/lib/social.functions";
 import { listMyMatches } from "@/lib/multiplayer.functions";
 import { AppShell } from "@/components/shell/AppShell";
 import { Card } from "@/components/ui/card";
-import { Play, Heart, MessageSquare, ChevronRight, Sparkles, Swords, Hammer } from "lucide-react";
+import { Play, Heart, MessageSquare, ChevronRight, Swords, Hammer } from "lucide-react";
 import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
@@ -161,27 +161,31 @@ function Home() {
 
         {/* QUICK PLAY (featured) */}
         <section className="space-y-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Featured variant</h2>
-          <Card className="p-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/70 px-1">Featured variant</h2>
+          <Card className="p-4 rounded-sm">
             <div className="flex items-start gap-3">
-              <div className="h-14 w-14 rounded-md bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-primary shrink-0">
-                <Sparkles className="h-7 w-7" />
+              <div className="h-14 w-14 rounded-sm bg-gradient-to-br from-[#ff4d6d]/40 via-[#ffe24d]/30 to-[#4dc4ff]/40 flex items-center justify-center text-card-foreground shrink-0 font-display font-black text-2xl">
+                {featured.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-display font-semibold text-base">{featured.name}</div>
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{featured.description}</p>
+                <p className="text-xs text-card-foreground/70 line-clamp-2 mt-0.5">{featured.description}</p>
               </div>
             </div>
             <div className="mt-3 flex gap-2">
-              <Button className="flex-1" onClick={() => playBuiltin(featured)}>
+              <button
+                onClick={() => playBuiltin(featured)}
+                className="prism-border prism-border-hover flex-1 inline-flex items-center justify-center h-10 text-sm font-semibold tracking-wide"
+              >
                 <Play className="h-4 w-4 mr-2" /> Play vs AI
-              </Button>
+              </button>
               <Link to="/lobby" className="flex-shrink-0">
-                <Button variant="outline">More games</Button>
+                <Button variant="outline" className="rounded-sm h-10">More games</Button>
               </Link>
             </div>
           </Card>
         </section>
+
 
         {/* SIGNATURE GAMES (built-in) */}
         <section className="space-y-2">
@@ -199,13 +203,13 @@ function Home() {
                   onClick={() => playBuiltin(g)}
                   className="w-44 shrink-0 snap-start text-left"
                 >
-                  <Card className="p-3 h-full flex flex-col bg-card/60 backdrop-blur border-white/10 hover:border-primary/60 transition">
-                    <div className="h-20 -mx-3 -mt-3 mb-2 rounded-t-md bg-[radial-gradient(circle_at_30%_30%,oklch(0.65_0.22_320/0.5),transparent_60%),radial-gradient(circle_at_70%_70%,oklch(0.7_0.2_200/0.5),transparent_60%)] flex items-center justify-center">
-                      <Sparkles className="h-7 w-7 text-white/90" />
+                  <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition">
+                    <div className="h-20 -mx-3 -mt-3 mb-2 rounded-t-sm bg-[linear-gradient(135deg,#ff4d6d_0%,#ff9a3c_18%,#ffe24d_36%,#4dff88_54%,#4dc4ff_72%,#8a4dff_88%,#ff4dd2_100%)] opacity-90 flex items-center justify-center">
+                      <span className="font-display font-black text-3xl text-card tracking-tight drop-shadow">{g.name.charAt(0)}</span>
                     </div>
                     <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 flex-1">{g.description}</p>
-                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                    <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
+                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
                       <Play className="h-3 w-3" /> Play
                     </div>
                   </Card>
