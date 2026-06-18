@@ -21,6 +21,28 @@ import {
 } from "@/hooks/useMultiplayerGame";
 import { toast } from "sonner";
 import type { Color, Move } from "@/game/types";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { adminCancelMatch } from "@/lib/admin.functions";
+import { Shield } from "lucide-react";
+
+function AdminCancelMatchButton({ matchId }: { matchId: string }) {
+  const { isModOrAdmin } = useIsAdmin();
+  const cancel = useServerFn(adminCancelMatch);
+  if (!isModOrAdmin) return null;
+  const onClick = async () => {
+    const reason = window.prompt("Cancel this match. Reason (optional):") ?? "";
+    if (reason === null) return;
+    try {
+      await cancel({ data: { matchId, reason: reason || undefined } });
+      toast.success("Match cancelled");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  };
+  return (
+    <Button variant="ghost" size="icon" aria-label="Admin cancel match" title="Cancel (admin)" onClick={onClick}>
+      <Shield className="h-4 w-4 text-red-500" />
+    </Button>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/multiplayer/$matchId")({
   head: () => ({ meta: [{ title: "Multiplayer game — Prism Chess" }] }),
@@ -242,6 +264,7 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
               </AlertDialog>
             </>
           )}
+          <AdminCancelMatchButton matchId={matchId} />
         </div>
       </header>
 

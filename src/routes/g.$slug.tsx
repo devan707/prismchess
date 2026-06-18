@@ -8,6 +8,8 @@ import {
   getPublishedGame, listComments, addComment, deleteComment, toggleLike, getMyLikeState,
 } from "@/lib/social.functions";
 import { ReportDialog } from "@/components/social/ReportDialog";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { adminDeleteGameComment } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
@@ -33,6 +35,8 @@ function SharedGamePage() {
   const delCmt = useServerFn(deleteComment);
   const like = useServerFn(toggleLike);
   const fetchLike = useServerFn(getMyLikeState);
+  const { isModOrAdmin } = useIsAdmin();
+  const adminDelCmt = useServerFn(adminDeleteGameComment);
 
   type GameRes = Awaited<ReturnType<typeof getPublishedGame>>;
   type Comment = Awaited<ReturnType<typeof listComments>>[number];
@@ -169,6 +173,19 @@ function SharedGamePage() {
                       <ReportDialog targetType="comment" targetId={c.id} size="icon" label="" />
                       {c.author_id === meId && (
                         <Button size="icon" variant="ghost" onClick={() => handleDelete(c.id)}><Trash2 className="h-3 w-3" /></Button>
+                      )}
+                      {isModOrAdmin && c.author_id !== meId && (
+                        <Button
+                          size="icon" variant="ghost"
+                          title="Admin delete"
+                          onClick={async () => {
+                            if (!window.confirm("Delete this comment (admin)?")) return;
+                            try { await adminDelCmt({ data: { commentId: c.id } }); setComments((p) => p.filter((x) => x.id !== c.id)); }
+                            catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
                       )}
                     </div>
                   </div>

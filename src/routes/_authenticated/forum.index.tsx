@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listTopics, toggleLike } from "@/lib/forum.functions";
 import { getMyRole } from "@/lib/profile.functions";
+import { adminDeleteForumTopic, adminSetTopicFlags } from "@/lib/admin.functions";
+import { AdminMenu } from "@/components/admin/AdminMenu";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2, Play } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +30,8 @@ function ForumPage() {
   const like = useServerFn(toggleLike);
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const setFlags = useServerFn(adminSetTopicFlags);
+  const delTopic = useServerFn(adminDeleteForumTopic);
 
   const load = () => fetchTopics({}).then(setTopics).catch((e) => toast.error(e.message));
   useEffect(() => {
@@ -128,6 +132,14 @@ function ForumPage() {
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <MessageSquare className="h-3.5 w-3.5" /> {t.reply_count}
                     </span>
+                    <AdminMenu
+                      show={isAdmin}
+                      actions={[
+                        { label: t.is_pinned ? "Unpin" : "Pin", onClick: async () => { await setFlags({ data: { topicId: t.id, isPinned: !t.is_pinned } }); load(); } },
+                        { label: t.is_featured ? "Unfeature" : "Feature", onClick: async () => { await setFlags({ data: { topicId: t.id, isFeatured: !t.is_featured } }); load(); } },
+                        { label: "Delete topic", destructive: true, confirm: `Delete "${t.title}" and all replies?`, onClick: async () => { await delTopic({ data: { topicId: t.id } }); load(); } },
+                      ]}
+                    />
                   </div>
                 </div>
               </li>

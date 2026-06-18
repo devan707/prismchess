@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import type { PieceDef } from "@/game/types";
 import { listDiscoveryPieces, likePiece } from "@/lib/piece-builder.functions";
+import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { AdminMenu } from "@/components/admin/AdminMenu";
 import { ArrowLeft, Heart, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -69,15 +72,18 @@ function PiecesIndex() {
         <Link to="/pieces/new"><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Create new</Button></Link>
       </header>
       <main className="max-w-5xl mx-auto px-4 pb-12 space-y-8">
-        <Section title="New" rows={newest} onLike={handleLike} />
-        <Section title="Popular" rows={popular} onLike={handleLike} />
-        {archive.length > 0 && <Section title="Archive" rows={archive} onLike={handleLike} />}
+        <Section title="New" rows={newest} onLike={handleLike} reload={refresh} />
+        <Section title="Popular" rows={popular} onLike={handleLike} reload={refresh} />
+        {archive.length > 0 && <Section title="Archive" rows={archive} onLike={handleLike} reload={refresh} />}
       </main>
     </div>
   );
 }
 
-function Section({ title, rows, onLike }: { title: string; rows: Row[]; onLike: (r: Row) => void }) {
+function Section({ title, rows, onLike, reload }: { title: string; rows: Row[]; onLike: (r: Row) => void; reload: () => Promise<void> | void }) {
+  const { isModOrAdmin } = useIsAdmin();
+  const setFlags = useServerFn(adminSetCustomPieceFlags);
+  const del = useServerFn(adminDeleteCustomPiece);
   if (rows.length === 0) {
     return (
       <section>
@@ -98,7 +104,17 @@ function Section({ title, rows, onLike }: { title: string; rows: Row[]; onLike: 
                 <PieceById id={def.id} color="w" def={def} className="text-4xl" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-sm truncate">{row.name}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-sm truncate">{row.name}</h3>
+                  <AdminMenu
+                    show={isModOrAdmin}
+                    actions={[
+                      { label: "Hide from feeds", onClick: async () => { await setFlags({ data: { pieceId: row.id, isHidden: true } }); await reload(); } },
+                      { label: "Feature", onClick: async () => { await setFlags({ data: { pieceId: row.id, isFeatured: true } }); await reload(); } },
+                      { label: "Delete piece", destructive: true, confirm: `Delete "${row.name}"?`, onClick: async () => { await del({ data: { pieceId: row.id } }); await reload(); } },
+                    ]}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{row.description || "—"}</p>
                 <button
                   onClick={() => onLike(row)}

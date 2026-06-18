@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json
+          id: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -42,6 +72,8 @@ export type Database = {
           def: Json
           description: string
           id: string
+          is_featured: boolean
+          is_hidden: boolean
           like_count: number
           name: string
           play_count: number
@@ -55,6 +87,8 @@ export type Database = {
           def: Json
           description?: string
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           like_count?: number
           name: string
           play_count?: number
@@ -68,6 +102,8 @@ export type Database = {
           def?: Json
           description?: string
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           like_count?: number
           name?: string
           play_count?: number
@@ -560,6 +596,7 @@ export type Database = {
           display_name: string | null
           id: string
           onboarded: boolean
+          suspended_until: string | null
           updated_at: string
           username: string
         }
@@ -569,6 +606,7 @@ export type Database = {
           display_name?: string | null
           id: string
           onboarded?: boolean
+          suspended_until?: string | null
           updated_at?: string
           username: string
         }
@@ -578,6 +616,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           onboarded?: boolean
+          suspended_until?: string | null
           updated_at?: string
           username?: string
         }
@@ -591,6 +630,8 @@ export type Database = {
           description: string
           design: Json
           id: string
+          is_featured: boolean
+          is_hidden: boolean
           like_count: number
           name: string
           slug: string
@@ -604,6 +645,8 @@ export type Database = {
           description?: string
           design: Json
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           like_count?: number
           name: string
           slug: string
@@ -617,6 +660,8 @@ export type Database = {
           description?: string
           design?: Json
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           like_count?: number
           name?: string
           slug?: string
@@ -688,25 +733,37 @@ export type Database = {
       reports: {
         Row: {
           created_at: string
+          handled_at: string | null
+          handled_by: string | null
           id: string
           reason: string
           reporter_id: string
+          resolution: string | null
+          status: string
           target_id: string
           target_type: string
         }
         Insert: {
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
           id?: string
           reason: string
           reporter_id: string
+          resolution?: string | null
+          status?: string
           target_id: string
           target_type: string
         }
         Update: {
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
           id?: string
           reason?: string
           reporter_id?: string
+          resolution?: string | null
+          status?: string
           target_id?: string
           target_type?: string
         }
@@ -862,6 +919,15 @@ export type Database = {
       is_match_participant: {
         Args: { _match_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          _action: string
+          _details?: Json
+          _target_id: string
+          _target_type: string
+        }
+        Returns: string
       }
       share_active_match: { Args: { _a: string; _b: string }; Returns: boolean }
     }

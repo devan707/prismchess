@@ -120,12 +120,12 @@ export const listDiscoveryPieces = createServerFn({ method: "GET" })
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
     });
     const [newest, popular, archive] = await Promise.all([
-      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public")
+      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public").eq("is_hidden", false)
         .order("created_at", { ascending: false }).limit(10),
-      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public")
+      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public").eq("is_hidden", false)
         .order("like_count", { ascending: false })
         .order("created_at", { ascending: false }).limit(10),
-      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public")
+      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public").eq("is_hidden", false)
         .order("created_at", { ascending: false }).range(10, 109),
     ]);
     const newestRows = (newest.data ?? []) as Row[];
