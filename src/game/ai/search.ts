@@ -12,11 +12,12 @@
  * depth cap or the time budget is hit, and always return the best move found
  * at the deepest *completed* iteration.
  */
-import type { Color, Difficulty, GameState, Move, Square } from "../types";
-import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
+import type { Difficulty, GameState, Move } from "../types";
+import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
 // Note: check-giving moves are treated as "loud" via per-call computation in
 // qsearch (see below) — we can't fold it into isLoud() without a state arg.
-import { evaluate, valueFor } from "./evaluate";
+import { evaluate, seeMove, valueFor } from "./evaluate";
+
 
 export interface SearchOptions {
   difficulty: Difficulty;
@@ -61,55 +62,35 @@ function isLoud(m: Move): boolean {
   );
 }
 
-/**
- * Cheap recapture-loss heuristic: after we move to m.to, can the opponent
- * recapture us with a piece worth less than what we'd lose? Returns a
- * positive penalty in centipawns (the expected material we'd hang).
- */
-function recaptureLoss(state: GameState, m: Move): number {
-  if (m.kind === "juggCharge" || m.kind === "juggExit" || m.kind === "juggShift") return 0;
-  if (m.kind === "resurrect" || m.kind === "necroRaise" || m.kind === "portalSwap" || m.kind === "drop") return 0;
-  const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
-  const movingValue = valueFor(movingId, state.registry[movingId]);
-  const next = applyMoveToState(state, m);
-  const us = m.piece.color;
-  const opp: Color = us === "w" ? "b" : "w";
-  const sq: Square = m.to;
-  const attacked = isSquareAttacked(next, sq, opp);
-  if (!attacked) return 0;
-  const board = next.board;
-  const resident = board[sq.r][sq.c];
-  if (!resident) return 0;
-  // Are we defended? Test by flipping the resident piece's colour so friendly
-  // recapturers show up as attackers.
-  board[sq.r][sq.c] = { id: resident.id, color: opp };
-  const defended = isSquareAttacked(next, sq, us);
-  board[sq.r][sq.c] = resident;
-  const victimValue = m.captured ? valueFor(m.captured.id, state.registry[m.captured.id]) : 0;
-  // Undefended: we hang the whole moving piece (minus what we just grabbed).
-  if (!defended) return Math.max(0, movingValue - victimValue);
-  // Defended: only a problem if their attacker is worth less than ours.
-  // Approximate: half the difference.
-  return Math.max(0, (movingValue - victimValue) * 0.35);
-}
-
-/** Move-ordering score. Captures by MVV-LVA, promotions, shape-shifts,
- *  juggernaut trample, minus a recapture-loss penalty. */
+/** Move-ordering score. Captures by SEE (true material gain after recaptures),
+ *  promotions, shape-shifts, and juggernaut trample on top. Losing captures
+ *  drop below quiet moves so we don't waste depth searching them first. */
 function orderingScore(state: GameState, m: Move): number {
   let s = 0;
   if (m.captured) {
-    const victim = valueFor(m.captured.id, state.registry[m.captured.id]);
-    const attacker = valueFor(m.piece.id, state.registry[m.piece.id]);
-    s += victim * 10 - attacker;
+    // Real swap-off result. Positive = winning capture; negative = sac.
+    const see = seeMove(state, m);
+    if (see >= 0) {
+      // MVV-LVA-flavoured tiebreak so two equally-winning captures still order.
+      const victim = valueFor(m.captured.id, state.registry[m.captured.id]);
+      s += 1_000 + see + victim / 10;
+    } else {
+      // Losing capture — order it below quiet moves but still ahead of nothing.
+      s += see; // negative
+    }
+  } else {
+    // Quiet move — penalise if it parks the piece on a square we'd lose it.
+    const see = seeMove(state, m);
+    if (see < 0) s += see;
   }
   if (m.promotion) s += valueFor(m.promotion, state.registry[m.promotion]) * 5;
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) * 4;
   if (m.juggTrampled) {
     for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]) * 6;
   }
-  s -= recaptureLoss(state, m);
   return s;
 }
+
 
 class Searcher {
   nodes = 0;
@@ -255,6 +236,40 @@ class Searcher {
   }
 }
 
+/** Tempo / purpose score used to break root-eval ties intelligently. Higher
+ *  = the move "does something" (captures, checks, threats, defense,
+ *  advancement). Used so the AI never picks a pointless shuffle when a
+ *  purposeful alternative scores the same. */
+function purposeBonus(state: GameState, m: Move): number {
+  let b = 0;
+  if (m.captured) {
+    const see = seeMove(state, m);
+    if (see >= 0) b += 200 + see * 0.05;
+  }
+  if (m.promotion || m.shapeshiftTo) b += 80;
+  if (m.juggTrampled && m.juggTrampled.length) b += 60;
+  // Reward giving check.
+  const next = applyMoveToState(state, m);
+  if (inCheck(next, next.turn)) b += 60;
+  // Forward progress (only for non-special moves with a from-square).
+  if (m.from) {
+    const wide = state.cols > state.rows;
+    const dir = m.piece.color === "w" ? 1 : -1;
+    const forwardDelta = wide ? (m.to.c - m.from.c) * dir : (m.to.r - m.from.r) * dir;
+    if (forwardDelta > 0) b += Math.min(20, forwardDelta * 6);
+  }
+  // Penalise immediate self-repeat (just-moved-this-piece-back-and-forth).
+  const h = state.history;
+  if (h && h.length >= 2 && m.from) {
+    const prev = h[h.length - 2]; // our previous move
+    if (prev && prev.piece.color === m.piece.color && prev.to.r === m.from.r &&
+        prev.to.c === m.from.c && prev.from && !m.captured) {
+      b -= 120;
+    }
+  }
+  return b;
+}
+
 export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   const start = Date.now();
   const deadline = start + Math.max(20, opts.budgetMs);
@@ -275,7 +290,23 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     if (!(err instanceof TimeUp)) throw err;
   }
   let chosen = searcher.bestMoveAtRoot;
-  if (searcher.tiesAtRoot.length > 1) chosen = pickRandom(searcher.tiesAtRoot);
+  // On medium / hard, break score-ties by purpose (captures, checks, threats,
+  // advancement) instead of randomness — every move should "do something".
+  // Easy keeps a touch of randomness so beginners can win.
+  if (searcher.tiesAtRoot.length > 1) {
+    if (opts.difficulty === "easy") {
+      chosen = pickRandom(searcher.tiesAtRoot);
+    } else {
+      let bestPurpose = -Infinity;
+      const best: Move[] = [];
+      for (const t of searcher.tiesAtRoot) {
+        const p = purposeBonus(state, t);
+        if (p > bestPurpose) { bestPurpose = p; best.length = 0; best.push(t); }
+        else if (p === bestPurpose) best.push(t);
+      }
+      chosen = best.length > 1 ? pickRandom(best) : best[0];
+    }
+  }
   // Easy: 25% chance to play a random legal move so beginners can win.
   if (opts.difficulty === "easy" && chosen && Math.random() < 0.25) {
     const all = allLegalMoves(state);
@@ -289,6 +320,7 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     elapsedMs: Date.now() - start,
   };
 }
+
 
 /** Difficulty → (budgetMs, maxDepth). Scaled down for big boards / explosive specials. */
 export function paramsFor(state: GameState, difficulty: Difficulty): { budgetMs: number; maxDepth: number } {

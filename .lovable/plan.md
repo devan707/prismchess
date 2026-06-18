@@ -1,42 +1,60 @@
-## Goal
-Add a "My Creations" hub to the Create page so users can find their published games, their custom pieces, local drafts, and their favorites (liked games + pieces) from other creators — wired into the existing publish/edit/play flows.
+Plan to make the AI both safer AND more aggressive, with no wasted moves.
 
-## Where it lives
-The Create page (`/create`) gets a tabbed layout:
+1. Real threat / defense map
+- Build a per-square attack/defense analyzer using the existing move generator (covers archers, dragons, juggernauts, knights, custom pieces, ranged shots).
+- For each piece, record: attackers, defenders, cheapest attacker/defender, hanging? winning capture available?
+- Replace the simple "isSquareAttacked" booleans in hanging/threat terms with a static-exchange-style swap-off score so trades are evaluated by actual material outcome, not just "attacked = bad".
 
-1. **My Games** — local drafts (existing) + published games (new)
-2. **My Pieces** — custom pieces the user has built
-3. **Favorites** — games and pieces the user has liked
+2. Blunder prevention (defense)
+- Strongly penalize moves that leave the moving piece on a square it loses material on.
+- Strongly penalize moves that abandon defense of another friendly piece, leaving it hanging.
+- Special heavy penalty for hanging Queen / Dragon / Wizard / Necromancer / royals.
+- Root-level filter: never play a move whose static-exchange result is a clear material loss unless the search proves real compensation (mate threat, winning recapture, king attack pressure).
 
-A "My Creations" entry point is also added to the Profile page and the More menu so it's reachable from anywhere.
+3. Aggression: threats, checks, captures, mate
+- Reward moves that create new threats: pieces newly attacked by us, especially high-value and undefended ones.
+- Reward double attacks / forks / pins (a single move creating ≥2 winning threats).
+- Reward safe checks and check sequences that reduce king mobility.
+- Reward king-zone pressure: multiple attackers near enemy royal, attackers worth less than defenders.
+- Boost capture-and-recapture sequences that come out ahead (SEE > 0).
+- In quiescence search, already includes captures/promos/check — keep that and extend ordering so winning captures and safe checks are tried first.
 
-## Tab contents & actions
+4. Tempo awareness — every move must do something
+- Each candidate move gets a "purpose score":
+  - captures material (net positive SEE)
+  - delivers check or creates a real threat
+  - improves a piece's mobility / attack count meaningfully
+  - advances development (opening) or king attack (mid/endgame)
+  - defends a currently hanging or threatened friendly
+  - executes a planned multi-move attack (piece moving toward enemy royal zone, supporting attackers, opening lines)
+- Moves that do none of the above get a strong "wasted tempo" penalty.
+- Strengthen the existing anti-shuffle term: any back-and-forth (same piece returning to a recent square without a captured piece, check, or new threat) is heavily penalized.
 
-**My Games**
-- *Drafts* (browser-saved, existing behavior): Play, Edit in Sandbox, Delete
-- *Published*: thumbnail/name, like + comment counts, **View** (`/g/<slug>`), **Edit** (loads the design into `/sandbox` so updates re-save to the same `published_games` record — uses the existing `publishedGameId` flow), **Unpublish**
+5. Planning continuity (no random reshuffling)
+- Track lightweight "plan state" inside the evaluator using existing history:
+  - which side of the board our heavy pieces are clustering on
+  - whether we have an attack building near the enemy royal
+  - reward moves that continue an existing buildup (more attackers joining the same zone)
+  - penalize moves that abandon a built-up attack for no gain
+- Reward coordinated development: a piece's value is partly its synergy with friendly pieces around it.
 
-**My Pieces**
-- Icon + name, visibility badge, like count, **Edit** (`/pieces/<slug>` builder), **Delete**, **View on profile**
+6. Search & move-ordering improvements
+- Make medium and hard always use the worker search (not easyMove fallback at any board size beyond a hard timeout).
+- Move-ordering priority: TT move → winning captures (SEE > 0) → safe checks → threats → killers → history → quiet.
+- Reduce root-tie randomness on medium/hard so the engine commits to the most purposeful move.
+- Tune difficulty budgets so medium feels solid and hard feels genuinely challenging (longer think on important positions, still responsive on simple ones).
 
-**Favorites**
-- *Liked games*: same row shape as Published — View, Play (loads design into sandbox/play), Unlike
-- *Liked pieces*: View piece detail, Unlike
-- Empty state guides users to `/discover` and `/pieces` to find creations to like
+7. Validation
+- Add scripted engine tests for these positions:
+  - AI must not hang queen/dragon to a defended attacker
+  - AI must take a free hanging piece
+  - AI must recapture when the capture is winning
+  - AI prefers a safe check / threat over a quiet move when both score equally
+  - AI does not shuffle the same piece across consecutive turns without purpose
+  - AI joins attackers into the enemy king zone when buildup exists
 
-## Integrations
-- Liking already exists for games (`toggleLike`) and pieces (`piece_likes`). Reuse those mutations so unliking from Favorites updates counts everywhere via `queryClient.invalidateQueries`.
-- Owner-only **Edit in sandbox** button added to `/g/$slug` when `author_id === me`, so editing a published game from its detail page funnels into the same update flow.
-- Profile page gets a "My Creations" link in addition to the existing tabs.
-
-## Technical notes
-- New server fns in `src/lib/social.functions.ts` and `src/lib/piece-builder.functions.ts`:
-  - `listMyLikedGames` — joins `game_likes` → `published_games` for `auth.uid()`, excludes hidden
-  - `listMyLikedPieces` — joins `piece_likes` → `custom_pieces` for `auth.uid()`, excludes hidden
-- Both use `requireSupabaseAuth`; no schema changes (existing RLS on `game_likes` / `piece_likes` already scopes to the user).
-- `/create` becomes an `_authenticated` route (move file to `src/routes/_authenticated/create.tsx`) so the data tabs always have a session; the unauthenticated landing already redirects via the managed gate. Local drafts continue to work since they're `localStorage`.
-- Data loading uses the standard pattern: loader primes `ensureQueryData`, components use `useSuspenseQuery`. Mutations (delete draft, unpublish, unlike) invalidate the relevant query keys.
-- Existing `publishGame` already accepts `gameId` for updates; Edit-from-list just sets `publishedGameId` in sandbox state before navigation (passed via search param).
-
-## Out of scope
-- Collections/folders, sharing favorite lists, sorting/filtering beyond newest-first, thumbnails for games (we can add a board mini-preview later if you want).
+Technical details
+- Files to edit: `src/game/ai/evaluate.ts`, `src/game/ai/search.ts`, `src/game/ai/index.ts`, possibly small helpers in `src/game/moves.ts` for cheap attack-map reuse.
+- Add a shared `tacticalMap(state)` helper memoized per evaluation so attack/defense isn't recomputed dozens of times per node.
+- Keep everything in the existing worker — no external AI service, no new dependencies.
+- Behavior on Easy stays beginner-friendly; Medium and Hard get the full upgrade.

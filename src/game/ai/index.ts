@@ -1,6 +1,6 @@
 import type { Color, Difficulty, GameState, Move, Square } from "../types";
-import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
-import { evaluate, valueFor } from "./evaluate";
+import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
+import { evaluate, seeMove, valueFor } from "./evaluate";
 import { getActivePlaybook as loadPlaybook } from "./playbook";
 
 function pickRandom<T>(arr: T[]): T {
@@ -8,39 +8,14 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 /**
- * Cheap static-exchange check for the destination square of a move: after
- * playing `m`, is our piece sitting on a square the opponent can recapture
- * for less material than it costs us? If so, return the (positive) material
- * we expect to lose. This is what stops the AI from grabbing a defended pawn
- * with its Wizard.
+ * Real static-exchange-based "do I hang material with this move?" check.
+ * Returns the positive cp we expect to lose (0 for safe / winning moves).
  */
 function recaptureLoss(state: GameState, m: Move): number {
-  // Only the most common case matters: a normal move/capture that leaves a
-  // single one of our pieces on m.to. Skip special multi-square moves.
-  if (m.kind === "juggCharge" || m.kind === "juggExit" || m.kind === "juggShift") return 0;
-  if (m.kind === "resurrect" || m.kind === "necroRaise" || m.kind === "portalSwap" || m.kind === "drop") return 0;
-  const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
-  const movingValue = valueFor(movingId, state.registry[movingId]);
-  const next = applyMoveToState(state, m);
-  const us = m.piece.color;
-  const opp = us === "w" ? "b" : "w";
-  const sq: Square = m.to;
-  // Dragon "flight" lands on an empty square but doesn't actually capture —
-  // landing under attack is still bad. For every other move, attacked = bad.
-  const attacked = isSquareAttacked(next, sq, opp);
-  if (!attacked) return 0;
-  // Defended? Temporarily flip the resident piece so friendly recapturers
-  // appear as attackers of that square.
-  const board = next.board;
-  const resident = board[sq.r][sq.c];
-  if (!resident) return 0;
-  board[sq.r][sq.c] = { id: resident.id, color: opp };
-  const defended = isSquareAttacked(next, sq, us);
-  board[sq.r][sq.c] = resident;
-  // Captured value already credited in moveScore; here we subtract the
-  // expected loss of our own piece on the recapture.
-  return defended ? movingValue * 0.25 : movingValue * 0.9;
+  const see = seeMove(state, m);
+  return see < 0 ? -see : 0;
 }
+
 
 /**
  * How many of the recent plies were quiet moves chaining back from `sq` for
