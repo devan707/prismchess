@@ -1288,7 +1288,7 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     }
     // First-of-two King's Hand move: defer own-king safety to the second
     // step. Otherwise enforce it now (board pre-prism-flip).
-    const isFirstHand = !state.pendingHand && m.piece.id === "H" && m.kind !== "handDouble";
+    const isFirstHand = !state.pendingHand && (m.piece.id === "H" || m.piece.id === "G") && m.kind !== "handDouble";
     if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
