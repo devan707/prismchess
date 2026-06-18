@@ -1139,7 +1139,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
   // turn with the same player; the second (or a handPass) flips it. End-of-
   // turn effects (prism aura sweep, enPassant clearing) only run when the
   // turn actually flips.
-  const isHand = move.piece.id === "H" && (move.kind === "normal" || move.kind === undefined);
+  const isHand = (move.piece.id === "H" || move.piece.id === "G") && (move.kind === "normal" || move.kind === undefined);
   const wasPending = !!state.pendingHand;
   const isFirstHandMove = isHand && !wasPending;
   const flipTurn = !isFirstHandMove;
