@@ -242,6 +242,7 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
               </AlertDialog>
             </>
           )}
+          <AdminCancelMatchButton matchId={matchId} />
         </div>
       </header>
 
