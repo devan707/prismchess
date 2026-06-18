@@ -164,9 +164,9 @@ export const PRESETS: Preset[] = [
         return PRESETS[0].build(rows, cols);
       }
       // White rows 0..1 + one portal at center of own half; mirrored for black.
-      // Row 0 — back rank:  J J A M D Q K H Z W J J
+      // Row 0 — back rank:  J J A M D Q K H W Z J J
       //   Juggernauts on each flank, Archer on the queen wing.
-      //   Queen side: Necromancer, then Dragon. King side: King's Hand, then Assassin, then Wizard.
+      //   Queen side: Necromancer, then Dragon. King side: King's Hand, then Wizard, then Assassin.
       //   The king-side Wizard sits on a light square for White / dark square for Black,
       //   so each side's Wizard is correctly bound to its own color.
       // Row 1 — shapeshifter pawns all the way across.
