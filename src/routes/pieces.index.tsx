@@ -8,7 +8,7 @@ import { listDiscoveryPieces, likePiece } from "@/lib/piece-builder.functions";
 import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { AdminMenu } from "@/components/admin/AdminMenu";
-import { ArrowLeft, Heart, Plus } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/pieces/")({
