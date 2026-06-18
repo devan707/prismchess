@@ -11,7 +11,7 @@ const TABS = [
 
 export function BottomTabs() {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-background/70 backdrop-blur-xl">
       <div className="max-w-3xl mx-auto grid grid-cols-5">
         {TABS.map(({ to, label, icon: Icon }) => (
           <Link
