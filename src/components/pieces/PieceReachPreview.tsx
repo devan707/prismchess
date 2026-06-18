@@ -80,7 +80,12 @@ export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
       case "slide":
         return <span className={`block w-2 h-2 rounded-full bg-sky-500 ${ring}`} />;
       case "ranged":
-        return <span className={`block w-2 h-2 rounded-full bg-orange-500`} />;
+        // Crosshair: outer ring + center dot, distinct from solid move/capture dots.
+        return (
+          <span className="relative block w-3 h-3 rounded-full border-2 border-orange-500">
+            <span className="absolute inset-0 m-auto w-[3px] h-[3px] rounded-full bg-orange-500" />
+          </span>
+        );
     }
   };
 
