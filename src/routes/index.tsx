@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   BUILTIN_GAMES,
@@ -11,6 +11,8 @@ import {
   type SavedGame,
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
+import { getVariantStats, type VariantStats } from "@/lib/variant-stats.functions";
+import { PlayCount } from "@/components/chess/PlayCount";
 import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
@@ -34,8 +36,23 @@ export const Route = createFileRoute("/")({
 function Home() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [stats, setStats] = useState<Record<string, VariantStats>>({});
 
   useEffect(() => { setSaved(loadSavedGames()); }, []);
+
+  const variantKeys = useMemo(() => [
+    ...BUILTIN_GAMES.map((g) => `builtin:${g.id}`),
+    ...saved.map((g) => `saved:${g.id}`),
+  ], [saved]);
+
+  useEffect(() => {
+    if (variantKeys.length === 0) return;
+    let cancelled = false;
+    getVariantStats({ data: { variantKeys } })
+      .then((s) => { if (!cancelled) setStats(s); })
+      .catch(() => { /* counters are best-effort */ });
+    return () => { cancelled = true; };
+  }, [variantKeys]);
 
   const playBuiltin = (g: GameType) => {
     const design = g.build();
@@ -121,24 +138,28 @@ function Home() {
         <section>
           <h2 className="font-display text-xl font-semibold mb-3">Built-in games</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {BUILTIN_GAMES.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => playBuiltin(g)}
-                className="group text-left rounded-xl border bg-card p-4 hover:border-primary hover:shadow-md transition"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-display font-semibold">{g.name}</h3>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {g.rows}×{g.cols}
+            {BUILTIN_GAMES.map((g) => {
+              const s = stats[`builtin:${g.id}`];
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => playBuiltin(g)}
+                  className="relative group text-left rounded-xl border bg-card p-4 pb-7 hover:border-primary hover:shadow-md transition"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-display font-semibold">{g.name}</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {g.rows}×{g.cols}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">{g.description}</p>
+                  <span className="inline-flex items-center text-xs font-medium text-primary group-hover:gap-2 gap-1 transition-all">
+                    <Play className="h-3 w-3" /> Play
                   </span>
-                </div>
-                <p className="text-xs text-muted-foreground mb-3">{g.description}</p>
-                <span className="inline-flex items-center text-xs font-medium text-primary group-hover:gap-2 gap-1 transition-all">
-                  <Play className="h-3 w-3" /> Play
-                </span>
-              </button>
-            ))}
+                  {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -157,27 +178,31 @@ function Home() {
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {saved.map((g) => (
-                <div key={g.id} className="rounded-xl border bg-card p-4 flex flex-col">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-display font-semibold truncate">{g.name}</h3>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      {g.design.rows}×{g.design.cols}
-                    </span>
+              {saved.map((g) => {
+                const s = stats[`saved:${g.id}`];
+                return (
+                  <div key={g.id} className="relative rounded-xl border bg-card p-4 pb-7 flex flex-col">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-display font-semibold truncate">{g.name}</h3>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {g.design.rows}×{g.design.cols}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Saved {new Date(g.createdAt).toLocaleDateString()}
+                    </p>
+                    <div className="mt-auto flex gap-2">
+                      <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
+                        <Play className="h-3 w-3 mr-1" /> Play
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Saved {new Date(g.createdAt).toLocaleDateString()}
-                  </p>
-                  <div className="mt-auto flex gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
-                      <Play className="h-3 w-3 mr-1" /> Play
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

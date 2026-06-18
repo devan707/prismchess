@@ -743,9 +743,43 @@ export type Database = {
         }
         Relationships: []
       }
+      variant_plays: {
+        Row: {
+          created_at: string
+          id: string
+          plays: number
+          updated_at: string
+          user_id: string
+          variant_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plays?: number
+          updated_at?: string
+          user_id: string
+          variant_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plays?: number
+          updated_at?: string
+          user_id?: string
+          variant_key?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      variant_play_stats: {
+        Row: {
+          total_plays: number | null
+          unique_players: number | null
+          variant_key: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       are_friends: { Args: { _a: string; _b: string }; Returns: boolean }

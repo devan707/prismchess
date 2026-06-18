@@ -1,77 +1,83 @@
-# Plan — The Prism
 
-A new **board fixture** (not really a piece) that occupies **2 adjacent cells** in a line and flips the color of any piece that touches its aura. Featured on the Grand Menagerie next to each Portal, and available in the custom designer.
+## 1. Fix the AI freeze + make difficulty meaningful
 
-## Rules summary
+### Why it currently freezes
+The AI runs on the main React thread. After the last round of changes (deeper search + qsearch + Regent/Lich now valued + tie randomization touching `applyMoveToState` more), the search blows past hundreds of ms on bigger boards. While it runs, React can't paint — the spinner never appears, the "Nudge" button never appears, and the page looks frozen until the move pops out. That's also why all three difficulties feel the same: hard never finishes its deeper search before the user notices, and on big boards `chooseMove` already falls back to `easyMove`.
 
-- 2-cell long fixture (2 squares in a row/column, like a stretched domino, distinct from the Juggernaut's side-by-side pair).
-- Indestructible — cannot be captured, moved, swapped, trampled, or resurrected. Blocks movement like a Barricade. Cannot be targeted by Portal swaps or Dragon strikes.
-- **Aura** = the union of all 8 king-neighbors of each of its 2 cells (≈10 squares around the prism, including diagonals).
-- **Flip triggers**:
-  1. On a piece's move, if it **enters or passes through** any aura cell during that move (sliders included; leapers only if they land in aura), it flips to the opposite color at the end of that move.
-  2. At the **end of every turn**, any piece (either color) currently sitting in the aura that did NOT just move out flips again. This is the "stickiness" rule — to keep a converted piece, you must walk it out of the aura on your next turn.
-- **King immunity**: Royal pieces never flip. Their moves through the aura are unaffected.
-- Pieces flipped retain their type, history (raisedOnce, etc.) — only `color` changes. Pawn promotion direction follows the new color from then on.
-- The Portal interaction the user described emerges naturally: swap a pawn onto the prism-adjacent cell where the Portal sat → pawn flips to enemy on next end-of-turn → Portal is now safely on your side of the board.
+### How chess.com / Lichess actually do it
+1. The engine runs in a **Web Worker** (Stockfish WASM in their case). The UI thread stays responsive — spinner animates, you can resign, you can scroll. The engine posts back when it has a move.
+2. They use **iterative deepening with a time budget**: search depth 1, then 2, then 3… keep the best move found so far, stop when the budget expires. Difficulty = bigger time budget + bigger depth cap, not a hardcoded depth.
+3. They use **transposition tables + better move ordering** (killer moves, PV, MVV-LVA) so deeper depths are cheap.
 
-## Visual
+We'll adopt the same architecture — scaled to what's realistic for a custom-variant engine:
 
-A rainbow-tinted long triangular prism glyph spanning its 2 cells (rendered similar to the Juggernaut's double-cell glyph, but oriented along the long axis). A faint rainbow halo on aura squares when the prism is selected/hovered in the designer or during play (purely cosmetic hint).
+- **`src/game/ai/worker.ts`** — a Web Worker entry that imports the existing `moves.ts` / `evaluate.ts` and exposes `{type: "search", state, difficulty, budgetMs}` → posts back `{type: "result", move, depthReached, nodes}`. Sends interim `{type: "progress", depth, score}` after each completed ply.
+- **`src/game/ai/engine.ts`** — thin client that wraps the worker with a Promise-based `requestMove(state, difficulty, budgetMs)`, plus `cancel()` to terminate an in-flight search.
+- **`src/game/ai/search.ts`** — refactored search supporting:
+  - Iterative deepening loop with `Date.now()` budget check at every node.
+  - Transposition table (Zobrist hash keyed off board+turn) for repeated positions.
+  - Killer-move + MVV-LVA ordering on top of the existing `moveScore`.
+  - Aspiration windows around the previous iteration's score.
+- **Difficulty mapping**:
+  - easy: 150 ms budget, depth cap 2, 20% chance of picking a non-top move (current vibe preserved).
+  - medium: 600 ms budget, depth cap 4.
+  - hard: 2500 ms budget, depth cap 6 (will usually finish depth 4–5 on 8×8, depth 3 on 12×12 — actually meaningfully stronger).
+- **`useGame.ts`** — replace the synchronous `chooseMove` call with `engine.requestMove(...)`; `nudgeAi` calls `engine.cancel()` and re-requests. The spinner state now reliably reflects an async operation. Add a hard wall-clock safety: if the worker doesn't respond within budget+2s, terminate and pick a fallback `easyMove`.
 
-## Files to change
+This single change makes the spinner work, makes "Nudge" work, and makes hard genuinely hard because the search can actually use the time without the UI looking dead.
 
-### New piece definition
-- `src/game/types.ts` — extend the `special` union with `"prism"`.
-- `src/game/pieces.ts` — add `Y` (Prism) to `PIECE_LIBRARY` and `BUILTIN_CUSTOM_IDS`. Marked `immobile: true`, `special: "prism"`, `builtinCustom: true`, with a description matching the rules above.
+### Files
+- new: `src/game/ai/worker.ts`, `src/game/ai/engine.ts`, `src/game/ai/search.ts`, `src/game/ai/tt.ts` (zobrist + transposition table)
+- edit: `src/game/ai/index.ts` (becomes a thin shim that still exports `chooseMove` for replay/analysis use; gameplay uses the engine)
+- edit: `src/hooks/useGame.ts` (async AI flow, real cancel)
 
-### Engine
-- `src/game/moves.ts`
-  - Treat Prism cells as impassable (like Barricade — extend `isBarricade` or add a sibling `isFixture` check so sliders stop before them and leapers cannot land on them).
-  - Block Portal swaps, Dragon strikes, Juggernaut trample, Necromancer raise targeting Prism cells.
-  - After applying a move (in whatever function commits a move to `GameState`), run a **`applyPrismEffects(state, justMovedPiece, path)`** pass:
-    1. Compute the union aura of every Prism on the board.
-    2. For the moving piece: if any square on its travel path (from→to inclusive for sliders; just `to` for leapers and drops) intersects the aura, flip its color (skip if royal).
-    3. End-of-turn sweep: for every non-royal piece currently on an aura square that did NOT just vacate, flip its color.
-  - The path-tracing helper already exists implicitly inside slider generation; add a small `pathSquares(from, to)` util for orthogonal/diagonal lines, and `[to]` for everything else.
-- `src/game/board.ts` — helpers to detect prism cells / aura.
-- `src/game/rules.ts` — make sure check/checkmate detection runs **after** flips are applied (a flipped piece may suddenly be giving check, or a previously-checking piece may now be friendly).
+## 2. Gallery play counters (unique users + total plays)
 
-### AI
-- `src/game/ai/evaluate.ts` — add awareness:
-  - Treat aura squares as risky for own pieces (small penalty per non-royal friendly piece adjacent to a Prism that didn't just move).
-  - Reward moves that flip an enemy piece (delta = value of that piece × 2, since they lose it and we gain it).
-  - Prism cells contribute zero material and are never capture targets.
-- `src/game/ai/index.ts` — no structural change; the search already iterates legal moves, so flips happen via `applyMove`.
+### Data model
+New table `public.variant_plays`:
 
-### Designer & presets
-- `src/game/design.ts`
-  - `grand-menagerie` preset: replace the two cells the user described (the squares next to each Portal on White's side; mirrored for Black) with Prism placements. Each Prism = 2 placements with `pieceId: "Y"` on adjacent cells along the column the Portal sits on (so the Prism runs lengthwise toward the Portal).
-  - Add a `placePrismPair(...)` helper analogous to `placeJuggernautPair` so the designer can drop a Prism and it auto-fills the partner cell along the long axis.
-  - `validateDesign`: a Prism cell must have a partner Prism cell in line.
-- `src/components/designer/PiecePalette.tsx` — surface the Prism in the custom-pieces tray with its rainbow glyph.
-- `src/components/designer/DesignerBoard.tsx` — handle the 2-cell drop using the new helper.
+```
+id uuid pk default gen_random_uuid()
+variant_key text not null     -- 'builtin:menagerie' or 'published:<uuid>' or 'saved:<id>'
+user_id uuid not null references auth.users(id) on delete cascade
+plays int not null default 0
+created_at timestamptz default now()
+updated_at timestamptz default now()
+unique (variant_key, user_id)
+```
 
-### Rendering
-- `src/components/chess/PieceGlyph.tsx` — render the Prism with a rainbow gradient triangular-prism emoji or SVG; both cells share one continuous glyph (like `JuggernautGlyph`).
-- New `src/components/chess/PrismGlyph.tsx` — SVG long triangular prism with a horizontal rainbow gradient (red→orange→yellow→green→blue→indigo→violet) spanning the two cells. Color-neutral (no side ring) since it belongs to neither player.
-- `src/components/chess/Board.tsx` — when a Prism cell is hovered/selected, paint a faint rainbow tint on aura squares (cosmetic only).
+GRANTs to `authenticated` + `service_role`, RLS:
+- SELECT: anyone authenticated can read (we'll aggregate on the server, but reading is harmless).
+- INSERT/UPDATE: only `auth.uid() = user_id`.
 
-### UI & content
-- `src/components/chess/MoveDiagram.tsx` — add a Prism diagram with two friendly pawns and an enemy pawn, showing one of your pawns walking into the aura and turning enemy-colored on the next turn. Use the same "scenario" format as Assassin and Archer.
-- `src/routes/sandbox.tsx` — add the Prism card and full description.
-- `src/lib/api/analyze-game.functions.ts` — extend the AI rules prompt with the Prism's behavior so post-game analysis explains flips correctly.
-- `src/lib/chess-names.ts` — add an entry so move notation can refer to "Prism" when relevant (e.g. "flipped by Prism").
+A view `public.variant_play_stats` (security invoker) aggregates `count(distinct user_id) as unique_players, sum(plays) as total_plays` grouped by `variant_key`. GRANT SELECT to `anon, authenticated` so unauthenticated landing-page visitors still see counts.
 
-### Move history & SFX
-- `src/components/chess/MoveHistory.tsx` — append a small "↔ flipped by Prism" annotation when a move triggered a flip.
-- Optional: a soft chime SFX on flip via `src/lib/sfx.ts` (re-use existing capture/promotion sound infra).
+### Server function
+`src/lib/variant-stats.functions.ts`:
+- `recordVariantPlay({ variantKey })` — `requireSupabaseAuth`, upserts +1 to `plays` for `(variant_key, auth.uid())`.
+- `getVariantStats({ variantKeys })` — public (no middleware), uses the server publishable client to read the aggregated view, returns `Record<variantKey, {unique: number, total: number}>`.
+
+`useGame.ts` fires `recordVariantPlay` once per match start (using the meta id we already save).
+
+### UI
+A small `<PlayCount unique={...} total={...} />` component:
+
+```
+👥 124  ▶ 530
+```
+
+- Tiny, muted-foreground, positioned bottom-left of each card via `absolute bottom-2 left-2` (cards become `relative`).
+- Used on the built-in cards in `src/routes/index.tsx`, the saved-game cards on the same page, and the published-game cards on the community/gallery page (`src/routes/_authenticated/multiplayer.index.tsx` — confirm during implementation).
+
+The home page fetches stats once on mount via the public server fn, keyed by the list of visible variant keys.
+
+### Files
+- new: migration adding `variant_plays` table + `variant_play_stats` view + GRANTs + RLS
+- new: `src/lib/variant-stats.functions.ts`
+- new: `src/components/chess/PlayCount.tsx`
+- edit: `src/routes/index.tsx` (fetch + render counts, position cards `relative`)
+- edit: `src/hooks/useGame.ts` (call `recordVariantPlay` on game start)
 
 ## Out of scope
-
-- Multiplayer schema changes — flips are deterministic from the move, so existing `match_moves` replay still works without new columns.
-- Tutorials — not requested; can be added later.
-
-## Open follow-ups (not blocking)
-
-- Should two adjacent Prisms with overlapping auras flip a piece twice (net no-op) in a single end-of-turn? Default: each flip is independent and applied once per Prism aura the piece is in, so overlap = even flips = no change. Documented in the description.
-- Should Shapeshifter Pawns / Undead retain their owner-history after a flip? Default: yes — only `color` changes, all other flags persist.
+- No engine rewrite into WASM/Stockfish — variant rules can't run on Stockfish. The worker approach gets us most of the responsiveness win without that.
+- No leaderboard / per-user history page (the data supports it later).
