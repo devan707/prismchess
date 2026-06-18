@@ -372,29 +372,21 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <span className="absolute top-0.5 left-1 text-[10px] font-semibold opacity-60"
                   style={{ color: light ? "oklch(0.3 0.04 145)" : "oklch(0.92 0.02 85)" }}>{rankLabel}</span>
               )}
-              {isLegal && !isCapture && !juggFoot && (
+              {markerKind === "move" && (
                 <div className="absolute rounded-full pointer-events-none"
                   style={{ width: "30%", height: "30%", background: "var(--color-board-legal)" }} />
               )}
-              {isLegal && isCapture && !juggFoot && (
+              {markerKind === "attack" && (
+                <div className="absolute rounded-full pointer-events-none"
+                  style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
+              )}
+              {markerKind === "capture" && !juggFoot && (
                 <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
                   style={{ borderColor: "var(--color-board-capture)", boxShadow: "inset 0 0 0 4px var(--color-board-capture)" }} />
-              )}
-              {juggTrample && (
-                <div className="absolute inset-1 rounded-full pointer-events-none"
-                  style={{ boxShadow: "inset 0 0 0 3px var(--color-board-capture)" }} />
               )}
               {isDropTarget && (
                 <div className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed"
                   style={{ borderColor: "var(--color-board-legal)", boxShadow: "inset 0 0 0 2px var(--color-board-legal)" }} />
-              )}
-              {isInspect && !isInspectCapture && (
-                <div className="absolute rounded-full pointer-events-none"
-                  style={{ width: "24%", height: "24%", background: "var(--color-board-inspect)" }} />
-              )}
-              {isInspect && isInspectCapture && (
-                <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
-                  style={{ borderColor: "var(--color-board-inspect)", boxShadow: "inset 0 0 0 4px var(--color-board-inspect)" }} />
               )}
               {piece && (() => {
                 const isJugg = state.registry[piece.id]?.special === "juggernaut";
