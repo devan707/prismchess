@@ -98,15 +98,22 @@ function Section({ title, rows, onLike, reload }: { title: string; rows: Row[]; 
       <h2 className="font-display text-xl font-semibold mb-3">{title}</h2>
       <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {rows.map((row) => {
-          const def = row.def as PieceDef;
+          const def: PieceDef = { ...(row.def as PieceDef), imageUrl: row.image_url ?? (row.def as PieceDef).imageUrl };
+          const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/pieces/${row.slug}`;
+          const copyLink = async () => {
+            try { await navigator.clipboard.writeText(shareUrl); toast.success("Link copied"); }
+            catch { toast.error("Couldn't copy link"); }
+          };
           return (
             <li key={row.id} className="rounded-lg border bg-card p-3 flex items-start gap-3">
-              <div className="w-14 h-14 rounded bg-stone-200 dark:bg-stone-700 flex items-center justify-center flex-shrink-0">
+              <Link to="/pieces/$slug" params={{ slug: row.slug }} className="w-14 h-14 rounded bg-stone-200 dark:bg-stone-700 flex items-center justify-center flex-shrink-0">
                 <PieceById id={def.id} color="w" def={def} className="text-4xl" />
-              </div>
+              </Link>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-sm truncate">{row.name}</h3>
+                  <Link to="/pieces/$slug" params={{ slug: row.slug }} className="font-semibold text-sm truncate hover:underline">
+                    {row.name}
+                  </Link>
                   <AdminMenu
                     show={isModOrAdmin}
                     actions={[
@@ -117,12 +124,17 @@ function Section({ title, rows, onLike, reload }: { title: string; rows: Row[]; 
                   />
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{row.description || "—"}</p>
-                <button
-                  onClick={() => onLike(row)}
-                  className="mt-1 text-xs flex items-center gap-1 text-muted-foreground hover:text-rose-500"
-                >
-                  <Heart className="h-3.5 w-3.5" /> {row.like_count}
-                </button>
+                <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                  <button onClick={() => onLike(row)} className="flex items-center gap-1 hover:text-rose-500">
+                    <Heart className="h-3.5 w-3.5" /> {row.like_count}
+                  </button>
+                  <button onClick={copyLink} className="flex items-center gap-1 hover:text-foreground" title="Copy share link">
+                    <Share2 className="h-3.5 w-3.5" /> Share
+                  </button>
+                  <Link to="/pieces/$slug" params={{ slug: row.slug }} className="flex items-center gap-1 hover:text-foreground ml-auto">
+                    <ExternalLink className="h-3.5 w-3.5" /> Open
+                  </Link>
+                </div>
               </div>
             </li>
           );
