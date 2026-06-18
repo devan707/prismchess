@@ -1251,7 +1251,7 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   // only with another single king-step.
   if (state.pendingHand) {
     if (from.r !== state.pendingHand.r || from.c !== state.pendingHand.c) return [];
-    if (p.id !== "H") return [];
+    if (p.id !== "H" && p.id !== "G") return [];
   }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
