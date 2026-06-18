@@ -89,59 +89,56 @@ export const savePiece = createServerFn({ method: "POST" })
 
 // ---------- List queries ----------
 
-type PieceRow = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  def: Record<string, unknown>;
-  visibility: string;
-  like_count: number;
-  created_at: string;
-  author_id: string;
-};
+const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id";
 
 export const listMyPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id")
+      .select(PIECE_COLS)
       .eq("author_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (data ?? []) as PieceRow[];
+    return data ?? [];
   });
 
 export const listDiscoveryPieces = createServerFn({ method: "GET" })
   .handler(async () => {
     const { createClient } = await import("@supabase/supabase-js");
+    const { Database } = await import("@/integrations/supabase/types").then((m) => ({ Database: null as unknown as typeof m extends { Database: infer D } ? D : never }));
+    void Database;
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-    if (!url || !key) return { newest: [] as PieceRow[], popular: [] as PieceRow[], archive: [] as PieceRow[] };
+    type Row = {
+      id: string; slug: string; name: string; description: string;
+      def: unknown; visibility: string; like_count: number;
+      created_at: string; author_id: string;
+    };
+    if (!url || !key) return { newest: [] as Row[], popular: [] as Row[], archive: [] as Row[] };
     const sb = createClient(url, key, {
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
     });
-    const cols = "id, slug, name, description, def, visibility, like_count, created_at, author_id";
     const [newest, popular, archive] = await Promise.all([
-      sb.from("custom_pieces").select(cols).eq("visibility", "public")
+      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public")
         .order("created_at", { ascending: false }).limit(10),
-      sb.from("custom_pieces").select(cols).eq("visibility", "public")
+      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public")
         .order("like_count", { ascending: false })
         .order("created_at", { ascending: false }).limit(10),
-      sb.from("custom_pieces").select(cols).eq("visibility", "public")
+      sb.from("custom_pieces").select(PIECE_COLS).eq("visibility", "public")
         .order("created_at", { ascending: false }).range(10, 109),
     ]);
-    const newestRows = (newest.data ?? []) as PieceRow[];
+    const newestRows = (newest.data ?? []) as Row[];
     const newestIds = new Set(newestRows.map((r) => r.id));
-    const popularRows = ((popular.data ?? []) as PieceRow[]).filter((r) => !newestIds.has(r.id));
+    const popularRows = ((popular.data ?? []) as Row[]).filter((r) => !newestIds.has(r.id));
     return {
       newest: newestRows,
       popular: popularRows,
-      archive: (archive.data ?? []) as PieceRow[],
+      archive: (archive.data ?? []) as Row[],
     };
   });
+
 
 // ---------- Likes ----------
 
