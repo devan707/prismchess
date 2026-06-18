@@ -200,7 +200,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
     if (!row) return null;
     const typedRow = row as {
       id: string; slug: string; name: string; description: string;
-      def: unknown; visibility: string; like_count: number;
+      def: import("@/integrations/supabase/types").Json; visibility: string; like_count: number;
       created_at: string; author_id: string; image_url: string | null; is_hidden: boolean;
     };
     const { data: prof } = await sb
