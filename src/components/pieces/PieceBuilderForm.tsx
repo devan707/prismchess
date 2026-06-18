@@ -547,7 +547,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
           <Textarea
             value={abilityRequest}
             onChange={(e) => setAbilityRequest(e.target.value.slice(0, 800))}
-            placeholder="e.g. Once per game, may resurrect a friendly pawn on an adjacent empty square."
+            placeholder="e.g. Add a glowing arrow animation for the ranged attack. Or: once per game, may resurrect a friendly pawn on an adjacent empty square."
             maxLength={800}
             rows={3}
           />
