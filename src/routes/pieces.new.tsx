@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { PieceBuilderForm, type PieceBuilderInitial } from "@/components/pieces/PieceBuilderForm";
 import { ArrowLeft } from "lucide-react";
-import { getMyPieceBySlug } from "@/lib/piece-builder.functions";
+import { getMyPieceBySlug, getPieceBySlug } from "@/lib/piece-builder.functions";
+import { supabase } from "@/integrations/supabase/client";
 import type { PieceDef } from "@/game/types";
 
 export const Route = createFileRoute("/pieces/new")({
@@ -23,11 +24,24 @@ export const Route = createFileRoute("/pieces/new")({
 function NewPiece() {
   const navigate = useNavigate();
   const { from } = Route.useSearch();
-  const getPiece = useServerFn(getMyPieceBySlug);
+  const getMine = useServerFn(getMyPieceBySlug);
+  const getPublic = useServerFn(getPieceBySlug);
 
   const { data: source, isLoading } = useQuery({
     queryKey: ["piece-template", from],
-    queryFn: () => (from ? getPiece({ data: { slug: from } }) : Promise.resolve(null)),
+    queryFn: async () => {
+      if (!from) return null;
+      // Try the user's own piece first (preserves "duplicate one of mine" UX).
+      // If not found (not signed in, or someone else's piece), fall back to the
+      // public detail fetch so any public piece can be remixed.
+      const { data: sess } = await supabase.auth.getSession();
+      const mine = sess.session ? await getMine({ data: { slug: from } }).catch(() => null) : null;
+      if (mine) return { ...mine, _ownByMe: true as const };
+      const pub = await getPublic({ data: { slug: from } });
+      if (!pub) return null;
+      const myId = sess.session?.user.id ?? null;
+      return { ...pub, _ownByMe: !!myId && pub.author_id === myId };
+    },
     enabled: !!from,
   });
 
@@ -38,10 +52,13 @@ function NewPiece() {
         name: source.name,
         description: source.description ?? "",
         def: source.def as unknown as PieceDef,
-        visibility: (source.visibility as "private" | "public") ?? "private",
-        imageUrl: source.image_url ?? null,
+        visibility: ((source as { visibility?: string }).visibility as "private" | "public") ?? "private",
+        imageUrl: (source as { image_url?: string | null }).image_url ?? null,
       }
     : undefined;
+
+  const isRemix = !!source && !(source as { _ownByMe?: boolean })._ownByMe;
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
