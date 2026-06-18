@@ -1104,6 +1104,28 @@ export function dropMoves(state: GameState, color: Color): Move[] {
   return out;
 }
 
+/** If the captured piece is a mirrored twin (Shadow Knight "E", Twin Tower "V"),
+ *  return the mirror-square location of its still-living partner on `b` (or null). */
+function mirrorTwinAt(b: Board, sq: Square, captured: Piece | null | undefined): Square | null {
+  if (!captured) return null;
+  if (captured.id !== "E" && captured.id !== "V") return null;
+  const cols = b[0]?.length ?? 0;
+  const mr = sq.r;
+  const mc = cols - 1 - sq.c;
+  if (mr === sq.r && mc === sq.c) return null;
+  if (mr < 0 || mr >= b.length || mc < 0 || mc >= cols) return null;
+  const t = b[mr][mc];
+  if (t && t.id === captured.id && t.color === captured.color) return { r: mr, c: mc };
+  return null;
+}
+
+/** Mirrored linked pieces (Shadow Knight "E", Twin Tower "V") die in pairs:
+ *  if one half is captured, the partner on the mirror square is also removed. */
+function killMirrorTwin(b: Board, sq: Square, captured: Piece | null | undefined): void {
+  const part = mirrorTwinAt(b, sq, captured);
+  if (part) b[part.r][part.c] = null;
+}
+
 export function applyMoveToBoard(board: Board, move: Move): Board {
   const b = cloneBoard(board);
   if (move.kind === "handPass") {
@@ -1117,6 +1139,7 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   if (move.kind === "dragonAttack") {
     // Dragon stays; enemy removed.
     b[move.to.r][move.to.c] = null;
+    killMirrorTwin(b, move.to, move.captured);
     return b;
   }
   if (move.kind === "archerShoot") {
@@ -1137,6 +1160,7 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
         }
       }
     }
+    killMirrorTwin(b, move.to, move.captured);
     return b;
   }
   if (move.kind === "castle" && move.from && move.rookFrom && move.rookTo) {
@@ -1168,6 +1192,8 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.partnerFrom.r][move.partnerFrom.c] = null;
     b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
     b[move.partnerTo.r][move.partnerTo.c] = { id: move.partnerPiece.id, color: move.partnerPiece.color };
+    if (move.captured) killMirrorTwin(b, move.to, move.captured);
+    if (move.partnerCaptured) killMirrorTwin(b, move.partnerTo, move.partnerCaptured);
     return b;
   }
   if (move.kind === "resurrect" && move.resurrectPieceId) {
@@ -1268,6 +1294,7 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
       }
     }
   }
+  killMirrorTwin(b, move.to, move.captured);
   return b;
 }
 
@@ -1415,9 +1442,18 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       if (move.captured.id === "J") {
         targetPool.push({ id: "J", color: move.captured.color });
       }
+      // Mirrored twins die in pairs (Shadow Knight, Twin Tower).
+      if ((move.captured.id === "E" || move.captured.id === "V") &&
+          mirrorTwinAt(state.board, move.epCapture ?? move.to, move.captured)) {
+        targetPool.push({ id: move.captured.id, color: move.captured.color });
+      }
     }
     if (move.partnerCaptured) {
       targetPool.push(move.partnerCaptured);
+      if ((move.partnerCaptured.id === "E" || move.partnerCaptured.id === "V") &&
+          move.partnerTo && mirrorTwinAt(state.board, move.partnerTo, move.partnerCaptured)) {
+        targetPool.push({ id: move.partnerCaptured.id, color: move.partnerCaptured.color });
+      }
     }
     if (move.juggTrampled) {
       for (const p of move.juggTrampled) {
@@ -1457,6 +1493,11 @@ function applyMoveToState(state: GameState, move: Move): GameState {
         nextCorpses.push({ square: part, pieceId: "J", originalOwner: move.captured.color });
       }
     }
+    // Mirrored twin partner (E/V) also dies on capture.
+    const twinPart = mirrorTwinAt(state.board, sq, move.captured);
+    if (twinPart) {
+      nextCorpses.push({ square: twinPart, pieceId: move.captured.id, originalOwner: move.captured.color });
+    }
   }
   // Linked-piece partner capture: record corpse at partnerTo.
   if (move.partnerCaptured && move.partnerTo && !move.partnerCaptured.raisedOnce) {
@@ -1465,6 +1506,10 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       pieceId: move.partnerCaptured.id,
       originalOwner: move.partnerCaptured.color,
     });
+    const twinPart = mirrorTwinAt(state.board, move.partnerTo, move.partnerCaptured);
+    if (twinPart) {
+      nextCorpses.push({ square: twinPart, pieceId: move.partnerCaptured.id, originalOwner: move.partnerCaptured.color });
+    }
   }
   // Juggernaut trample: record a corpse on each trampled square along the
   // charge lane (both lead and partner rows/cols).
