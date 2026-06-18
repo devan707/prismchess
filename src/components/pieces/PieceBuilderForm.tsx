@@ -82,11 +82,14 @@ function summarizeOption(opt: MoveOption): string {
     : opt.kind === "capture-only" ? "Capture only"
     : "Move or capture";
   const s = opt.steps[0];
-  const dir = s
-    ? (s.direction.kind === "absolute"
-        ? (ABSOLUTE_DIR_OPTIONS.find((o) => o.value === s.direction.dir)?.label ?? "")
-        : "relative chain")
-    : "";
+  let dir = "";
+  if (s) {
+    if (s.direction.kind === "absolute") {
+      dir = ABSOLUTE_DIR_OPTIONS.find((o) => o.value === s.direction.dir)?.label ?? "";
+    } else {
+      dir = "relative chain";
+    }
+  }
   const dist = s ? (s.distance === "unlimited" ? "unlimited" : `${s.distance} sq`) : "";
   const cond = opt.condition === "from-starting-square" ? " · starting only" : "";
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
