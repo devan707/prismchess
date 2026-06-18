@@ -312,9 +312,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
             else if (isAttackPattern && !piece) markerKind = "attack";
             else if (isEnemyMoveOnly && !piece) markerKind = "move";
           } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
-            if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
-            else if (isAttackPattern && !piece) markerKind = "attack";
-            else if (isLegalRaw && !piece) markerKind = "move";
+            if (showHints) {
+              if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
+              else if (isAttackPattern && !piece) markerKind = "attack";
+              else if (isLegalRaw && !piece) markerKind = "move";
+            }
           }
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
