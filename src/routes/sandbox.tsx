@@ -553,6 +553,20 @@ function Sandbox() {
             selectedPiece={selectedPiece}
             onSelectPiece={handleSelectPiece}
             hasSquareSelected={!!selectedSquare}
+            removableIds={design.customPieces.map((p) => p.id)}
+            onRemovePiece={(id) => {
+              setDesign((d) => ({
+                ...d,
+                customPieces: d.customPieces.filter((p) => p.id !== id),
+                placements: d.placements.filter((p) => p.pieceId !== id),
+                reserves: {
+                  w: Object.fromEntries(Object.entries(d.reserves.w).filter(([k]) => k !== id)) as typeof d.reserves.w,
+                  b: Object.fromEntries(Object.entries(d.reserves.b).filter(([k]) => k !== id)) as typeof d.reserves.b,
+                },
+              }));
+              if (selectedPiece === id) setSelectedPiece(null);
+              toast.success("Removed from this game.");
+            }}
           />
           <PieceLibraryPanel
             alreadyInDesign={design.customPieces.map((p) => p.id)}
@@ -563,6 +577,18 @@ function Sandbox() {
                   ? d.customPieces
                   : [...d.customPieces, def],
               }));
+            }}
+            onRemoveFromDesign={(id) => {
+              setDesign((d) => ({
+                ...d,
+                customPieces: d.customPieces.filter((p) => p.id !== id),
+                placements: d.placements.filter((p) => p.pieceId !== id),
+                reserves: {
+                  w: Object.fromEntries(Object.entries(d.reserves.w).filter(([k]) => k !== id)) as typeof d.reserves.w,
+                  b: Object.fromEntries(Object.entries(d.reserves.b).filter(([k]) => k !== id)) as typeof d.reserves.b,
+                },
+              }));
+              if (selectedPiece === id) setSelectedPiece(null);
             }}
           />
           <div className="rounded-lg border bg-card p-3 space-y-2">
