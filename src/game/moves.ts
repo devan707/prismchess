@@ -429,9 +429,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     //   • The 3rd/final square may be empty or hold an enemy — capture
     //     happens only on the final step.
     //   • The 3 step directions cannot ALL be the same (no straight line of 3).
-    //   • Between consecutive steps the turn must be ≤ 45° — each new
-    //     step direction is the same as, or adjacent to, the previous one
-    //     on the 8-direction compass.
+    //   • Between consecutive steps the turn must be ≤ 90° — each new
+    //     step direction is within two compass slots of the previous one
+    //     on the 8-direction compass (so N→NE, N→E are fine; N→SE is not).
     //   • The Assassin CANNOT move or capture on adjacent squares; the
     //     final landing must be at least 2 squares (Chebyshev) from start.
     const { rows, cols } = rowsCols(board);
@@ -451,7 +451,8 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
 
     const turnOK = (prevIdx: number, nextIdx: number) => {
       const d = Math.abs(prevIdx - nextIdx);
-      return d <= 1 || d === 7; // 7 ↔ 0 wraparound = also 45°
+      // Allow up to 90° between consecutive steps (two compass slots).
+      return d <= 2 || d >= 6;
     };
     const visited = new Set<string>();
     visited.add(`${from.r},${from.c}`);
