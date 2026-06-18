@@ -42,14 +42,36 @@ export const ROYAL_OR_FIXTURE_IDS = new Set<PieceId>(["K", "G", "L", "Y"]);
 export function estimatePiecePoints(def: PieceDef): number {
   if (def.special === "prism") return 0;
   if (def.royal) return 12;
-  const slides = def.movement?.slides?.length ?? 0;
-  const leaps = def.movement?.leaps?.length ?? 0;
   if (def.immobile && !def.special) return 1;
   let est = 0.5;
-  est += slides * 1.1;             // each slide direction = several squares/turn
-  est += leaps * 0.35;             // each leap = one destination
-  if (leaps > 0) est += 0.4;       // maneuverability: can jump pieces
-  if (def.movement?.slidersJump) est += 1.0;
+
+  if (def.options && def.options.length > 0) {
+    // Option-based piece. Sum approximate reach per option with kind +
+    // condition weighting. Captures only / conditional options weigh less.
+    for (const opt of def.options) {
+      // Estimate the number of "squares produced" by this option's first step.
+      const s = opt.steps[0];
+      if (!s) continue;
+      const dirCount =
+        s.direction.kind === "absolute"
+          ? s.direction.dir === "any-8" ? 8 :
+            s.direction.dir === "any-orth" || s.direction.dir === "any-diag" ? 4 : 1
+          : 2;
+      const distScore = s.distance === "unlimited" ? 4 : Math.min(4, s.distance as number);
+      let optScore = dirCount * (s.distance === "unlimited" ? 1.1 : 0.35 * distScore);
+      if (opt.kind === "capture-only") optScore *= 0.5;
+      if (opt.kind === "move-only") optScore *= 0.85;
+      if (opt.condition === "from-starting-square") optScore *= 0.25;
+      est += optScore;
+    }
+  } else {
+    const slides = def.movement?.slides?.length ?? 0;
+    const leaps = def.movement?.leaps?.length ?? 0;
+    est += slides * 1.1;
+    est += leaps * 0.35;
+    if (leaps > 0) est += 0.4;
+    if (def.movement?.slidersJump) est += 1.0;
+  }
   switch (def.special) {
     case "dragon": est += 6; break;
     case "necromancer": est += 5; break;
@@ -62,6 +84,7 @@ export function estimatePiecePoints(def: PieceDef): number {
     case "pawn": est += 0.5; break;
     default: break;
   }
+  if (def.rangedCapture) est += 1.5;
   if (est < 0.5) est = 0.5;
   if (est > 14) est = 14;
   return Math.round(est * 2) / 2;
