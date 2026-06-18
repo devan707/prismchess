@@ -15,11 +15,14 @@ interface Props {
   onSelectPiece: (id: PieceId | "erase" | null) => void;
   /** Whether a board square is currently selected — drives the helper hint. */
   hasSquareSelected: boolean;
+  /** Ids of pieces that can be removed from this design's palette (custom pieces added via the library). */
+  removableIds?: string[];
+  onRemovePiece?: (id: PieceId) => void;
 }
 
 export function PiecePalette({
   pieces, color, onColorChange, reserves, onReserveChange,
-  selectedPiece, onSelectPiece, hasSquareSelected,
+  selectedPiece, onSelectPiece, hasSquareSelected, removableIds, onRemovePiece,
 }: Props) {
   const [hovered, setHovered] = useState<PieceId | null>(null);
   return (
