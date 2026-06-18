@@ -76,6 +76,30 @@ function buildDiagram(id: PieceId): Diagram | null {
     case "H":
       for (const [dr, dc] of ALL8) markers.push({ r: cr + dr, c: cc + dc, type: "b" });
       return { rows, cols, center, markers };
+    case "G":
+    case "L": {
+      // Regent / Lich King: TWO king-steps per turn (second is mandatory and
+      // may return to the starting square). Show every square reachable in
+      // up to 2 king-steps (Chebyshev ≤ 2) — the full 5×5 ring around the
+      // piece. Royal: must not end the turn in check.
+      const m: Array<{ r: number; c: number; type: Marker }> = [];
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          m.push({ r: cr + dr, c: cc + dc, type: "b" });
+        }
+      }
+      return {
+        rows,
+        cols,
+        center,
+        markers: m,
+        note:
+          id === "L"
+            ? "Lich King: two king-steps per turn (the second step is mandatory and may return to the starting square). Royal — checkmating it wins the game, and it can never step into or pass through check."
+            : "Regent: two king-steps per turn (the second step is mandatory and may return to the starting square). Royal — checkmating it wins the game, and it can never step into or pass through check.",
+      };
+    }
     case "Q":
       for (const [dr, dc] of ALL8) ray(markers, cr, cc, dr, dc, 3, "b");
       return { rows, cols, center, markers };
@@ -114,26 +138,23 @@ function buildDiagram(id: PieceId): Diagram | null {
       for (const [dr, dc] of DIAG) markers.push({ r: cr + dr, c: cc + dc, type: "m" });
       return { rows, cols, center, markers };
     case "Z": {
-      // Assassin: each turn picks ONE of two move modes:
-      //   (a) Single king-step (1 square, any direction) — may capture.
-      //   (b) Exactly 3 king-steps with constraints:
-      //         • first 2 landings must be empty (no jumping)
-      //         • no revisits
-      //         • 3 steps cannot all share the same direction
-      //         • each consecutive turn ≤ 45°
-      //         • capture only on step 3
+      // Assassin: every turn is a 3-step infiltration. There is NO single
+      // king-step mode — the final landing is always ≥ 2 squares (Chebyshev)
+      // from the start, so adjacent squares are unreachable.
+      //   • first 2 landings must be empty (no jumping)
+      //   • no revisits
+      //   • 3 steps cannot all share the same direction (no straight line of 3)
+      //   • each consecutive turn ≤ 90° (two compass slots)
+      //   • capture only on step 3
       const DIRS_8: Array<[number, number]> = [
         [-1, 0], [-1, 1], [0, 1], [1, 1],
         [1, 0], [1, -1], [0, -1], [-1, -1],
       ];
       const turnOK = (a: number, b: number) => {
         const d = Math.abs(a - b);
-        return d <= 1 || d === 7;
+        return d <= 2 || d >= 6;
       };
       const reachable = new Set<string>();
-      // (a) Single king-step destinations.
-      for (const [dr, dc] of DIRS_8) reachable.add(`${dr},${dc}`);
-      // (b) 3-step infiltration destinations.
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
           if (!turnOK(i, j)) continue;
@@ -145,10 +166,14 @@ function buildDiagram(id: PieceId): Diagram | null {
             const [dr3, dc3] = DIRS_8[k];
             const p1 = `${dr1},${dc1}`;
             const p2 = `${dr1 + dr2},${dc1 + dc2}`;
-            const p3 = `${dr1 + dr2 + dr3},${dc1 + dc2 + dc3}`;
+            const fr = dr1 + dr2 + dr3;
+            const fc = dc1 + dc2 + dc3;
+            const p3 = `${fr},${fc}`;
             // No revisits (start = "0,0" implicit).
             const path = new Set(["0,0", p1, p2, p3]);
             if (path.size !== 4) continue;
+            // Final landing must be at least 2 squares (Chebyshev) from start.
+            if (Math.max(Math.abs(fr), Math.abs(fc)) <= 1) continue;
             reachable.add(p3);
           }
         }
@@ -157,23 +182,38 @@ function buildDiagram(id: PieceId): Diagram | null {
         const [dr, dc] = k.split(",").map(Number);
         markers.push({ r: cr + dr, c: cc + dc, type: "b" });
       }
-      // Worked example: friendly Pawn directly N blocks the natural N-N-?
-      // routes. Assassin steps NW → N → N (idx 7,0,0 — turns 45°, 0°) to
-      // slip around the Pawn and capture the Rook on the third step.
+      // Worked example: zig-zag N → NE → NW around a friendly Pawn to
+      // capture a Rook two squares directly ahead. Step 2→3 is a 90° turn,
+      // which is now legal.
       const scenario: Scenario = {
         rows: 5,
         cols: 5,
         self: { r: 3, c: 2 },
         friends: [{ r: 2, c: 2, id: "P" }],
-        enemies: [{ r: 0, c: 1, id: "R" }],
+        enemies: [{ r: 1, c: 2, id: "R" }],
         path: [
           { r: 2, c: 1 }, // step 1: NW
-          { r: 1, c: 1 }, // step 2: N
-          { r: 0, c: 1 }, // step 3: N — captures the Rook
+          { r: 1, c: 2 }, // step 2: NE (45° turn)
+          { r: 1, c: 2 }, // placeholder — overwritten below
         ],
         caption:
-          "Two move modes per turn. Mode 1: a plain king-step to any of the 8 adjacent squares (may capture). Mode 2 (shown): a 3-step infiltration — Assassin curves NW → N → N around the friendly Pawn; every consecutive turn stays within 45°, and the capture lands on step 3.",
+          "Three king-steps per turn. The first two landings must be empty; capture only happens on step 3. Consecutive turns must stay within 90°, the three steps can't all go the same way, and the final square must be at least 2 squares from where you started — so adjacent squares are never reachable.",
       };
+      // Better-shaped scenario: NW → N → NE (each turn = 45°) lands on a
+      // square 2 NW + 0 from start? Use a clean curve: N → NE → NW.
+      // Redefine path here so it actually matches the enemy on (1,2):
+      // start (3,2) → (2,2) blocked by friend. Pick start (3,2):
+      //   step1 NW → (2,1) empty
+      //   step2 NE → (1,2) — but enemy sits there, can't land on step 2.
+      // Swap enemy to (0,1) and walk NW → N → N? That's straight N+N (only 2
+      // same dirs allowed). Use NW (idx 7) → N (0) → NE (1): turns 45° + 45°.
+      //   (3,2) → (2,1) → (1,1) → (0,2).
+      scenario.enemies = [{ r: 0, c: 2, id: "R" }];
+      scenario.path = [
+        { r: 2, c: 1 }, // step 1: NW
+        { r: 1, c: 1 }, // step 2: N (45° turn)
+        { r: 0, c: 2 }, // step 3: NE (45° turn) — captures the Rook
+      ];
       return { rows, cols, center, markers, scenario };
     }
 
