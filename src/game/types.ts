@@ -56,6 +56,9 @@ export interface PieceDef {
   glyph: string;
   /** If true, glyph is colored emoji — render with neutral coloring + side ring. */
   emoji?: boolean;
+  /** Optional uploaded image URL (PNG 300×300 with transparent background).
+   *  When set, takes precedence over `glyph`/`emoji` for rendering. */
+  imageUrl?: string;
   /** Movement (and capture if `capture` not given). */
   movement?: MovementSpec;
   /** Optional separate capture pattern. */

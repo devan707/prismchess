@@ -42,6 +42,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminStatsRouteImport } from './routes/_authenticated/admin.stats'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as ApiPublicPieceImgSplatRouteImport } from './routes/api/public/piece-img/$'
 import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
 import { Route as AuthenticatedMultiplayerJoinTokenRouteImport } from './routes/_authenticated/multiplayer.join.$token'
 
@@ -217,6 +218,11 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicPieceImgSplatRoute = ApiPublicPieceImgSplatRouteImport.update({
+  id: '/api/public/piece-img/$',
+  path: '/api/public/piece-img/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksCleanupStaleChallengesRoute =
   ApiPublicHooksCleanupStaleChallengesRouteImport.update({
     id: '/api/public/hooks/cleanup-stale-challenges',
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
+  '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -298,6 +305,7 @@ export interface FileRoutesByTo {
   '/multiplayer': typeof AuthenticatedMultiplayerIndexRoute
   '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
+  '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/_authenticated/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
   '/_authenticated/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
+  '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/multiplayer/'
     | '/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
+    | '/api/public/piece-img/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/multiplayer'
     | '/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
+    | '/api/public/piece-img/$'
   id:
     | '__root__'
     | '/'
@@ -444,6 +455,7 @@ export interface FileRouteTypes {
     | '/_authenticated/multiplayer/'
     | '/_authenticated/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
+    | '/api/public/piece-img/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -461,6 +473,7 @@ export interface RootRouteChildren {
   PiecesNewRoute: typeof PiecesNewRoute
   PiecesIndexRoute: typeof PiecesIndexRoute
   ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
+  ApiPublicPieceImgSplatRoute: typeof ApiPublicPieceImgSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -696,6 +709,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/piece-img/$': {
+      id: '/api/public/piece-img/$'
+      path: '/api/public/piece-img/$'
+      fullPath: '/api/public/piece-img/$'
+      preLoaderRoute: typeof ApiPublicPieceImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/cleanup-stale-challenges': {
       id: '/api/public/hooks/cleanup-stale-challenges'
       path: '/api/public/hooks/cleanup-stale-challenges'
@@ -813,6 +833,7 @@ const rootRouteChildren: RootRouteChildren = {
   PiecesIndexRoute: PiecesIndexRoute,
   ApiPublicHooksCleanupStaleChallengesRoute:
     ApiPublicHooksCleanupStaleChallengesRoute,
+  ApiPublicPieceImgSplatRoute: ApiPublicPieceImgSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
