@@ -81,6 +81,15 @@ function ProfilePage() {
           </div>
           <Button type="submit" disabled={busy}>Save profile</Button>
         </form>
+
+        <section className="mt-10">
+          <h2 className="font-display text-lg font-semibold mb-1">Default game settings</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Used as the starting values when you begin a new game against the computer. You can still change them per game.
+          </p>
+          <PlayPrefsForm value={prefs} onChange={updatePrefs} />
+          <p className="text-[11px] text-muted-foreground mt-2">Saved automatically.</p>
+        </section>
       </main>
     </div>
   );
