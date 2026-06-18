@@ -124,21 +124,33 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
 
-/** Find the other piece of the same id+color (the "twin") elsewhere on the board.
- *  Used by linked pieces (Shadow Knight, Twin Tower). Returns null if no
- *  partner exists or if more than one other candidate exists (ambiguous). */
-function findLinkPartner(board: Board, from: Square, piece: Piece): Square | null {
-  let found: Square | null = null;
-  for (let r = 0; r < board.length; r++) {
-    for (let c = 0; c < board[0].length; c++) {
-      if (r === from.r && c === from.c) continue;
-      const t = board[r][c];
-      if (!t || t.id !== piece.id || t.color !== piece.color) continue;
-      if (found) return null; // ambiguous (3+ linked pieces) — disable
-      found = { r, c };
-    }
+/** The mirror square across the board's vertical center axis. Linked pieces
+ *  (Shadow Knight, Twin Tower) must always occupy mirror squares of each
+ *  other. On odd-width boards a piece on the centre column mirrors to
+ *  itself (the twins are "stacked" on one square). */
+function mirrorSquare(board: Board, sq: Square): Square {
+  const cols = board[0]?.length ?? 0;
+  return { r: sq.r, c: cols - 1 - sq.c };
+}
+
+/** Locate the linked partner. Position is purely positional: the partner
+ *  lives on the mirror square. Returns:
+ *   - { sq, stacked: true }  when the piece is on the centre column
+ *     (odd-width board) — its twin shares the same square.
+ *   - { sq, stacked: false } when a matching piece exists at the mirror.
+ *   - null when the partner has been captured (orphan — cannot act). */
+function findLinkPartner(
+  board: Board,
+  from: Square,
+  piece: Piece,
+): { sq: Square; stacked: boolean } | null {
+  const mirror = mirrorSquare(board, from);
+  if (mirror.r === from.r && mirror.c === from.c) {
+    return { sq: mirror, stacked: true };
   }
-  return found;
+  const t = board[mirror.r][mirror.c];
+  if (!t || t.id !== piece.id || t.color !== piece.color) return null;
+  return { sq: mirror, stacked: false };
 }
 
 function promotionOptionsFor(state: GameState): PieceId[] {
