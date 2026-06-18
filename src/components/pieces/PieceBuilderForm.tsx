@@ -72,6 +72,10 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [iconPrompt, setIconPrompt] = useState("");
   const [emoji, setEmoji] = useState("");
   const [emojiBusy, setEmojiBusy] = useState(false);
+  const [imageMode, setImageMode] = useState<"emoji" | "upload">("emoji");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [steps, setSteps] = useState<MoveStep[]>([defaultStep()]);
   const [ranged, setRanged] = useState<RangedAttack>(defaultRangedAttack());
   const [overrideEnabled, setOverrideEnabled] = useState(false);
@@ -79,6 +83,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
+  const uploadImage = useServerFn(uploadPieceImage);
 
   const id = useMemo(() => genId(), []);
 
@@ -86,12 +91,14 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
   const validation = useMemo(() => {
     if (!name.trim()) return "Name your piece.";
-    if (!emoji) return "Pick or generate an icon (emoji).";
+    if (imageMode === "emoji" && !emoji) return "Pick or generate an emoji icon (or upload an image).";
+    if (imageMode === "upload" && !imageFile) return "Upload a 300×300 PNG with a transparent background (or use an emoji).";
+    if (imageError) return imageError;
     const c = compileMovement(steps);
     if (c.error) return c.error;
     if (compiledRanged.error) return compiledRanged.error;
     return null;
-  }, [name, emoji, steps, compiledRanged]);
+  }, [name, emoji, imageMode, imageFile, imageError, steps, compiledRanged]);
 
   const compiledMove = useMemo(() => compileMovement(steps), [steps]);
 
@@ -100,6 +107,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
     name: name || "New piece",
     glyph: emoji || "❓",
     emoji: true,
+    imageUrl: imageMode === "upload" ? imagePreview ?? undefined : undefined,
     movement: compiledMove.moveSpec,
     capture: compiledMove.captureSpec,
     description,
