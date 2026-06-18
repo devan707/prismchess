@@ -36,7 +36,7 @@ type Row = {
 
 type Tab = "mine" | "new" | "popular";
 
-export function PieceLibraryPanel({ onAdd, alreadyInDesign }: Props) {
+export function PieceLibraryPanel({ onAdd, alreadyInDesign, onRemoveFromDesign }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("new");
   const [mine, setMine] = useState<Row[]>([]);
