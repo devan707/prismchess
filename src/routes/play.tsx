@@ -650,6 +650,12 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
         registry={state.registry}
         onChoose={(p) => confirmPromotion(p)}
       />
+
+      <AiThinkingIndicator
+        thinking={aiThinking}
+        since={aiThinkingSince}
+        onNudge={nudgeAi}
+      />
     </div>
   );
 }
