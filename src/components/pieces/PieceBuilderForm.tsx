@@ -22,7 +22,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { savePiece, suggestPieceEmoji } from "@/lib/piece-builder.functions";
+import { savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
