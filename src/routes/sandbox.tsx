@@ -48,6 +48,7 @@ export const Route = createFileRoute("/sandbox")({
 
 function Sandbox() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const [design, setDesign] = useState<Design>(() => buildDefaultDesign(8, 8, "classic"));
   const [paletteColor, setPaletteColor] = useState<Color>("w");
   const [mirror, setMirror] = useState(true);
@@ -60,8 +61,30 @@ function Sandbox() {
   const suggestDesc = useServerFn(suggestGameDescription);
   const genTutorial = useServerFn(generateGameTutorial);
   const publish = useServerFn(publishGame);
+  const fetchMyGame = useServerFn(getMyPublishedGame);
   const [publishing, setPublishing] = useState(false);
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
+
+  // If ?edit=<gameId> is present, hydrate the sandbox from that published variant.
+  useEffect(() => {
+    if (!search.edit) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const row = await fetchMyGame({ data: { gameId: search.edit! } });
+        if (cancelled || !row) return;
+        setDesign(row.design as unknown as Design);
+        setSaveName(row.name);
+        setDescription(row.description);
+        setPublishedGameId(row.id);
+        toast.info(`Editing "${row.name}" — Publish will update this listing.`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Couldn't load that game");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [search.edit, fetchMyGame]);
+
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
