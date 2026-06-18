@@ -357,8 +357,26 @@ function Home() {
           </section>
         )}
       </main>
+
+      {/* Fixed bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[rgba(6,5,12,0.85)] border-t border-[rgba(180,140,255,0.25)]">
+        <div className="max-w-5xl mx-auto px-4 py-3 grid grid-cols-4">
+          {[
+            { to: "/friends", icon: Users, label: "Friends" },
+            { to: "/messages", icon: Mail, label: "Messages" },
+            { to: "/history", icon: History, label: "History" },
+            { to: "/help", icon: BookOpen, label: "Help" },
+          ].map(({ to, icon: Icon, label }) => (
+            <Link key={to} to={to} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] font-bold tracking-widest uppercase">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
       </div>
     </div>
+
 
   );
 }
