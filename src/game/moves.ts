@@ -427,7 +427,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         if (isSelfCell(cell.r, cell.c)) continue;
         const occ = board[cell.r][cell.c];
         if (!occ) continue;
-        if (occ.color === piece.color || isBarricade(occ, state.registry) || isFixture(occ, state.registry)) {
+        if (occ.color === piece.color || isFixture(occ, state.registry)) {
           blocked = true; break;
         }
         // Front-immune enemy (juggernaut / barricade) approached from its
