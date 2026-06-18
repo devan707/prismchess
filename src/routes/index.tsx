@@ -38,6 +38,16 @@ interface LastVariant {
   description?: string;
 }
 
+function signatureGlyphs(id: string): [string, string, string] {
+  switch (id) {
+    case "classic-8": return ["♞", "♛", "♝"];
+    case "mini-6": return ["♜", "♚", "♛"];
+    case "menagerie": return ["♞", "♛", "♝"];
+    case "grand-menagerie": return ["♜", "♛", "♞"];
+    default: return ["♟", "♚", "♟"];
+  }
+}
+
 function readLastVariant(): LastVariant | null {
   if (typeof window === "undefined") return null;
   try {
