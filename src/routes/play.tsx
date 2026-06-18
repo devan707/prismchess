@@ -26,6 +26,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { MoveDiagram } from "@/components/chess/MoveDiagram";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
+import { AiThinkingIndicator } from "@/components/chess/AiThinkingIndicator";
 import { recordSoloGame } from "@/lib/history.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -176,6 +177,7 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
     state, status, tryMove, tryDrop, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
     undo, takeback, pendingPromotion, promotionOptions, confirmPromotion,
+    aiThinking, aiThinkingSince, nudgeAi,
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
@@ -648,6 +650,12 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
         options={promotionOptions}
         registry={state.registry}
         onChoose={(p) => confirmPromotion(p)}
+      />
+
+      <AiThinkingIndicator
+        thinking={aiThinking}
+        since={aiThinkingSince}
+        onNudge={nudgeAi}
       />
     </div>
   );
