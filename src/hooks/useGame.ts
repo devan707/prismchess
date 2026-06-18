@@ -150,33 +150,60 @@ export function useGame(opts: UseGameOptions) {
     aiThinkingRef.current = true;
     setAiThinking(true);
     setAiThinkingSince(Date.now());
-    // Two-tick delay lets the spinner paint before chooseMove blocks the thread.
-    const t = setTimeout(() => {
-      try {
-        const move = chooseMove(state, opts.difficulty);
-        if (move) playMove(move);
-      } catch (err) {
-        console.error("AI move failed", err);
-      } finally {
+    let cancelled = false;
+    // Off-thread AI: worker keeps UI responsive (spinner animates, Nudge works).
+    engineRequestMove(state, opts.difficulty, { hardTimeoutMs: 20000 })
+      .then((move) => {
+        if (cancelled) return;
+        if (move) {
+          playMove(move);
+        } else {
+          // Worker failed or timed out — synchronous fallback so the game
+          // doesn't stall forever.
+          const fb = chooseMove(state, "easy");
+          if (fb) playMove(fb);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // Cancellation is expected when the user nudges; everything else logs.
+        if (!(err instanceof Error && /cancel/i.test(err.message))) {
+          console.error("AI move failed", err);
+        }
+      })
+      .finally(() => {
+        if (cancelled) return;
         aiThinkingRef.current = false;
         setAiThinking(false);
         setAiThinkingSince(null);
-      }
-    }, 60);
+      });
     return () => {
-      clearTimeout(t);
+      cancelled = true;
       aiThinkingRef.current = false;
       setAiThinking(false);
       setAiThinkingSince(null);
     };
   }, [state, opts.humanColor, opts.difficulty, gameOver, playMove, aiNudge]);
 
-  /** Re-kick the AI scheduler if it appears stuck. */
+  /** Re-kick the AI scheduler if it appears stuck. Terminates the worker. */
   const nudgeAi = useCallback(() => {
+    engineCancel();
     aiThinkingRef.current = false;
     setAiThinking(false);
     setAiThinkingSince(null);
     setAiNudge((n) => n + 1);
+  }, []);
+
+  // Record one "play" per match start (counts toward the gallery counters).
+  const recordedRef = useRef(false);
+  useEffect(() => {
+    if (recordedRef.current) return;
+    recordedRef.current = true;
+    const meta = typeof window !== "undefined" ? loadCurrentMeta() : null;
+    if (!meta?.id) return;
+    recordVariantPlay({ data: { variantKey: meta.id } }).catch(() => {
+      // Best-effort; not signed in is fine, just skip.
+    });
   }, []);
 
   const legalFor = useCallback(
