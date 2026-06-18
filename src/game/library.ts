@@ -27,11 +27,12 @@ function pawnRow(row: number, cols: number): Placement[] {
 
 function presetDesign(rows: number, cols: number, presetId: string): Design {
   const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[0];
+  const includeBarricade = presetId === "menagerie" || presetId === "grand-menagerie";
   return {
     rows,
     cols,
     placements: preset.build(rows, cols),
-    reserves: defaultReserves(),
+    reserves: defaultReserves([], { includeBarricade }),
     customPieces: loadCustomPieces(),
   };
 }
