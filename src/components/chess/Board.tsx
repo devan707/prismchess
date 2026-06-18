@@ -73,27 +73,37 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
 
   // Compute slide animation offsets for the piece that just moved.
   // Translates the destination piece from its previous (from) square visually.
+  const dispR = (r: number) => ((humanColor === "w") !== flipped ? (rows - 1 - r) : r);
+  const dispC = (c: number) => ((humanColor === "w") !== flipped ? c : (cols - 1 - c));
   const slideAnim = (() => {
     if (!last || !last.from) return null;
-    // Display delta: how far the piece moved in visual grid cells.
-    // displayRows is reversed for white, so visual row index = displayRows.indexOf(r).
-    const fromDispR = displayRowsIndex(last.from.r);
-    const toDispR = displayRowsIndex(last.to.r);
-    const fromDispC = displayColsIndex(last.from.c);
-    const toDispC = displayColsIndex(last.to.c);
+    if (last.kind === "archerShoot") return null; // archer stays — no slide
+    const fromDispR = dispR(last.from.r);
+    const toDispR = dispR(last.to.r);
+    const fromDispC = dispC(last.from.c);
+    const toDispC = dispC(last.to.c);
     return {
       to: last.to,
       dx: (fromDispC - toDispC) * 100,
       dy: (fromDispR - toDispR) * 100,
       key: moveCount,
     };
-    function displayRowsIndex(r: number) {
-      return (humanColor === "w") !== flipped ? (rows - 1 - r) : r;
-    }
-    function displayColsIndex(c: number) {
-      return (humanColor === "w") !== flipped ? c : (cols - 1 - c);
-    }
   })();
+
+  // Archer ranged-shot animation: an arrow flies from the archer (from) to the
+  // target (to). The archer itself does not move on the board.
+  const arrowAnim = (() => {
+    if (!last || !last.from || last.kind !== "archerShoot") return null;
+    const fromDispR = dispR(last.from.r);
+    const toDispR = dispR(last.to.r);
+    const fromDispC = dispC(last.from.c);
+    const toDispC = dispC(last.to.c);
+    const dx = (toDispC - fromDispC) * 100; // % of cell, rightward+
+    const dy = (toDispR - fromDispR) * 100; // % of cell, downward+
+    const rot = (Math.atan2(dy, dx) * 180) / Math.PI; // arrow glyph points right
+    return { from: last.from, dx, dy, rot, key: moveCount };
+  })();
+
 
   // If a juggernaut is selected, also highlight its partner square as "selected".
   const selectedPartner: Square | null = (() => {
