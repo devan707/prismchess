@@ -1,7 +1,8 @@
-import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
-import { isSquareAttacked } from "../moves";
+import type { Board, Color, GameState, Move, PieceDef, PieceId, Square } from "../types";
+import { isSquareAttacked, pseudoMovesFrom } from "../moves";
 import { getActivePlaybook } from "./playbook";
 import { getPiecePoints } from "../pieceValue";
+
 
 
 
@@ -59,6 +60,207 @@ export function valueFor(id: PieceId, def: PieceDef | undefined): number {
   if (def?.royal) cp += ROYAL_BONUS;
   return cp;
 }
+
+
+// ============================================================================
+// Static Exchange Evaluation (SEE)
+//
+// The single biggest reason the bot felt random was that "is this square
+// attacked?" is a boolean — it can't tell a free pawn from a queen sac. SEE
+// replays a hypothetical capture sequence using only the cheapest available
+// attacker on each side and returns the net material the initiator wins/loses.
+// We use it for: hanging detection, real-threat detection, move ordering, and
+// a root-level blunder filter.
+// ============================================================================
+
+export interface Attacker {
+  from: Square;
+  pieceId: PieceId;
+  value: number;
+}
+
+const ATTACKER_EXCLUDE_KINDS = new Set([
+  "drop", "portalSwap", "resurrect", "necroRaise",
+  "juggExit", "castle", "juggCastle", "handPass",
+]);
+
+/** Every piece of `byColor` that can capture something on `sq` right now,
+ *  sorted by piece value ascending. Cheapest attacker first. */
+export function attackersOf(state: GameState, sq: Square, byColor: Color): Attacker[] {
+  const out: Attacker[] = [];
+  const board = state.board;
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[0].length; c++) {
+      const p = board[r][c];
+      if (!p || p.color !== byColor) continue;
+      // Skip the resident — a piece on `sq` can't capture itself.
+      if (r === sq.r && c === sq.c) continue;
+      const moves = pseudoMovesFrom(state, { r, c });
+      let hits = false;
+      for (const m of moves) {
+        if (m.kind && ATTACKER_EXCLUDE_KINDS.has(m.kind)) continue;
+        // Dragon "flight" with no captured isn't really an attack.
+        if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
+        const lands =
+          (m.to.r === sq.r && m.to.c === sq.c) ||
+          ((m.kind === "shadowLink" || m.kind === "twinLink") &&
+            !!m.partnerTo && m.partnerTo.r === sq.r && m.partnerTo.c === sq.c);
+        if (!lands) continue;
+        hits = true;
+        break;
+      }
+      if (hits) {
+        out.push({
+          from: { r, c },
+          pieceId: p.id,
+          value: valueFor(p.id, state.registry[p.id]),
+        });
+      }
+    }
+  }
+  out.sort((a, b) => a.value - b.value);
+  return out;
+}
+
+/**
+ * Classic SEE swap-off. `sideToMove` has just placed its first attacker on
+ * `sq` (value = `firstAttackerValue`), capturing a victim worth
+ * `victimValue`. Opponent moves next. Returns net material gained by the
+ * side that ORIGINATED the sequence (i.e. the player who put the first
+ * attacker on the square just before this call).
+ */
+function seeSwapOff(
+  state: GameState,
+  sq: Square,
+  initiator: Color,
+  victimValue: number,
+  firstAttackerValue: number,
+): number {
+  const board = state.board;
+  const opp: Color = initiator === "w" ? "b" : "w";
+  // Find both sides' attackers of `sq`. For initiator's recapturers, we need
+  // to flip the resident piece to opp-colour so friendlies show up as
+  // attackers of their own square; then restore.
+  const resident = board[sq.r][sq.c];
+  let usList: number[];
+  if (resident && resident.color === initiator) {
+    board[sq.r][sq.c] = { id: resident.id, color: opp };
+    usList = attackersOf(state, sq, initiator).map((a) => a.value);
+    board[sq.r][sq.c] = resident;
+  } else {
+    usList = attackersOf(state, sq, initiator).map((a) => a.value);
+  }
+  // The first attacker just moved — drop it from the recapture pool.
+  const ui = usList.indexOf(firstAttackerValue);
+  if (ui >= 0) usList.splice(ui, 1);
+  const themList = attackersOf(state, sq, opp).map((a) => a.value);
+
+  const gains: number[] = [victimValue];
+  let onSquare = firstAttackerValue;
+  let side: Color = opp;
+  let ui2 = 0, ti = 0;
+  while (true) {
+    const useUs = side === initiator;
+    const list = useUs ? usList : themList;
+    const idx = useUs ? ui2 : ti;
+    if (idx >= list.length) break;
+    gains.push(onSquare - gains[gains.length - 1]);
+    onSquare = list[idx];
+    if (useUs) ui2++; else ti++;
+    // Early-out: if even capturing here would lose, side won't continue.
+    if (Math.max(-gains[gains.length - 2], gains[gains.length - 1]) < 0) break;
+    side = side === initiator ? opp : initiator;
+  }
+  for (let i = gains.length - 2; i >= 0; i--) {
+    gains[i] = -Math.max(-gains[i], -gains[i + 1]);
+  }
+  return gains[0];
+}
+
+/**
+ * SEE for a planned move. Net centipawns for the mover after the full
+ * capture/recapture sequence. Positive = winning move (or quiet move to
+ * a safe square). Negative = we're hanging material.
+ *
+ * Non-standard move shapes (drops, portal swaps, resurrects, juggernaut
+ * special moves) return 0 — they have their own scoring elsewhere.
+ */
+export function seeMove(state: GameState, m: Move): number {
+  if (!m.from) return 0;
+  if (m.kind === "drop" || m.kind === "portalSwap" ||
+      m.kind === "resurrect" || m.kind === "necroRaise" ||
+      m.kind === "juggCharge" || m.kind === "juggExit" ||
+      m.kind === "juggShift" || m.kind === "juggCastle" ||
+      m.kind === "castle" || m.kind === "handPass") {
+    return 0;
+  }
+  const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
+  const movingVal = valueFor(movingId, state.registry[movingId]);
+  const victimVal = m.captured ? valueFor(m.captured.id, state.registry[m.captured.id]) : 0;
+  // Build the post-move board (cheap shallow copy of just the affected rows).
+  const board = state.board.map((row) => row.slice());
+  board[m.from.r][m.from.c] = null;
+  // archerShoot doesn't relocate the archer; the victim is removed but the
+  // mover stays put. Model it as "no piece sits on sq after the shot".
+  if (m.kind === "archerShoot") {
+    board[m.to.r][m.to.c] = null;
+    const ghost: GameState = { ...state, board };
+    // Archer is still on its old square; no recapture on m.to. The shot is
+    // free unless the victim was defended... but it costs nothing to the
+    // archer because the archer didn't move. So net = victimVal.
+    void ghost;
+    return victimVal;
+  }
+  board[m.to.r][m.to.c] = { id: movingId, color: m.piece.color };
+  const ghost: GameState = { ...state, board };
+  return seeSwapOff(ghost, m.to, m.piece.color, victimVal, movingVal);
+}
+
+/**
+ * Material `color` expects to lose at square `sq` (which holds a friendly
+ * piece) if the opponent initiates a capture sequence with their cheapest
+ * attacker. Returns 0 if the opponent has no winning capture there.
+ */
+function expectedLossAt(state: GameState, sq: Square, color: Color): number {
+  const board = state.board;
+  const piece = board[sq.r][sq.c];
+  if (!piece || piece.color !== color) return 0;
+  const opp: Color = color === "w" ? "b" : "w";
+  const attackers = attackersOf(state, sq, opp);
+  if (attackers.length === 0) return 0;
+  const victimVal = valueFor(piece.id, state.registry[piece.id]);
+  const a = attackers[0];
+  // Simulate the opp making the first capture with its cheapest attacker.
+  const ghostBoard = board.map((row) => row.slice());
+  ghostBoard[a.from.r][a.from.c] = null;
+  ghostBoard[sq.r][sq.c] = { id: a.pieceId, color: opp };
+  const ghost: GameState = { ...state, board: ghostBoard };
+  const opponentNet = seeSwapOff(ghost, sq, opp, victimVal, a.value);
+  // Opp only initiates if they come out ahead.
+  return Math.max(0, opponentNet);
+}
+
+/**
+ * Material `color` would win at `sq` (which holds an enemy piece) by
+ * initiating a capture with our cheapest attacker. Returns 0 if no winning
+ * capture exists.
+ */
+function expectedGainAt(state: GameState, sq: Square, color: Color): number {
+  const board = state.board;
+  const piece = board[sq.r][sq.c];
+  if (!piece || piece.color === color) return 0;
+  const attackers = attackersOf(state, sq, color);
+  if (attackers.length === 0) return 0;
+  const victimVal = valueFor(piece.id, state.registry[piece.id]);
+  const a = attackers[0];
+  const ghostBoard = board.map((row) => row.slice());
+  ghostBoard[a.from.r][a.from.c] = null;
+  ghostBoard[sq.r][sq.c] = { id: a.pieceId, color };
+  const ghost: GameState = { ...state, board: ghostBoard };
+  const net = seeSwapOff(ghost, sq, color, victimVal, a.value);
+  return Math.max(0, net);
+}
+
 
 
 function inB(board: Board, r: number, c: number): boolean {
