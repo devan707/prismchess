@@ -71,11 +71,15 @@ function NewPiece() {
           </Link>
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">
-              {template ? `Duplicate "${template.name.replace(/ \(copy\)$/, "")}"` : "Create a custom piece"}
+              {template
+                ? (isRemix ? `Remix "${template.name.replace(/ \(copy\)$/, "")}"` : `Duplicate "${template.name.replace(/ \(copy\)$/, "")}"`)
+                : "Create a custom piece"}
             </h1>
             <p className="text-xs text-muted-foreground">
               {template
-                ? "Saves as a new piece — change the name and tweak something so it's distinct."
+                ? (isRemix
+                    ? "Saves as your own new piece — change the name and tweak something so it's distinct. The original is not affected."
+                    : "Saves as a new piece — change the name and tweak something so it's distinct.")
                 : "Define how your piece moves, then save it private or publish to the community library."}
             </p>
           </div>
