@@ -135,12 +135,13 @@ export const PRESETS: Preset[] = [
   {
     id: "menagerie",
     name: "Menagerie",
-    description: "Classic layout reimagined: Archers as rooks, Dragons as knights, Wizards as bishops, a Regent leading the army, and an Assassin (white) / Necromancer (black) standing in for the queen. Shapeshifter pawns up front.",
+    description: "The Kings are gone and the Queens have vanished. The White Kingdom is ruled by a Regent until the Queen's return; the Dark Kingdom has abandoned hope and follows the Lich King. Archers, Dragons, Wizards, and Assassins clash while the fate of the Queens remains unknown. Shapeshifter pawns lead the charge.",
     build: (rows, cols) => {
       // Designed for an 8×8 board. Fall back to classic-ish on smaller boards.
       if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
-      // Back rank: Archer, Dragon, Wizard, <queen-slot>, Regent, Wizard, Dragon, Archer
-      // White's queen slot is an Assassin (Z); Black's mirrors to a Necromancer (M).
+      // Back rank: Archer, Dragon, Wizard, Assassin, Regent/Lich King, Wizard, Dragon, Archer.
+      // Both sides field an Assassin in the queen slot. White is led by a Regent (G),
+      // Black by the Lich King (L) — mechanically identical royals.
       const cKing = 4;
       const cQueen = 3;
       const whiteBack: PieceId[] = [];
@@ -150,11 +151,11 @@ export const PRESETS: Preset[] = [
         if (c === 0 || c === 7) id = "A";
         else if (c === 1 || c === 6) id = "D";
         else if (c === 2 || c === 5) id = "W";
-        else if (c === cQueen) id = "_Q"; // sentinel, replaced per side
-        else if (c === cKing) id = "G";
+        else if (c === cQueen) id = "Z";
+        else if (c === cKing) id = "_K"; // sentinel, replaced per side
         else id = "P";
-        whiteBack.push(id === "_Q" ? "Z" : id);
-        blackBack.push(id === "_Q" ? "M" : id);
+        whiteBack.push(id === "_K" ? "G" : id);
+        blackBack.push(id === "_K" ? "L" : id);
       }
       const placements: Placement[] = [];
       whiteBack.forEach((id, c) => placements.push({ color: "w", pieceId: id, r: 0, c }));

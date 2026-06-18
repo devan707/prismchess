@@ -21,6 +21,7 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   T: 5,    // Portal
   H: 4,    // King's Hand
   G: 0,    // Regent — royal, infinite value implicit via royal handling
+  L: 0,    // Lich King — royal, infinite value implicit via royal handling
   Z: 5,    // Assassin — 3-step infiltration only, no king-step adjacency
   W: 7,    // Wizard
   M: 7,    // Necromancer
