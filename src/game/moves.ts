@@ -1519,6 +1519,20 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     if (m.captured && m.captured.id === "J" && m.from && !attackerBypassesFrontArc) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
+    // Knight side-attack on a juggernaut: the knight must land on the
+    // exposed side of the targeted half (the side opposite the partner).
+    // It cannot leap across the pair to strike the far half.
+    if (m.captured && m.captured.id === "J" && m.from && m.piece.id === "N") {
+      const partner = findJuggPartner(state.board, m.to, m.captured.color, state.registry);
+      if (partner) {
+        const perpAxis: "r" | "c" = wide ? "r" : "c";
+        const tp = m.to[perpAxis];
+        const pp = partner[perpAxis];
+        const kp = m.from[perpAxis];
+        // If knight sits strictly on the partner's side of the target, reject.
+        if ((kp - tp) !== 0 && Math.sign(kp - tp) === Math.sign(pp - tp)) return false;
+      }
+    }
     // Front-arc immunity: a barricade cannot be captured from the front.
     if (m.captured && state.registry[m.captured.id]?.immobile && m.from && !attackerBypassesFrontArc) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
