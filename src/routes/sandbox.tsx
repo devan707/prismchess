@@ -425,7 +425,13 @@ function Sandbox() {
       <main className="max-w-7xl mx-auto px-4 pb-12 grid gap-4 lg:grid-cols-[260px_1fr_300px]">
         <aside className="space-y-3">
           <BoardSizePicker rows={design.rows} cols={design.cols} onChange={setSize} />
-          <PresetPicker onApply={applyPreset} />
+          <PresetPicker
+            onApply={applyPreset}
+            userPresets={userPresets}
+            onSaveCurrentAsPreset={saveCurrentAsPreset}
+            onRenameUserPreset={renameUserPreset}
+            onDeleteUserPreset={removeUserPreset}
+          />
           <div className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="font-display text-sm font-semibold">Pawn swap</h3>
             <p className="text-[11px] text-muted-foreground">
