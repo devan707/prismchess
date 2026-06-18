@@ -225,16 +225,20 @@ export function compileMovement(steps: MoveStep[]): CompiledMovement {
   return lastCaptures ? { moveSpec } : { moveSpec, captureSpec: {} };
 }
 
-/** Compile a ranged attack picker into a MovementSpec of leap offsets. */
+/** Compile the user's ranged attack picker into a MovementSpec of leap offsets.
+ *  Unions the leap endpoints produced by every direction+range band. */
 export function compileRangedAttack(r: RangedAttack): { spec: MovementSpec; error?: string } {
   if (!r.enabled) return { spec: {} };
-  const min = Math.max(1, Math.min(4, Math.floor(r.minDistance)));
-  const max = Math.max(min, Math.min(4, Math.floor(r.maxDistance)));
-  const dirs = absDirOffsets(r.direction);
+  const opts = r.options ?? [];
+  if (opts.length === 0) return { spec: {}, error: "Add at least one ranged attack option." };
   const leaps: Offset[] = [];
-  for (const d of dirs) {
-    for (let k = min; k <= max; k++) {
-      leaps.push({ dr: d.dr * k, dc: d.dc * k });
+  for (const opt of opts) {
+    const min = Math.max(1, Math.min(RANGED_MAX_DISTANCE, Math.floor(opt.minDistance)));
+    const max = Math.max(min, Math.min(RANGED_MAX_DISTANCE, Math.floor(opt.maxDistance)));
+    for (const d of absDirOffsets(opt.direction)) {
+      for (let k = min; k <= max; k++) {
+        leaps.push({ dr: d.dr * k, dc: d.dc * k });
+      }
     }
   }
   const deduped = dedupeOffsets(leaps);
