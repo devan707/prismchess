@@ -506,6 +506,7 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
           disabled={viewingPast || terminal}
           onSelectionChange={handleSelectionChange}
           allowEnemyInspect={enemyInspect}
+          showHints={showHints}
         />
 
         {takebackOn && state.history.length > 0 && !terminal && !viewingPast && (
