@@ -138,9 +138,13 @@ function SharedGamePage() {
             <Button size="sm" variant={liked ? "default" : "outline"} onClick={handleLike}>
               <Heart className={`h-3 w-3 mr-1 ${liked ? "fill-current" : ""}`} /> {likeCount}
             </Button>
-            {meId === game.author_id && (
+            {meId === game.author_id ? (
               <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sandbox", search: { edit: game.id } as never })}>
                 <Pencil className="h-3 w-3 mr-1" /> Edit
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sandbox", search: { remix: game.slug } as never })} title="Open this variant in the sandbox and save as your own">
+                <Wand2 className="h-3 w-3 mr-1" /> Remix
               </Button>
             )}
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
