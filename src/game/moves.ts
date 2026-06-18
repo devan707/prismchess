@@ -464,6 +464,12 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       const blocks = (t: Piece | null) =>
         !!t && (t.color === piece.color || isBarricade(t, state.registry) || isFixture(t, state.registry));
       if (blocks(t1) || blocks(t2)) break;
+      // Front-immune enemies (other juggernauts, barricades) approached from
+      // their front cannot be trampled — the charge stops BEFORE that cell.
+      // Because the charger and any opposing juggernaut always face each
+      // other, this means juggernauts can never charge through one another.
+      if (frontImmuneBlocker(t1, nF, from, state.registry, wide)) break;
+      if (frontImmuneBlocker(t2, nP, from, state.registry, wide)) break;
       if (t1 && t1.color !== piece.color && !isFixture(t1, state.registry)) trampled.push(t1);
       if (t2 && t2.color !== piece.color && !isFixture(t2, state.registry)) trampled.push(t2);
       curF = nF; curP = nP;
