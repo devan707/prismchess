@@ -29,9 +29,14 @@ type OpenChallenge = Awaited<ReturnType<typeof listOpenChallenges>>[number];
 type MyMatch = Awaited<ReturnType<typeof listMyMatches>>[number];
 
 function TimeControlLabel({ tc }: { tc: string }) {
-  if (tc === "10min") return <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> 10 min</span>;
-  if (tc === "30min") return <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> 30 min</span>;
   if (tc === "3day") return <span className="inline-flex items-center gap-1"><Hourglass className="h-3 w-3" /> 3 days/move</span>;
+  const m = /^(\d+)min$/.exec(tc);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    const Icon = n <= 3 ? Zap : Clock;
+    const label = n <= 3 ? `Blitz ${n} min` : `${n} min`;
+    return <span className="inline-flex items-center gap-1"><Icon className="h-3 w-3" /> {label}</span>;
+  }
   return <span>{tc}</span>;
 }
 
