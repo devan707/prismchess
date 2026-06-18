@@ -254,6 +254,46 @@ export function PieceBuilderForm({ onSaved }: Props) {
             <p className="text-xs text-muted-foreground mb-1">Reach from a center cell</p>
             <PieceReachPreview steps={steps} />
           </div>
+
+          {/* Worth */}
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold">Worth</span>
+              <PieceWorthBadge
+                id={previewDef.id}
+                def={{ ...previewDef, pointsOverride: finalPts }}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Estimated: <span className="font-mono tabular-nums">{estimatedPts}</span> pts
+              {" "}(calibrated to classical chess: P=1, N/B=3, R=5, Q=9).
+            </p>
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={overrideEnabled}
+                onChange={(e) => {
+                  setOverrideEnabled(e.target.checked);
+                  if (e.target.checked) setOverridePts(estimatedPts);
+                }}
+              />
+              Override manually
+            </label>
+            {overrideEnabled && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={0.5}
+                  max={14}
+                  step={0.5}
+                  value={overridePts}
+                  onChange={(e) => setOverridePts(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="font-mono text-xs tabular-nums w-8 text-right">{overridePts}</span>
+              </div>
+            )}
+          </div>
           <div className="border-t pt-3 space-y-2">
             {validation && (
               <p className="text-xs text-destructive flex items-center gap-1">
