@@ -59,10 +59,14 @@ export interface PieceDef {
   /** Optional uploaded image URL (PNG 300×300 with transparent background).
    *  When set, takes precedence over `glyph`/`emoji` for rendering. */
   imageUrl?: string;
-  /** Movement (and capture if `capture` not given). */
+  /** Movement (and capture if `capture` not given). Legacy single-pattern. */
   movement?: MovementSpec;
   /** Optional separate capture pattern. */
   capture?: MovementSpec;
+  /** v2: list of alternative move options (each with kind + condition).
+   *  When present, this takes precedence over `movement`/`capture` for the
+   *  generic engine path. */
+  options?: import("./customMovement").MoveOption[];
   /** Optional ranged capture (Archer-style). The piece captures an enemy
    *  on a matching square WITHOUT relocating. `timing` is informational
    *  for now ("replace" = instead of a normal move/capture; "before"/"after"

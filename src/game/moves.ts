@@ -1,5 +1,6 @@
 import type { Board, Color, GameState, Move, MovementSpec, Offset, Piece, PieceDef, PieceId, Square } from "./types";
 import { cloneBoard, findRoyals, inBoardBounds } from "./board";
+import { compileOption } from "./customMovement";
 
 function rowsCols(board: Board): { rows: number; cols: number } {
   return { rows: board.length, cols: board[0]?.length ?? 0 };
@@ -604,8 +605,32 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
 
-  // Generic data-driven piece
-  if (def.movement || def.capture) {
+  // Generic data-driven piece — v2 option-based path
+  if (def.options && def.options.length > 0) {
+    const onStartingSquare = !state.history.some(
+      (m) =>
+        (m.from && m.from.r === from.r && m.from.c === from.c) ||
+        (m.to.r === from.r && m.to.c === from.c),
+    );
+    const seen = new Set<string>(); // dedupe across overlapping options
+    for (const opt of def.options) {
+      if (opt.condition === "from-starting-square" && !onStartingSquare) continue;
+      const compiled = compileOption(opt);
+      if (compiled.error) continue;
+      const mode: "move" | "capture" | "both" =
+        opt.kind === "move-only" ? "move" : opt.kind === "capture-only" ? "capture" : "both";
+      const targets = emitFromSpec(board, state.registry, from, piece, compiled.spec, mode);
+      for (const t of targets) {
+        const k = `${t.r},${t.c}`;
+        const occ = board[t.r][t.c];
+        const isCap = !!occ && occ.color !== piece.color;
+        const sig = `${k}|${isCap ? "c" : "m"}`;
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        moves.push({ from, to: t, piece, captured: isCap ? occ : null });
+      }
+    }
+  } else if (def.movement || def.capture) {
     const moveSpec = def.movement ?? {};
     const captureSpec = def.capture ?? moveSpec;
     const moveTargets = emitFromSpec(board, state.registry, from, piece, moveSpec, "move");

@@ -583,6 +583,53 @@ export type Database = {
         }
         Relationships: []
       }
+      piece_ability_requests: {
+        Row: {
+          admin_note: string | null
+          author_id: string
+          created_at: string
+          id: string
+          piece_id: string
+          request_text: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          author_id: string
+          created_at?: string
+          id?: string
+          piece_id: string
+          request_text: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          author_id?: string
+          created_at?: string
+          id?: string
+          piece_id?: string
+          request_text?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piece_ability_requests_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "custom_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       piece_likes: {
         Row: {
           created_at: string

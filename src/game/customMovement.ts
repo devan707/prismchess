@@ -50,6 +50,38 @@ export interface CompiledMovement {
   error?: string;
 }
 
+// ---------- Move Options (v2: multiple alternative moves per piece) ----------
+
+export type MoveOptionKind = "move-or-capture" | "move-only" | "capture-only";
+export type MoveCondition = "none" | "from-starting-square";
+
+export interface MoveOption {
+  /** One movement chain (1..4 steps) — same shape as before. */
+  steps: MoveStep[];
+  /** Whether this option moves only, captures only, or either. Replaces
+   *  the per-step `captures` flag for option-based pieces. */
+  kind: MoveOptionKind;
+  /** When this option is available. */
+  condition: MoveCondition;
+}
+
+export interface CompiledOption {
+  /** Compiled MovementSpec (leap endpoints or slides). */
+  spec: MovementSpec;
+  kind: MoveOptionKind;
+  condition: MoveCondition;
+  error?: string;
+}
+
+/** Compile a single MoveOption to a MovementSpec. Ignores per-step capture
+ *  flags — the option-level `kind` controls capture behavior at runtime. */
+export function compileOption(opt: MoveOption): CompiledOption {
+  const stepsAsCapturing = opt.steps.map((s) => ({ ...s, captures: true }));
+  const c = compileMovement(stepsAsCapturing);
+  if (c.error) return { spec: {}, kind: opt.kind, condition: opt.condition, error: c.error };
+  return { spec: c.moveSpec, kind: opt.kind, condition: opt.condition };
+}
+
 
 // ---------- direction helpers ----------
 
@@ -250,6 +282,21 @@ export function defaultStep(): MoveStep {
     captures: true,
   };
 }
+
+export function defaultOption(kind: MoveOptionKind = "move-or-capture"): MoveOption {
+  return { steps: [defaultStep()], kind, condition: "none" };
+}
+
+export const OPTION_KIND_OPTIONS: { value: MoveOptionKind; label: string; hint: string }[] = [
+  { value: "move-or-capture", label: "Move or capture", hint: "Standard — the piece moves there or captures whatever is there." },
+  { value: "move-only",       label: "Move only",       hint: "Cannot capture on this option (pawn-style forward push)." },
+  { value: "capture-only",    label: "Capture only",    hint: "Only legal when an enemy is on the destination (pawn-style diagonal)." },
+];
+
+export const CONDITION_OPTIONS: { value: MoveCondition; label: string }[] = [
+  { value: "none",                 label: "Always available" },
+  { value: "from-starting-square", label: "Only from starting square" },
+];
 
 export function defaultRangedAttack(): RangedAttack {
   return {
