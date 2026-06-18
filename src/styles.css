@@ -120,20 +120,50 @@
   filter: blur(50px) saturate(1.05);
 }
 
-/* Thin rainbow border, semi-opaque dark fill. Pair with rounded-none / rounded-sm. */
+/* Subtle prism gradient button: dark base with very muted rainbow tint and a thin white border. */
 @utility prism-border {
   position: relative;
-  background-color: oklch(0.18 0.02 280 / 0.88);
   color: oklch(0.98 0.01 90);
-  border: 1px solid transparent;
-  border-image: linear-gradient(
+  border: 1px solid oklch(1 0 0 / 0.65);
+  background-color: oklch(0.20 0.02 280 / 0.88);
+  background-image: linear-gradient(
     90deg,
-    #ff4d6d, #ff9a3c, #ffe24d, #4dff88, #4dc4ff, #8a4dff, #ff4dd2
-  ) 1;
+    oklch(0.55 0.10 25 / 0.55),
+    oklch(0.58 0.09 70 / 0.45),
+    oklch(0.60 0.08 150 / 0.40),
+    oklch(0.55 0.10 230 / 0.45),
+    oklch(0.55 0.11 320 / 0.55)
+  );
+  background-blend-mode: overlay;
 }
 @utility prism-border-hover {
   &:hover {
-    background-color: oklch(0.22 0.02 280 / 0.92);
+    filter: brightness(1.08);
+  }
+}
+
+/* Muted rainbow tile background for signature game cards (blurred + gray overlay). */
+@utility prism-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg,
+      oklch(0.70 0.15 25),
+      oklch(0.75 0.14 70),
+      oklch(0.78 0.13 150),
+      oklch(0.72 0.14 230),
+      oklch(0.70 0.15 320)
+    );
+  filter: blur(0.5px) saturate(0.75);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: oklch(0.55 0.005 280 / 0.5);
+    backdrop-filter: blur(6px);
+    z-index: 0;
   }
 }
 

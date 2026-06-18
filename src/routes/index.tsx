@@ -38,6 +38,16 @@ interface LastVariant {
   description?: string;
 }
 
+function signatureGlyphs(id: string): [string, string, string] {
+  switch (id) {
+    case "classic-8": return ["♞", "♛", "♝"];
+    case "mini-6": return ["♜", "♚", "♛"];
+    case "menagerie": return ["♞", "♛", "♝"];
+    case "grand-menagerie": return ["♜", "♛", "♞"];
+    default: return ["♟", "♚", "♟"];
+  }
+}
+
 function readLastVariant(): LastVariant | null {
   if (typeof window === "undefined") return null;
   try {
@@ -197,24 +207,31 @@ function Home() {
           </div>
           <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
             <div className="flex gap-3 pb-2 snap-x">
-              {BUILTIN_GAMES.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => playBuiltin(g)}
-                  className="w-44 shrink-0 snap-start text-left"
-                >
-                  <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition">
-                    <div className="h-20 -mx-3 -mt-3 mb-2 rounded-t-sm bg-[linear-gradient(135deg,#ff4d6d_0%,#ff9a3c_18%,#ffe24d_36%,#4dff88_54%,#4dc4ff_72%,#8a4dff_88%,#ff4dd2_100%)] opacity-90 flex items-center justify-center">
-                      <span className="font-display font-black text-3xl text-card tracking-tight drop-shadow">{g.name.charAt(0)}</span>
-                    </div>
-                    <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
-                    <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
-                    <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
-                      <Play className="h-3 w-3" /> Play
-                    </div>
-                  </Card>
-                </button>
-              ))}
+              {BUILTIN_GAMES.map((g) => {
+                const glyphs = signatureGlyphs(g.id);
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => playBuiltin(g)}
+                    className="w-44 shrink-0 snap-start text-left"
+                  >
+                    <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition overflow-hidden">
+                      <div className="prism-tile h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1">
+                        <span className="relative z-10 flex items-end gap-1 text-card-foreground/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
+                          <span className="text-3xl opacity-80">{glyphs[0]}</span>
+                          <span className="text-5xl">{glyphs[1]}</span>
+                          <span className="text-3xl opacity-80">{glyphs[2]}</span>
+                        </span>
+                      </div>
+                      <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
+                      <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
+                      <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
+                        <Play className="h-3 w-3" /> Play
+                      </div>
+                    </Card>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
