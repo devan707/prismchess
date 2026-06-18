@@ -77,7 +77,7 @@ export const getTopic = createServerFn({ method: "GET" })
         .select("id, slug, name, description, def, image_url")
         .eq("id", topic.shared_piece_id)
         .maybeSingle();
-      if (p) sharedPiece = p as typeof sharedPiece;
+      if (p) sharedPiece = p as unknown as typeof sharedPiece;
     }
 
     const { data: replies, error: rErr } = await context.supabase
