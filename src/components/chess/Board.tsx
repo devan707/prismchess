@@ -400,8 +400,20 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   style={{ width: "30%", height: "30%", background: "var(--color-board-legal)" }} />
               )}
               {markerKind === "attack" && (
-                <div className="absolute rounded-full pointer-events-none"
-                  style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
+                <div
+                  className="absolute rounded-full pointer-events-none flex items-center justify-center"
+                  style={{
+                    width: "42%",
+                    height: "42%",
+                    border: "3px solid var(--color-board-attack)",
+                    background: "transparent",
+                  }}
+                >
+                  <div
+                    className="rounded-full"
+                    style={{ width: "28%", height: "28%", background: "var(--color-board-attack)" }}
+                  />
+                </div>
               )}
               {markerKind === "capture" && !juggFoot && (
                 <div className="absolute inset-1 rounded-full pointer-events-none ring-4"
