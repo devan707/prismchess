@@ -6,6 +6,7 @@
 import type { Difficulty, GameState, Move } from "../types";
 import type { WorkerRequest, WorkerResponse } from "./worker";
 import { chooseMove } from "./index";
+import { loadPlaybook, type Playbook } from "./playbook";
 
 let worker: Worker | null = null;
 let nextId = 1;
@@ -25,7 +26,6 @@ function getWorker(): Worker | null {
       else p.reject(new Error(msg.message));
     });
     worker.addEventListener("error", (ev) => {
-      // Reject all pending requests on a hard worker error.
       for (const [, p] of pending) p.reject(new Error(ev.message || "AI worker crashed"));
       pending.clear();
       worker?.terminate();
@@ -39,9 +39,9 @@ function getWorker(): Worker | null {
 }
 
 export interface RequestMoveOptions {
-  /** Wall-clock fallback. If the worker doesn't respond in this many ms,
-   *  give up and resolve `null` so the caller can fall back to easy mode. */
   hardTimeoutMs?: number;
+  /** Per-variant playbook snapshot to use during this search. */
+  playbook?: Playbook;
 }
 
 export function requestMove(
@@ -50,26 +50,22 @@ export function requestMove(
   opts: RequestMoveOptions = {},
 ): Promise<Move | null> {
   const w = getWorker();
+  const playbook = opts.playbook ?? loadPlaybook();
   if (!w) {
-    // SSR / worker-disabled environment: fall back to synchronous chooseMove.
     return Promise.resolve(chooseMove(state, difficulty));
   }
   const id = nextId++;
-  // Strip non-serializable bits (e.g. functions) — registry contains plain
-  // data so structuredClone via postMessage works as-is, but we be defensive.
   const safeState = JSON.parse(JSON.stringify(state)) as GameState;
-  const msg: WorkerRequest = { type: "search", id, state: safeState, difficulty };
+  const msg: WorkerRequest = { type: "search", id, state: safeState, difficulty, playbook };
   return new Promise<Move | null>((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    const hard = opts.hardTimeoutMs ?? 15000;
+    const hard = opts.hardTimeoutMs ?? 30000;
     const timer = setTimeout(() => {
       if (!pending.has(id)) return;
       pending.delete(id);
-      // Hard kill — something is wedged.
       cancel();
       resolve(null);
     }, hard);
-    // Wrap resolve/reject to clear the timer.
     const wrapped = pending.get(id)!;
     pending.set(id, {
       resolve: (m) => { clearTimeout(timer); wrapped.resolve(m); },
@@ -85,7 +81,6 @@ export function requestMove(
   });
 }
 
-/** Terminate the worker and reject all pending requests. Used by "Nudge". */
 export function cancel(): void {
   if (worker) {
     worker.terminate();

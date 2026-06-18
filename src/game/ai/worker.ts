@@ -1,18 +1,22 @@
 /// <reference lib="webworker" />
 /**
- * AI worker entry. Receives a GameState + difficulty, runs an iterative-
- * deepening search, posts the chosen move back. Running in a Worker means
- * the UI thread stays responsive (spinner animates, "Nudge" stays clickable)
- * even when the engine is searching for several seconds on hard.
+ * AI worker entry. Receives a GameState + difficulty + playbook snapshot,
+ * runs an iterative-deepening search, posts the chosen move back.
+ *
+ * Important: the playbook snapshot must come in from the main thread —
+ * Workers have no window/localStorage, so reading the playbook directly
+ * here would always yield defaults. See playbook.ts setActivePlaybookSnapshot.
  */
 import { runSearch, paramsFor } from "./search";
 import type { Difficulty, GameState, Move } from "../types";
+import { setActivePlaybookSnapshot, type Playbook } from "./playbook";
 
 export type WorkerRequest = {
   type: "search";
   id: number;
   state: GameState;
   difficulty: Difficulty;
+  playbook?: Playbook | null;
 };
 
 export type WorkerResponse =
@@ -25,6 +29,7 @@ ctx.addEventListener("message", (ev: MessageEvent<WorkerRequest>) => {
   const msg = ev.data;
   if (msg?.type !== "search") return;
   try {
+    setActivePlaybookSnapshot(msg.playbook ?? null);
     const params = paramsFor(msg.state, msg.difficulty);
     const result = runSearch(msg.state, { difficulty: msg.difficulty, ...params });
     const out: WorkerResponse = {
@@ -43,5 +48,7 @@ ctx.addEventListener("message", (ev: MessageEvent<WorkerRequest>) => {
       message: err instanceof Error ? err.message : String(err),
     };
     ctx.postMessage(out);
+  } finally {
+    setActivePlaybookSnapshot(null);
   }
 });
