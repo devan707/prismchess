@@ -55,6 +55,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   })();
   const attackSet = new Set(attackSquares.map((s) => `${s.r},${s.c}`));
 
+  // Ranged attacks (archer shoot, dragon strike) get crosshair markers;
+  // melee threats stay as orange dots.
+  const rangedAttackSet: Set<string> = (() => {
+    const out = new Set<string>();
+    if (!selected || !selectedPieceForInspect) return out;
+    for (const m of pseudoMovesFrom(state, selected)) {
+      if (m.kind === "archerShoot" || m.kind === "dragonAttack") {
+        out.add(`${m.to.r},${m.to.c}`);
+      }
+    }
+    return out;
+  })();
+
   // For enemy inspection we don't have legalFor — derive pseudo non-capture
   // move squares directly so we can still paint green move-only dots.
   const enemyMoveOnlyTargets: Square[] = (() => {
