@@ -1133,8 +1133,12 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
   if (move.kind === "dragonAttack") {
     // Dragon stays; enemy removed.
     b[move.to.r][move.to.c] = null;
+    killMirrorTwin(b, move.to, move.captured);
     return b;
   }
+  if (move.kind === "archerShoot") {
+    // Archer/Trebuchet stays in place; target enemy is removed (true ranged attack).
+    b[move.to.r][move.to.c] = null;
   if (move.kind === "archerShoot") {
     // Archer/Trebuchet stays in place; target enemy is removed (true ranged attack).
     b[move.to.r][move.to.c] = null;
