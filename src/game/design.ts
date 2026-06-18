@@ -171,7 +171,7 @@ export const PRESETS: Preset[] = [
       //   so each side's Wizard is correctly bound to its own color.
       // Row 1 — shapeshifter pawns all the way across.
       // Portal (T) is placed centrally on each side, not on the back rank.
-      const row0: PieceId[] = ["J", "J", "A", "M", "D", "Q", "K", "H", "Z", "W", "J", "J"];
+      const row0: PieceId[] = ["J", "J", "A", "M", "D", "Q", "K", "H", "W", "Z", "J", "J"];
       const row1: PieceId[] = [
         "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "S", "S",
       ];
