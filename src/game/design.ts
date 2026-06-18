@@ -29,6 +29,7 @@ function fillRow(row: number, ids: PieceId[], cols: number): Placement[] {
   // Center the back rank if shorter than cols; pad with empties.
   const start = Math.floor((cols - ids.length) / 2);
   ids.forEach((id, i) => {
+    if (!id) return; // empty slot — leave the square blank
     const c = start + i;
     if (c >= 0 && c < cols) out.push({ color: "w", pieceId: id, r: row, c });
   });
@@ -39,28 +40,40 @@ function fillCol(col: number, ids: PieceId[], rows: number): Placement[] {
   const out: Placement[] = [];
   const start = Math.floor((rows - ids.length) / 2);
   ids.forEach((id, i) => {
+    if (!id) return;
     const r = start + i;
     if (r >= 0 && r < rows) out.push({ color: "w" as const, pieceId: id, r, c: col });
   });
   return out;
 }
 
-function classicBackRank(cols: number): PieceId[] {
-  // Symmetric: R N B [...filler...] K Q B N R (Q on d-ish file)
-  if (cols >= 8) {
-    // Use standard chess ordering for 8 cols, otherwise pattern.
-    if (cols === 8) return ["R", "N", "B", "Q", "K", "B", "N", "R"];
-    // > 8: extend with extra Q/B/N pairs
-    const left: PieceId[] = ["R", "N", "B"];
-    const right: PieceId[] = ["B", "N", "R"];
-    const middle: PieceId[] = ["Q", "K"];
-    const fillers = cols - left.length - right.length - middle.length;
-    const extras: PieceId[] = [];
-    const pool: PieceId[] = ["N", "B", "Q"];
-    for (let i = 0; i < fillers; i++) extras.push(pool[i % pool.length]);
-    return [...left, ...extras.slice(0, Math.floor(extras.length / 2)), ...middle, ...extras.slice(Math.floor(extras.length / 2)), ...right];
+/** Take a fixed-width back-rank template and stretch it to `cols` columns by
+ *  keeping the outermost pieces hugging the edges (e.g. rooks in corners)
+ *  and centering the inner block, padding the gap symmetrically with blanks.
+ *  Returns a length-`cols` array where empty slots are the empty string. */
+function centerBackRank(template: PieceId[], cols: number): PieceId[] {
+  if (template.length === 0) return [];
+  if (cols <= template.length) return template;
+  if (template.length === 1) {
+    const out: PieceId[] = new Array(cols).fill("") as PieceId[];
+    out[Math.floor(cols / 2)] = template[0];
+    return out;
   }
-  // < 8 cols: progressively trim from the queen/extras
+  const out: PieceId[] = new Array(cols).fill("") as PieceId[];
+  out[0] = template[0];
+  out[cols - 1] = template[template.length - 1];
+  const inner = template.slice(1, template.length - 1);
+  const innerCols = cols - 2;
+  const start = 1 + Math.floor((innerCols - inner.length) / 2);
+  inner.forEach((id, i) => { out[start + i] = id; });
+  return out;
+}
+
+function classicBackRank(cols: number): PieceId[] {
+  if (cols >= 8) {
+    return centerBackRank(["R", "N", "B", "Q", "K", "B", "N", "R"], cols);
+  }
+  // < 8 cols: hand-tuned trims so the king + rooks always survive.
   const trims: Record<number, PieceId[]> = {
     3: ["R", "K", "R"],
     4: ["R", "K", "Q", "R"],
@@ -70,6 +83,7 @@ function classicBackRank(cols: number): PieceId[] {
   };
   return trims[cols] ?? trims[5];
 }
+
 
 export const PRESETS: Preset[] = [
   {
