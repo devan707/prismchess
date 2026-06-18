@@ -179,8 +179,8 @@ class Searcher {
     if (loud.length === 0) return standPat;
     // Pair-sort by orderingScore (captures first, checks after).
     const order = loud.map((_, i) => i).sort((a, b) => orderingScore(state, loud[b]) - orderingScore(state, loud[a]));
-    for (const m of loud) {
-      const next = applyMoveToState(state, m);
+    for (const i of order) {
+      const next = loudNexts[i];
       const score = -this.qsearch(next, -beta, -alpha, depthLeft - 1);
       if (score >= beta) return beta;
       if (score > alpha) alpha = score;
