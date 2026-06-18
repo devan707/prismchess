@@ -1104,20 +1104,26 @@ export function dropMoves(state: GameState, color: Color): Move[] {
   return out;
 }
 
-/** Mirrored linked pieces (Shadow Knight "E", Twin Tower "V") die in pairs:
- *  if one half is captured, the partner on the mirror square is also removed. */
-function killMirrorTwin(b: Board, sq: Square, captured: Piece | null | undefined): void {
-  if (!captured) return;
-  if (captured.id !== "E" && captured.id !== "V") return;
+/** If the captured piece is a mirrored twin (Shadow Knight "E", Twin Tower "V"),
+ *  return the mirror-square location of its still-living partner on `b` (or null). */
+function mirrorTwinAt(b: Board, sq: Square, captured: Piece | null | undefined): Square | null {
+  if (!captured) return null;
+  if (captured.id !== "E" && captured.id !== "V") return null;
   const cols = b[0]?.length ?? 0;
   const mr = sq.r;
   const mc = cols - 1 - sq.c;
-  if (mr === sq.r && mc === sq.c) return; // stacked on center column — already removed
-  if (mr < 0 || mr >= b.length || mc < 0 || mc >= cols) return;
+  if (mr === sq.r && mc === sq.c) return null;
+  if (mr < 0 || mr >= b.length || mc < 0 || mc >= cols) return null;
   const t = b[mr][mc];
-  if (t && t.id === captured.id && t.color === captured.color) {
-    b[mr][mc] = null;
-  }
+  if (t && t.id === captured.id && t.color === captured.color) return { r: mr, c: mc };
+  return null;
+}
+
+/** Mirrored linked pieces (Shadow Knight "E", Twin Tower "V") die in pairs:
+ *  if one half is captured, the partner on the mirror square is also removed. */
+function killMirrorTwin(b: Board, sq: Square, captured: Piece | null | undefined): void {
+  const part = mirrorTwinAt(b, sq, captured);
+  if (part) b[part.r][part.c] = null;
 }
 
 export function applyMoveToBoard(board: Board, move: Move): Board {
