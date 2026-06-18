@@ -118,7 +118,7 @@ export const listMyLikedPieces = createServerFn({ method: "GET" })
     if (ids.length === 0) return [];
     const { data: pieces, error: piecesErr } = await context.supabase
       .from("custom_pieces")
-      .select(PIECE_COLS + ", is_hidden")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden")
       .in("id", ids);
     if (piecesErr) throw new Error(piecesErr.message);
     type Row = {
