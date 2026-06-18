@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SandboxRouteImport } from './routes/sandbox'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as MoreRouteImport } from './routes/more'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as DiscoverRouteImport } from './routes/discover'
@@ -48,6 +49,11 @@ const SandboxRoute = SandboxRouteImport.update({
 const PlayRoute = PlayRouteImport.update({
   id: '/play',
   path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoreRoute = MoreRouteImport.update({
+  id: '/more',
+  path: '/more',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LobbyRoute = LobbyRouteImport.update({
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/discover': typeof DiscoverRoute
   '/help': typeof HelpRoute
   '/lobby': typeof LobbyRoute
+  '/more': typeof MoreRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/help': typeof HelpRoute
   '/lobby': typeof LobbyRoute
+  '/more': typeof MoreRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/friends': typeof AuthenticatedFriendsRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/help': typeof HelpRoute
   '/lobby': typeof LobbyRoute
+  '/more': typeof MoreRoute
   '/play': typeof PlayRoute
   '/sandbox': typeof SandboxRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/help'
     | '/lobby'
+    | '/more'
     | '/play'
     | '/sandbox'
     | '/forum'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/help'
     | '/lobby'
+    | '/more'
     | '/play'
     | '/sandbox'
     | '/friends'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/help'
     | '/lobby'
+    | '/more'
     | '/play'
     | '/sandbox'
     | '/_authenticated/forum'
@@ -393,6 +405,7 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   HelpRoute: typeof HelpRoute
   LobbyRoute: typeof LobbyRoute
+  MoreRoute: typeof MoreRoute
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
@@ -415,6 +428,13 @@ declare module '@tanstack/react-router' {
       path: '/play'
       fullPath: '/play'
       preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/more': {
+      id: '/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof MoreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lobby': {
@@ -700,6 +720,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   HelpRoute: HelpRoute,
   LobbyRoute: LobbyRoute,
+  MoreRoute: MoreRoute,
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
