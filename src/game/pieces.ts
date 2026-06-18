@@ -199,7 +199,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
 };
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
-export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S", "J", "Z", "W", "Y"];
+export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "G", "A", "D", "X", "T", "M", "S", "J", "Z", "W", "Y"];
 export const ALL_BUILTIN_IDS: PieceId[] = [...STANDARD_PIECE_IDS, ...BUILTIN_CUSTOM_IDS];
 
 /** Build a registry from the built-ins + user-defined pieces. */
