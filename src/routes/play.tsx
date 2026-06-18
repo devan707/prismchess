@@ -176,6 +176,22 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
 
   const selectedPiece = selectedSquare ? displayedState.board[selectedSquare.r][selectedSquare.c] : null;
   const selectedDef = selectedPiece ? displayedState.registry[selectedPiece.id] : null;
+  const hasJuggernaut = useMemo(() => {
+    for (const row of displayedState.board) {
+      for (const cell of row) {
+        if (cell && displayedState.registry[cell.id]?.special === "juggernaut") return true;
+      }
+    }
+    return false;
+  }, [displayedState.board, displayedState.registry]);
+  const selectedDescription = useMemo(() => {
+    if (!selectedDef) return "";
+    let d = selectedDef.description ?? "";
+    if (selectedDef.id === "K" && hasJuggernaut) {
+      d += " JUGGERNAUT CASTLE: instead of castling with a rook, the King may jump 3 squares sideways toward an un-moved Juggernaut pair on its back rank; the Juggernaut then slides into the two squares the King crossed, landing right next to him on the other side. Same safety rules as normal castling — the King cannot be in check, may not pass through or land on an attacked square, neither the King nor the Juggernaut may have moved, and every square between them must be empty.";
+    }
+    return d;
+  }, [selectedDef, hasJuggernaut]);
 
 
 
