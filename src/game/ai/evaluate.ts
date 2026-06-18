@@ -1,42 +1,13 @@
 import type { Board, Color, GameState, PieceDef, PieceId } from "../types";
 import { isSquareAttacked } from "../moves";
 import { getActivePlaybook } from "./playbook";
+import { getPiecePoints } from "../pieceValue";
 
 
-
-/**
- * Centralised piece values. The user-tunable values are expressed in "pawns"
- * (P=1) and scaled internally so the rest of the search can stay in centipawn
- * units. Add or override pieces here as the library grows.
- */
-export const PIECE_VALUES_PAWNS: Record<string, number> = {
-  K: 200,   // royal — effectively invaluable, big number keeps loss dominant
-  Q: 9,
-  R: 5,
-  B: 3,
-  N: 3,
-  P: 1,
-  S: 2,    // Shapeshifter Pawn
-  A: 4,    // Archer — fragile diagonal-only ranged specialist
-  T: 5,    // Portal
-  H: 4,    // King's Hand
-  G: 12,   // Regent — royal AND powerful (2 king-steps); losing it is bad
-  L: 13,   // Lich King — royal AND powerful; losing it is bad
-  Z: 5,    // Assassin — 3-step infiltration only, no king-step adjacency
-  W: 7,    // Wizard
-  M: 7,    // Necromancer
-  J: 8,    // Juggernaut
-  D: 8,    // Dragon
-  X: 0.5,  // Barricade
-  Y: 0,    // Prism — indestructible fixture, no material value
-};
 
 /**
  * Precomputed Assassin reach: every (Δrow, Δcol) end-square reachable in
- * exactly 3 king-steps under the engine's rules (no jumping, no revisits,
- * not all 3 steps the same direction, every consecutive turn ≤ 45°).
- * Used as a heuristic in evaluate(); the real legal-move generator lives
- * in moves.ts.
+ * exactly 3 king-steps under the engine's rules.
  */
 const ASSASSIN_REACH: Array<[number, number]> = (() => {
   const DIRS_8: Array<[number, number]> = [
@@ -48,7 +19,6 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
     return d <= 1 || d === 7;
   };
   const out = new Set<string>();
-  // 3-step infiltration reach only — the Assassin no longer has a king-step.
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       if (!turnOK(i, j)) continue;
@@ -63,7 +33,6 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
         const p3 = `${dr1 + dr2 + dr3},${dc1 + dc2 + dc3}`;
         const path = new Set(["0,0", p1, p2, p3]);
         if (path.size !== 4) continue;
-        // Final landing must not be adjacent to start (no king-step attacks).
         const fr = dr1 + dr2 + dr3, fc = dc1 + dc2 + dc3;
         if (Math.max(Math.abs(fr), Math.abs(fc)) <= 1) continue;
         out.add(p3);
@@ -75,20 +44,20 @@ const ASSASSIN_REACH: Array<[number, number]> = (() => {
 
 
 const PAWN_UNIT = 100;
+const ROYAL_BONUS = 20000; // cp — loss-of-royal must dominate everything.
 
+/**
+ * Centipawn value used by the AI. Delegates to the canonical pieceValue.ts
+ * table (built-ins) or estimator (custom pieces), scaled by any learned
+ * per-piece multiplier, plus a flat royal bump.
+ */
 export function valueFor(id: PieceId, def: PieceDef | undefined): number {
   const pb = getActivePlaybook();
   const mult = pb.pieceValueMultipliers[id] ?? 1;
-  const v = PIECE_VALUES_PAWNS[id];
-  if (v != null) return v * PAWN_UNIT * mult;
-  if (!def) return PAWN_UNIT * mult;
-  // Fallback for custom pieces: rough by movement breadth.
-  let est = 1;
-  if (def.royal) est += 50;
-  const slides = def.movement?.slides?.length ?? 0;
-  const leaps = def.movement?.leaps?.length ?? 0;
-  est += slides * 0.8 + leaps * 0.3;
-  return est * PAWN_UNIT * mult;
+  const pts = getPiecePoints(id, def);
+  let cp = pts * PAWN_UNIT * mult;
+  if (def?.royal) cp += ROYAL_BONUS;
+  return cp;
 }
 
 
