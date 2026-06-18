@@ -52,11 +52,11 @@
   --background: oklch(0.98 0.01 90);
   --foreground: oklch(0.18 0.02 280);
 
-  /* Cards stay dark gray */
-  --card: oklch(0.22 0.02 280);
-  --card-foreground: oklch(0.97 0.01 280);
-  --popover: oklch(0.22 0.02 280);
-  --popover-foreground: oklch(0.97 0.01 280);
+  /* Cards are light to match the airy shell; text stays dark for contrast. */
+  --card: oklch(0.985 0.005 90 / 0.85);
+  --card-foreground: oklch(0.18 0.02 280);
+  --popover: oklch(0.985 0.005 90);
+  --popover-foreground: oklch(0.18 0.02 280);
 
   /* Primary = near-black; buttons get rainbow border via .prism-border */
   --primary: oklch(0.18 0.02 280);
