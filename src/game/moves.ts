@@ -430,6 +430,11 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         if (occ.color === piece.color || isBarricade(occ, state.registry) || isFixture(occ, state.registry)) {
           blocked = true; break;
         }
+        // Front-immune enemy (juggernaut / barricade) approached from its
+        // front cannot be trampled — it blocks the shift entirely.
+        if (frontImmuneBlocker(occ, cell, from, state.registry, wide)) {
+          blocked = true; break;
+        }
         trampled.push(occ);
       }
       if (blocked) continue;
