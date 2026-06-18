@@ -203,6 +203,27 @@ export const PRESETS: Preset[] = [
     },
   },
   {
+    id: "house-of-mirrors",
+    name: "House of Mirrors",
+    description: "Classical chess with magical symmetry. Each side's Rooks become Twin Towers and Knights become Shadow Knights — every linked pair moves together as one. Familiar opening theory, completely different coordination.",
+    build: (rows, cols) => {
+      if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
+      // Back rank: V E B Q K B E V — Twin Towers on the corners, Shadow Knights inside.
+      const back: PieceId[] = ["V", "E", "B", "Q", "K", "B", "E", "V"];
+      const placements: Placement[] = [];
+      back.forEach((id, c) => {
+        placements.push({ color: "w", pieceId: id, r: 0, c });
+        placements.push({ color: "b", pieceId: id, r: rows - 1, c });
+      });
+      // Standard pawn ranks.
+      for (let c = 0; c < cols; c++) {
+        placements.push({ color: "w", pieceId: "P", r: 1, c });
+        placements.push({ color: "b", pieceId: "P", r: rows - 2, c });
+      }
+      return placements;
+    },
+  },
+  {
     id: "empty",
     name: "Empty",
     description: "Start from scratch. Drag pieces onto the board.",
