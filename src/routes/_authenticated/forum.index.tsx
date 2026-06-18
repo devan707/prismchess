@@ -101,6 +101,24 @@ function ForumPage() {
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.body}</p>
                   </Link>
                   <div className="flex flex-col items-end gap-2 shrink-0">
+                    {t.shared_design && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            saveDesign(t.shared_design as unknown as Design);
+                            navigate({ to: "/play" });
+                          } catch {
+                            toast.error("Couldn't load that game.");
+                          }
+                        }}
+                      >
+                        <Play className="h-3.5 w-3.5 mr-1" /> Play
+                      </Button>
+                    )}
                     <button
                       onClick={() => onLike(t)}
                       className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${t.liked_by_me ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
