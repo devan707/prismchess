@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
 import { publishGame } from "@/lib/social.functions";
+import { PieceLibraryPanel } from "@/components/pieces/PieceLibraryPanel";
 
 export const Route = createFileRoute("/sandbox")({
   head: () => ({
@@ -436,16 +437,21 @@ function Sandbox() {
             onSelectPiece={handleSelectPiece}
             hasSquareSelected={!!selectedSquare}
           />
+          <PieceLibraryPanel
+            alreadyInDesign={design.customPieces.map((p) => p.id)}
+            onAdd={(def) => {
+              setDesign((d) => ({
+                ...d,
+                customPieces: d.customPieces.some((p) => p.id === def.id)
+                  ? d.customPieces
+                  : [...d.customPieces, def],
+              }));
+            }}
+          />
           <div className="rounded-lg border bg-card p-3 space-y-2">
-            <h3 className="font-display text-sm font-semibold">Custom pieces</h3>
+            <h3 className="font-display text-sm font-semibold">Built-in custom pieces</h3>
             <p className="text-[11px] text-muted-foreground">
-              Eleven custom pieces are built-in: King's Hand, Archer, Dragon, Barricade
-              (drop only directly in front of one of your own pieces), Portal (swap with a friendly piece),
-              Necromancer (resurrect a captured ally), Shapeshifter Pawn (transforms into whatever it captures),
-              Juggernaut (a 2-square siege engine — auto-pairs on placement; charges, tramples, immune from the front),
-              Assassin (each turn: either a single king-step move/capture, OR a 3-king-step infiltration — no jumping, no revisits, no straight line of 3, never a turn greater than 45°, capture only on the final step),
-              Wizard (rook moves that hop across opposite-colored squares — bound to its starting color),
-              and Prism (indestructible rainbow fixture — any non-royal piece that enters or stays in its 8-square aura flips color; kings are immune).
+              Eleven custom pieces ship with the app: King's Hand, Archer, Dragon, Barricade, Portal, Necromancer, Shapeshifter Pawn, Juggernaut, Assassin, Wizard, and Prism. Hover any piece in the palette for details.
             </p>
           </div>
         </aside>
