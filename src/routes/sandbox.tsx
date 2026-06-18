@@ -402,6 +402,8 @@ function Sandbox() {
           description: desc,
           design: design as unknown as Record<string, unknown>,
           tutorial: (tutorial ?? null) as unknown as Record<string, unknown> | null,
+          // Only set for brand-new listings — updates ignore this field server-side.
+          remixedFromId: publishedGameId ? null : remixedFromId,
         },
       });
       setPublishedGameId(res.id);
