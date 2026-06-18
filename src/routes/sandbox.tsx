@@ -58,6 +58,7 @@ function Sandbox() {
   const genTutorial = useServerFn(generateGameTutorial);
   const publish = useServerFn(publishGame);
   const [publishing, setPublishing] = useState(false);
+  const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
@@ -339,17 +340,19 @@ function Sandbox() {
     try {
       toast.info("Publishing — generating tutorial…");
       const tutorial = await buildTutorialBestEffort(name, desc);
-      const { slug } = await publish({
+      const res = await publish({
         data: {
+          gameId: publishedGameId,
           name,
           description: desc,
           design: design as unknown as Record<string, unknown>,
           tutorial: (tutorial ?? null) as unknown as Record<string, unknown> | null,
         },
       });
-      const url = `${window.location.origin}/g/${slug}`;
+      setPublishedGameId(res.id);
+      const url = `${window.location.origin}/g/${res.slug}`;
       try { await navigator.clipboard.writeText(url); } catch {}
-      toast.success("Published! Share link copied to clipboard.");
+      toast.success(res.updated ? "Updated! Your published variant is refreshed." : "Published! Share link copied to clipboard.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't publish");
     } finally {
@@ -381,8 +384,8 @@ function Sandbox() {
           <Button onClick={handleSave} variant="outline" size="sm" disabled={!!validationError || saving || publishing} title="Save privately to your own library — only you can play it">
             <Save className="h-4 w-4 mr-1" /> {saving ? "Saving…" : "Save private"}
           </Button>
-          <Button onClick={handlePublish} variant="outline" size="sm" disabled={!!validationError || saving || publishing} title="Publish publicly to the community gallery so others can discover and play it">
-            <Share2 className="h-4 w-4 mr-1" /> {publishing ? "Publishing…" : "Publish public"}
+          <Button onClick={handlePublish} variant="outline" size="sm" disabled={!!validationError || saving || publishing} title={publishedGameId ? "Update your existing published listing instead of creating a new one" : "Publish publicly to the community gallery so others can discover and play it"}>
+            <Share2 className="h-4 w-4 mr-1" /> {publishing ? (publishedGameId ? "Updating…" : "Publishing…") : (publishedGameId ? "Update published" : "Publish public")}
           </Button>
           <Button onClick={startGame} size="sm" disabled={!!validationError}>
             <Play className="h-4 w-4 mr-1" /> Play

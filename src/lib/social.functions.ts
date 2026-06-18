@@ -342,22 +342,93 @@ export const sendMatchMessage = createServerFn({ method: "POST" })
 const DesignJsonSchema = z.record(z.string(), z.unknown());
 const TutorialJsonSchema = z.record(z.string(), z.unknown()).nullable().optional();
 
+/** Deep stable equality for plain JSON values (objects, arrays, primitives). */
+function jsonEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== typeof b) return false;
+  if (typeof a !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (!jsonEqual(a[i], b[i])) return false;
+    return true;
+  }
+  const ao = a as Record<string, unknown>;
+  const bo = b as Record<string, unknown>;
+  const ak = Object.keys(ao).sort();
+  const bk = Object.keys(bo).sort();
+  if (ak.length !== bk.length) return false;
+  for (let i = 0; i < ak.length; i++) {
+    if (ak[i] !== bk[i]) return false;
+    if (!jsonEqual(ao[ak[i]], bo[bk[i]])) return false;
+  }
+  return true;
+}
+
 export const publishGame = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({
+    gameId: UuidSchema.nullable().optional(),
     name: z.string().trim().min(1).max(80),
     description: z.string().trim().min(1).max(2000),
     design: DesignJsonSchema,
     tutorial: TutorialJsonSchema,
   }).parse(i))
   .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    // Load all of this author's existing published games once for dedupe checks.
+    const { data: mine, error: mineErr } = await supabase
+      .from("published_games")
+      .select("id, slug, name, design")
+      .eq("author_id", userId);
+    if (mineErr) throw new Error(mineErr.message);
+    const rows = mine ?? [];
+    const nameLower = data.name.toLowerCase();
+
+    // If updating an existing record, verify ownership and apply update in place.
+    if (data.gameId) {
+      const target = rows.find((r) => r.id === data.gameId);
+      if (!target) throw new Error("You can only update a variant you published.");
+      // Name must remain unique among your other variants.
+      const nameClash = rows.find((r) => r.id !== data.gameId && r.name.toLowerCase() === nameLower);
+      if (nameClash) throw new Error(`You already have a published variant named "${nameClash.name}". Choose a different name.`);
+      // Design must not be identical to a different variant of yours.
+      const dupDesign = rows.find((r) => r.id !== data.gameId && jsonEqual(r.design, data.design));
+      if (dupDesign) throw new Error(`This board is identical to your variant "${dupDesign.name}". Update that one instead.`);
+      const { data: updated, error } = await supabase
+        .from("published_games")
+        .update({
+          name: data.name,
+          description: data.description,
+          design: data.design as never,
+          tutorial: (data.tutorial ?? null) as never,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.gameId)
+        .eq("author_id", userId)
+        .select("id, slug").single();
+      if (error) throw new Error(error.message);
+      return { ...updated, updated: true as const };
+    }
+
+    // New publish — block duplicates by name OR by identical design.
+    const sameName = rows.find((r) => r.name.toLowerCase() === nameLower);
+    if (sameName) {
+      throw new Error(`You already published a variant named "${sameName.name}". Open it from your library to update it instead of creating a new listing.`);
+    }
+    const sameDesign = rows.find((r) => jsonEqual(r.design, data.design));
+    if (sameDesign) {
+      throw new Error(`This board is identical to your published variant "${sameDesign.name}". Update that one instead of publishing a duplicate.`);
+    }
+
     // Retry slug a few times if collision.
     for (let attempt = 0; attempt < 5; attempt++) {
       const slug = slugify(data.name);
-      const { data: inserted, error } = await context.supabase
+      const { data: inserted, error } = await supabase
         .from("published_games")
         .insert({
-          author_id: context.userId,
+          author_id: userId,
           slug,
           name: data.name,
           description: data.description,
@@ -365,7 +436,7 @@ export const publishGame = createServerFn({ method: "POST" })
           tutorial: (data.tutorial ?? null) as never,
         })
         .select("id, slug").single();
-      if (!error) return inserted;
+      if (!error) return { ...inserted, updated: false as const };
       if (error.code !== "23505") throw new Error(error.message);
     }
     throw new Error("Could not generate a unique link, please try again.");
