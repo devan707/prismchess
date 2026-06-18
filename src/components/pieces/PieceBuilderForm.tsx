@@ -158,6 +158,8 @@ export function PieceBuilderForm({ onSaved }: Props) {
       // Reset
       setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
       setSteps([defaultStep()]);
+      setOverrideEnabled(false);
+      setOverridePts(3);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the piece.");
     } finally {
