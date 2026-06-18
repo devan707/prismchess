@@ -21,9 +21,11 @@ interface BoardProps {
   /** Allow clicking an opponent piece to inspect its move/attack pattern.
    *  Only enabled in PvComputer (and analysis); disabled in PvP matches. */
   allowEnemyInspect?: boolean;
+  /** When false, hides the legal-move dots for your own selected piece. */
+  showHints?: boolean;
 }
 
-export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange, allowEnemyInspect = false }: BoardProps) {
+export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece, dropTargets, onDrop, disabled, onSelectionChange, allowEnemyInspect = false, showHints = true }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [dragFrom, setDragFrom] = useState<Square | null>(null);
 
