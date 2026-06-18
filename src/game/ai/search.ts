@@ -12,7 +12,7 @@
  * depth cap or the time budget is hit, and always return the best move found
  * at the deepest *completed* iteration.
  */
-import type { Color, Difficulty, GameState, Move } from "../types";
+import type { Difficulty, GameState, Move } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
 // Note: check-giving moves are treated as "loud" via per-call computation in
 // qsearch (see below) — we can't fold it into isLoud() without a state arg.
