@@ -218,16 +218,27 @@ function search(state: GameState, depth: number, alpha: number, beta: number, us
 function rootSearch(state: GameState, depth: number, useAB: boolean): Move | null {
   const moves = allLegalMoves(state);
   if (moves.length === 0) return null;
-  let best = moves[0];
+  const ordered = orderMoves(state, moves);
+  let best = ordered[0];
   let bestScore = -Infinity;
+  // Collect ties to randomize so the AI doesn't repeat the same move every game.
+  const ties: Move[] = [];
   let alpha = -Infinity;
   const beta = Infinity;
-  for (const m of orderMoves(state, moves)) {
+  for (const m of ordered) {
     const next = applyMoveToState(state, m);
     const score = -search(next, depth - 1, -beta, -alpha, useAB);
-    if (score > bestScore) { bestScore = score; best = m; }
+    if (score > bestScore + 0.5) {
+      bestScore = score;
+      best = m;
+      ties.length = 0;
+      ties.push(m);
+    } else if (Math.abs(score - bestScore) <= 0.5) {
+      ties.push(m);
+    }
     if (useAB && bestScore > alpha) alpha = bestScore;
   }
+  if (ties.length > 1) return pickRandom(ties);
   return best;
 }
 
@@ -249,15 +260,15 @@ export function chooseMove(state: GameState, difficulty: Difficulty): Move | nul
     }
   }
   if (difficulty === "medium") {
-    if (area > 100) return easyMove(state);
+    if (area > 144) return easyMove(state);
     if (heavyBranching) return rootSearch(state, 2, true);
     const depth = area > 64 ? 2 : 3;
     return rootSearch(state, depth, true);
   }
   // hard
-  if (area > 100) return rootSearch(state, 1, true);
-  if (heavyBranching) return rootSearch(state, 2, true);
-  const depth = area > 64 ? 3 : 4;
+  if (area > 144) return rootSearch(state, 2, true);
+  if (heavyBranching) return rootSearch(state, 3, true);
+  const depth = area > 80 ? 3 : 4;
   return rootSearch(state, depth, true);
 }
 

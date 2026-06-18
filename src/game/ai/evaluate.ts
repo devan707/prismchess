@@ -20,8 +20,8 @@ export const PIECE_VALUES_PAWNS: Record<string, number> = {
   A: 4,    // Archer — fragile diagonal-only ranged specialist
   T: 5,    // Portal
   H: 4,    // King's Hand
-  G: 0,    // Regent — royal, infinite value implicit via royal handling
-  L: 0,    // Lich King — royal, infinite value implicit via royal handling
+  G: 12,   // Regent — royal AND powerful (2 king-steps); losing it is bad
+  L: 13,   // Lich King — royal AND powerful; losing it is bad
   Z: 5,    // Assassin — 3-step infiltration only, no king-step adjacency
   W: 7,    // Wizard
   M: 7,    // Necromancer
