@@ -54,6 +54,18 @@ export function PieceGlyph({ piece, def, className }: Props) {
         <NecromancerGlyph color={piece.color} />
       ) : isPrism ? (
         <PrismGlyph />
+      ) : isJuggernaut ? (
+        <img
+          src={juggernautArt}
+          alt=""
+          draggable={false}
+          style={{
+            width: "115%",
+            height: "115%",
+            objectFit: "contain",
+            filter: `${piece.color === "w" ? "invert(1) hue-rotate(180deg)" : "none"} drop-shadow(0 0 1px rgba(0,0,0,0.9)) drop-shadow(0 0 2px rgba(0,0,0,0.7)) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`,
+          }}
+        />
       ) : (
         <span
           className="relative"
