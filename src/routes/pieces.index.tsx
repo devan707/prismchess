@@ -72,9 +72,9 @@ function PiecesIndex() {
         <Link to="/pieces/new"><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Create new</Button></Link>
       </header>
       <main className="max-w-5xl mx-auto px-4 pb-12 space-y-8">
-        <Section title="New" rows={newest} onLike={handleLike} />
-        <Section title="Popular" rows={popular} onLike={handleLike} />
-        {archive.length > 0 && <Section title="Archive" rows={archive} onLike={handleLike} />}
+        <Section title="New" rows={newest} onLike={handleLike} reload={refresh} />
+        <Section title="Popular" rows={popular} onLike={handleLike} reload={refresh} />
+        {archive.length > 0 && <Section title="Archive" rows={archive} onLike={handleLike} reload={refresh} />}
       </main>
     </div>
   );
