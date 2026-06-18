@@ -196,14 +196,20 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-export function defaultReserves(custom: PieceDef[] = []): { w: Reserves; b: Reserves } {
+export function defaultReserves(
+  custom: PieceDef[] = [],
+  opts: { includeBarricade?: boolean } = {},
+): { w: Reserves; b: Reserves } {
   const w: Reserves = {};
   const b: Reserves = {};
+  const includeBarricade = opts.includeBarricade ?? false;
   for (const id of Object.keys(PIECE_LIBRARY)) {
+    if (id === "X" && !includeBarricade) continue;
     const d = PIECE_LIBRARY[id];
     if (d.defaultReserve) { w[id] = d.defaultReserve; b[id] = d.defaultReserve; }
   }
   for (const d of custom) {
+    if (d.id === "X" && !includeBarricade) continue;
     if (d.defaultReserve) { w[d.id] = d.defaultReserve; b[d.id] = d.defaultReserve; }
   }
   return { w, b };
