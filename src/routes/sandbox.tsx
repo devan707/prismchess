@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BoardSizePicker } from "@/components/designer/BoardSizePicker";
 import { PresetPicker } from "@/components/designer/PresetPicker";
 import { PiecePalette } from "@/components/designer/PiecePalette";
