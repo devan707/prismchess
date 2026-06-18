@@ -699,6 +699,10 @@ export function dropMoves(state: GameState, color: Color): Move[] {
 
 export function applyMoveToBoard(board: Board, move: Move): Board {
   const b = cloneBoard(board);
+  if (move.kind === "handPass") {
+    // Turn-ending no-op when the King's Hand has no legal second step.
+    return b;
+  }
   if (move.kind === "drop") {
     b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
     return b;
