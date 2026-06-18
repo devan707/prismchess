@@ -576,6 +576,18 @@ export function PieceBuilderForm({ onSaved }: Props) {
             />
           </div>
 
+          <div className="border-t pt-3">
+            <p className="text-xs font-semibold mb-1">Playtest</p>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Drop allies/enemies, then click your piece to see legal moves and try captures, blocks, and slides.
+            </p>
+            <PieceTestBoard
+              def={previewDef}
+              options={options}
+              rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
+            />
+          </div>
+
           {/* Worth */}
           <div className="border-t pt-3 space-y-2">
             <div className="flex items-center justify-between">
