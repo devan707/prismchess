@@ -5,13 +5,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 1px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-2xl: calc(var(--radius) + 6px);
+  --radius-3xl: calc(var(--radius) + 8px);
+  --radius-4xl: calc(var(--radius) + 12px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -46,30 +46,36 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  /* Dark prism theme */
-  --background: oklch(0.13 0.02 280);
-  --foreground: oklch(0.97 0.01 280);
-  --card: oklch(0.18 0.025 280 / 0.7);
+  --radius: 0.125rem;
+  /* Light splotchy prism theme — dark text on a soft pastel rainbow.
+     Tiles/cards stay dark gray with light text. */
+  --background: oklch(0.98 0.01 90);
+  --foreground: oklch(0.18 0.02 280);
+
+  /* Cards stay dark gray */
+  --card: oklch(0.22 0.02 280);
   --card-foreground: oklch(0.97 0.01 280);
-  --popover: oklch(0.16 0.025 280);
+  --popover: oklch(0.22 0.02 280);
   --popover-foreground: oklch(0.97 0.01 280);
-  --primary: oklch(0.7 0.22 320);
-  --primary-foreground: oklch(0.12 0.02 280);
-  --secondary: oklch(0.22 0.03 280);
-  --secondary-foreground: oklch(0.97 0.01 280);
-  --muted: oklch(0.22 0.02 280);
-  --muted-foreground: oklch(0.72 0.03 280);
-  --accent: oklch(0.78 0.18 200);
-  --accent-foreground: oklch(0.12 0.02 280);
+
+  /* Primary = near-black; buttons get rainbow border via .prism-border */
+  --primary: oklch(0.18 0.02 280);
+  --primary-foreground: oklch(0.98 0.01 90);
+
+  --secondary: oklch(0.94 0.02 90);
+  --secondary-foreground: oklch(0.18 0.02 280);
+  --muted: oklch(0.93 0.02 90);
+  --muted-foreground: oklch(0.45 0.03 280);
+  --accent: oklch(0.92 0.04 320);
+  --accent-foreground: oklch(0.18 0.02 280);
   --destructive: oklch(0.62 0.24 25);
   --destructive-foreground: oklch(0.98 0.01 85);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.22 320);
+  --border: oklch(0.18 0.02 280 / 12%);
+  --input: oklch(0.18 0.02 280 / 15%);
+  --ring: oklch(0.55 0.18 320);
 
-  --board-light: oklch(0.78 0.04 280);
-  --board-dark: oklch(0.28 0.05 280);
+  --board-light: oklch(0.92 0.02 90);
+  --board-dark: oklch(0.45 0.05 280);
   --board-highlight: oklch(0.78 0.16 90 / 0.55);
   --board-legal: oklch(0.74 0.18 200 / 0.6);
   --board-attack: oklch(0.78 0.18 65 / 0.7);
@@ -93,11 +99,11 @@
   }
 }
 
-/* Misty prism aura — fixed background, low-opacity rainbow gradients over near-black */
+/* Splotchy pastel rainbow — light, airy background */
 @utility prism-aura {
   position: relative;
   isolation: isolate;
-  background-color: oklch(0.10 0.02 280);
+  background-color: oklch(0.98 0.01 90);
 }
 @utility prism-aura-bg {
   position: fixed;
@@ -105,13 +111,30 @@
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(60% 40% at 15% 10%, oklch(0.55 0.22 25 / 0.35), transparent 70%),
-    radial-gradient(50% 40% at 85% 15%, oklch(0.6 0.22 60 / 0.30), transparent 70%),
-    radial-gradient(55% 45% at 90% 60%, oklch(0.6 0.22 145 / 0.25), transparent 70%),
-    radial-gradient(60% 45% at 50% 95%, oklch(0.55 0.25 260 / 0.40), transparent 70%),
-    radial-gradient(50% 40% at 10% 80%, oklch(0.6 0.25 320 / 0.30), transparent 70%),
-    linear-gradient(180deg, oklch(0.10 0.02 280), oklch(0.08 0.02 280));
-  filter: blur(40px) saturate(1.1);
+    radial-gradient(45% 35% at 12% 8%, oklch(0.85 0.12 25 / 0.55), transparent 70%),
+    radial-gradient(40% 35% at 88% 12%, oklch(0.88 0.13 70 / 0.50), transparent 70%),
+    radial-gradient(50% 40% at 92% 55%, oklch(0.86 0.13 150 / 0.45), transparent 70%),
+    radial-gradient(55% 45% at 50% 95%, oklch(0.82 0.14 265 / 0.55), transparent 70%),
+    radial-gradient(45% 40% at 8% 78%, oklch(0.84 0.14 320 / 0.50), transparent 70%),
+    linear-gradient(180deg, oklch(0.985 0.005 90), oklch(0.96 0.015 90));
+  filter: blur(50px) saturate(1.05);
+}
+
+/* Thin rainbow border, semi-opaque dark fill. Pair with rounded-none / rounded-sm. */
+@utility prism-border {
+  position: relative;
+  background-color: oklch(0.18 0.02 280 / 0.88);
+  color: oklch(0.98 0.01 90);
+  border: 1px solid transparent;
+  border-image: linear-gradient(
+    90deg,
+    #ff4d6d, #ff9a3c, #ffe24d, #4dff88, #4dc4ff, #8a4dff, #ff4dd2
+  ) 1;
+}
+@utility prism-border-hover {
+  &:hover {
+    background-color: oklch(0.22 0.02 280 / 0.92);
+  }
 }
 
 @keyframes piece-slide {
@@ -125,9 +148,3 @@
   85% { opacity: 1; }
   100% { transform: translate(var(--arrow-dx, 0), var(--arrow-dy, 0)) rotate(var(--arrow-rot, 0deg)) scale(1); opacity: 0; }
 }
-
-
-
-
-
-
