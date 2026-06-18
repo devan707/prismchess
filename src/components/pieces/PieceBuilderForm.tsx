@@ -85,6 +85,9 @@ function buildPieceDef(opts: {
     def.rangedCapture = { spec: ranged.spec, timing: opts.ranged.timing };
   }
   if (opts.pointsOverride != null) def.pointsOverride = opts.pointsOverride;
+  // Persist the editable source for the ranged attack so re-editing later
+  // can restore the exact direction/range bands. Ignored by the engine.
+  (def as unknown as { __rangedSource?: RangedAttack }).__rangedSource = opts.ranged;
   return def;
 }
 
