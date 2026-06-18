@@ -199,39 +199,32 @@ function Home() {
         {/* Primary actions */}
         <section className="space-y-3">
           <Link to="/multiplayer" className="block">
-            <button className="w-full flex items-center justify-center gap-3 bg-[#c9a84c] text-[#0a0d14] py-4 font-semibold shadow-[0_8px_30px_rgba(201,168,76,0.25)] hover:bg-[#d9b85c] active:scale-[0.99] transition">
-              <Swords className="h-5 w-5" /> Play Multiplayer
+            <button className="prism-button-primary w-full py-4 font-semibold text-base tracking-wide active:scale-[0.99] transition">
+              <span className="relative z-10 inline-flex items-center justify-center gap-3">
+                <Swords className="h-5 w-5" /> Play Multiplayer
+              </span>
             </button>
           </Link>
           <div className="grid grid-cols-2 gap-3">
             <Link to="/sandbox">
-              <button className="w-full home-panel-strong flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-wider text-foreground hover:border-[#c9a84c]/60 transition">
-                <Hammer className="h-6 w-6 text-[#c9a84c]" />
-                SANDBOX
+              <button className="prism-button w-full flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-widest active:scale-[0.99] transition">
+                <span className="relative z-10 flex flex-col items-center gap-2">
+                  <Hammer className="h-6 w-6" />
+                  SANDBOX
+                </span>
               </button>
             </Link>
             <Link to="/forum">
-              <button className="w-full home-panel-strong flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-wider text-foreground hover:border-[#c9a84c]/60 transition">
-                <MessagesSquare className="h-6 w-6 text-[#c9a84c]" />
-                COMMUNITY
+              <button className="prism-button w-full flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-widest active:scale-[0.99] transition">
+                <span className="relative z-10 flex flex-col items-center gap-2">
+                  <MessagesSquare className="h-6 w-6" />
+                  COMMUNITY
+                </span>
               </button>
             </Link>
           </div>
-          {/* Secondary utility row */}
-          <div className="grid grid-cols-4 gap-2 pt-1">
-            {[
-              { to: "/friends", icon: Users, label: "Friends" },
-              { to: "/messages", icon: Mail, label: "Messages" },
-              { to: "/history", icon: History, label: "History" },
-              { to: "/help", icon: BookOpen, label: "Help" },
-            ].map(({ to, icon: Icon, label }) => (
-              <Link key={to} to={to} className="home-panel flex flex-col items-center justify-center py-3 gap-1 hover:border-[#c9a84c]/40 transition">
-                <Icon className="h-4 w-4 text-[#c9a84c]/90" />
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-              </Link>
-            ))}
-          </div>
         </section>
+
 
         {/* Built-in games */}
         <section>
