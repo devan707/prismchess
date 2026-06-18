@@ -145,13 +145,36 @@ export function useGame(opts: UseGameOptions) {
     if (state.turn === opts.humanColor) return;
     if (aiThinkingRef.current) return;
     aiThinkingRef.current = true;
+    setAiThinking(true);
+    setAiThinkingSince(Date.now());
+    // Two-tick delay lets the spinner paint before chooseMove blocks the thread.
     const t = setTimeout(() => {
-      const move = chooseMove(state, opts.difficulty);
-      if (move) playMove(move);
+      try {
+        const move = chooseMove(state, opts.difficulty);
+        if (move) playMove(move);
+      } catch (err) {
+        console.error("AI move failed", err);
+      } finally {
+        aiThinkingRef.current = false;
+        setAiThinking(false);
+        setAiThinkingSince(null);
+      }
+    }, 60);
+    return () => {
+      clearTimeout(t);
       aiThinkingRef.current = false;
-    }, 250);
-    return () => { clearTimeout(t); aiThinkingRef.current = false; };
-  }, [state, opts.humanColor, opts.difficulty, gameOver, playMove]);
+      setAiThinking(false);
+      setAiThinkingSince(null);
+    };
+  }, [state, opts.humanColor, opts.difficulty, gameOver, playMove, aiNudge]);
+
+  /** Re-kick the AI scheduler if it appears stuck. */
+  const nudgeAi = useCallback(() => {
+    aiThinkingRef.current = false;
+    setAiThinking(false);
+    setAiThinkingSince(null);
+    setAiNudge((n) => n + 1);
+  }, []);
 
   const legalFor = useCallback(
     (from: Square | null): Square[] => {
