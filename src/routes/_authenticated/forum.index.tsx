@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/forum/")({
 type Topic = Awaited<ReturnType<typeof listTopics>>[number];
 
 function ForumPage() {
+  const navigate = useNavigate();
   const fetchTopics = useServerFn(listTopics);
   const fetchRole = useServerFn(getMyRole);
   const like = useServerFn(toggleLike);
