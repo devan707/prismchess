@@ -19,6 +19,11 @@ export function PieceGlyph({ piece, def, className }: Props) {
   // Prism is a rainbow fixture — render as a custom SVG (no silhouette filter,
   // color-agnostic) so its refractive look reads on any square.
   const isPrism = def?.special === "prism";
+  // Juggernaut: on the live board it spans 2 cells via a dedicated overlay
+  // (Board.tsx). Everywhere else — sandbox palette, designer board,
+  // promotion dialog, graveyard — render the same artwork in a single cell
+  // so the silhouette stays consistent instead of falling back to 🛡️.
+  const isJuggernaut = def?.special === "juggernaut";
 
   // Unified approach: every piece is rendered as a silhouette in its side's
   // colour with a strong contrasting outline so it's unmistakable on any square.
