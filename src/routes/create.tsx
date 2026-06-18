@@ -98,14 +98,14 @@ function Create() {
   const editPublished = (g: MyGame) => {
     navigate({ to: "/sandbox", search: { edit: g.id } as never });
   };
-  const handleUnpublish = async (g: MyGame) => {
-    if (!confirm(`Unpublish "${g.name}"? It will be removed from the discover feed. Your local draft is unaffected.`)) return;
+  const handleDeleteGame = async (g: MyGame) => {
+    if (!confirm(`Delete "${g.name}"? It will be permanently removed from the discover feed. Your local draft is unaffected.`)) return;
     try {
       await unpublishFn({ data: { gameId: g.id } });
       setMyGames((prev) => prev.filter((x) => x.id !== g.id));
-      toast.success("Unpublished");
+      toast.success("Deleted");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't unpublish");
+      toast.error(e instanceof Error ? e.message : "Couldn't delete");
     }
   };
 
@@ -230,7 +230,7 @@ function Create() {
                         <Link to="/g/$slug" params={{ slug: g.slug }}><Button size="sm" variant="ghost" aria-label="View"><ExternalLink className="h-3 w-3" /></Button></Link>
                         <Button size="sm" variant="ghost" onClick={() => editPublished(g)} aria-label="Edit"><Pencil className="h-3 w-3" /></Button>
                         <Link to="/sandbox" search={{ duplicate: g.id }}><Button size="sm" variant="ghost" aria-label="Duplicate" title="Duplicate as a new variant"><Copy className="h-3 w-3" /></Button></Link>
-                        <Button size="sm" variant="ghost" onClick={() => handleUnpublish(g)} aria-label="Unpublish"><Share2 className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteGame(g)} aria-label="Delete"><Trash2 className="h-3 w-3" /></Button>
                       </div>
                     ))}
                   </Card>
