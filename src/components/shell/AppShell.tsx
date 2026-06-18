@@ -20,8 +20,13 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
           <div className="max-w-3xl mx-auto px-3 h-16 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-3 group">
               <img src={logoUrl} alt="Prism Chess" width={44} height={44} className="h-11 w-11" />
-              <span className="font-display font-bold text-lg tracking-[0.22em] uppercase text-foreground">
-                Prism Chess
+              <span className="flex flex-col leading-tight">
+                <span className="font-display font-bold text-lg tracking-[0.22em] uppercase text-foreground">
+                  Prism Chess
+                </span>
+                <span className="font-display text-[10px] tracking-[0.28em] uppercase text-foreground/55">
+                  Design your own chess
+                </span>
               </span>
             </Link>
             <UserMenu />
