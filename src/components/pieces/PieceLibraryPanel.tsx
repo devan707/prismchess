@@ -94,6 +94,8 @@ export function PieceLibraryPanel({ onAdd, alreadyInDesign, onRemoveFromDesign }
     if (!confirm(`Delete "${row.name}"?`)) return;
     try {
       await remove({ data: { pieceId: row.id } });
+      const def = row.def as PieceDef;
+      onRemoveFromDesign?.(def.id);
       toast.success("Deleted");
       await refresh();
     } catch (e) {
