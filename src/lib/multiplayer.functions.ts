@@ -221,7 +221,8 @@ export const joinMatch = createServerFn({ method: "POST" })
     if (match.host_id === context.userId) throw new Error("You can't join your own challenge.");
 
     const now = new Date().toISOString();
-    const { error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("matches")
       .update({
         guest_id: context.userId,
