@@ -124,6 +124,11 @@ export interface GameState {
   registry: Record<PieceId, PieceDef>;
   rows: number;
   cols: number;
+  /** When a King's Hand has used its first of two moves this turn, the
+   *  square it currently occupies. The same side must then make a second
+   *  King-step with that same piece (or pass if no legal step exists)
+   *  before the turn flips. */
+  pendingHand?: Square | null;
 }
 
 export type Difficulty = "easy" | "medium" | "hard";
