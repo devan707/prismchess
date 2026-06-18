@@ -7,9 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelMyOpenChallenges } from "@/lib/push.functions";
+import { resetAllPlaybooks } from "@/game/ai/playbook";
+import { toast } from "sonner";
 import {
   User as UserIcon, Users, Mail, MessagesSquare, History, BookOpen,
-  Bell, LogOut, LogIn, ChevronRight,
+  Bell, LogOut, LogIn, ChevronRight, Brain,
 } from "lucide-react";
 
 export const Route = createFileRoute("/more")({
@@ -125,6 +127,16 @@ function More() {
           <Card className="divide-y">
             <Row to="/profile" icon={Bell} label="Notifications & profile" hint="Manage push notifications" />
             <Row to="/help" icon={BookOpen} label="Help & support" />
+            <Row
+              onClick={() => {
+                if (!confirm("Reset the AI's memory across every variant? This wipes all learned lessons, piece weights, and tactical notes.")) return;
+                resetAllPlaybooks();
+                toast.success("AI memory cleared for all variants");
+              }}
+              icon={Brain}
+              label="Reset AI memory (all variants)"
+              hint="Wipes the engine's learned lessons across every game"
+            />
           </Card>
         </section>
 
