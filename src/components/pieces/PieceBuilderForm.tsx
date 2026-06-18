@@ -157,10 +157,46 @@ export function PieceBuilderForm({ onSaved }: Props) {
     }
   };
 
+  const handleFile = (file: File | null) => {
+    setImageError(null);
+    setImageFile(null);
+    setImagePreview(null);
+    if (!file) return;
+    if (file.type !== "image/png") {
+      setImageError("Image must be a PNG.");
+      return;
+    }
+    if (file.size > 1_000_000) {
+      setImageError("Image must be under 1 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        if (img.width !== 300 || img.height !== 300) {
+          setImageError(`Image must be exactly 300×300 (got ${img.width}×${img.height}).`);
+          return;
+        }
+        setImageFile(file);
+        setImagePreview(url);
+      };
+      img.onerror = () => setImageError("Couldn't read the image.");
+      img.src = url;
+    };
+    reader.onerror = () => setImageError("Couldn't read the image.");
+    reader.readAsDataURL(file);
+  };
+
   const doSave = async (visibility: "private" | "public") => {
     if (validation) { toast.error(validation); return; }
+    // For uploaded images we use a single-character placeholder glyph so the
+    // legacy emoji renderer never sees an empty string; PieceGlyph prefers
+    // `imageUrl` when present anyway.
+    const effectiveEmoji = imageMode === "upload" ? "🖼️" : emoji;
     const def = buildPieceDef({
-      id, name: name.trim(), description: description.trim(), emoji, steps, ranged,
+      id, name: name.trim(), description: description.trim(), emoji: effectiveEmoji, steps, ranged,
       pointsOverride: overrideEnabled ? overridePts : undefined,
     });
     if ("error" in def) { toast.error(def.error); return; }
@@ -174,6 +210,16 @@ export function PieceBuilderForm({ onSaved }: Props) {
           visibility,
         },
       });
+
+      // After the row exists, upload the image (RLS keys on the row id).
+      if (imageMode === "upload" && imageFile) {
+        const fd = new FormData();
+        fd.set("pieceId", row.id);
+        fd.set("file", imageFile, "piece.png");
+        const res = await uploadImage({ data: fd });
+        def.imageUrl = res.imageUrl;
+      }
+
       toast.success(
         visibility === "public"
           ? `Published "${name.trim()}" to the community library`
@@ -182,6 +228,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
       onSaved?.(row.id, def);
       // Reset
       setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
+      setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
       setSteps([defaultStep()]);
       setRanged(defaultRangedAttack());
       setOverrideEnabled(false);
@@ -214,22 +261,68 @@ export function PieceBuilderForm({ onSaved }: Props) {
         {/* Icon */}
         <section className="rounded-lg border bg-card p-4 space-y-3">
           <h2 className="font-display text-lg font-semibold">2. Icon</h2>
-          <p className="text-xs text-muted-foreground">
-            Describe what the piece looks like — the AI picks one emoji. It will be rendered in the same black-and-white style as built-in pieces.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              value={iconPrompt}
-              onChange={(e) => setIconPrompt(e.target.value)}
-              placeholder="a coiled snake with bright fangs"
-              maxLength={200}
-              className="flex-1"
-            />
-            <Button onClick={handleEmoji} disabled={emojiBusy} variant="outline">
-              <Wand2 className="h-4 w-4 mr-1" /> {emojiBusy ? "Picking…" : emoji ? "Regenerate" : "Generate"}
-            </Button>
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setImageMode("emoji")}
+              className={`px-3 py-1 rounded-md border ${imageMode === "emoji" ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+            >
+              AI emoji
+            </button>
+            <button
+              type="button"
+              onClick={() => setImageMode("upload")}
+              className={`px-3 py-1 rounded-md border ${imageMode === "upload" ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+            >
+              Upload PNG
+            </button>
           </div>
+
+          {imageMode === "emoji" ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Describe what the piece looks like — the AI picks one emoji rendered in the same black-and-white style as built-in pieces.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={iconPrompt}
+                  onChange={(e) => setIconPrompt(e.target.value)}
+                  placeholder="a coiled snake with bright fangs"
+                  maxLength={200}
+                  className="flex-1"
+                />
+                <Button onClick={handleEmoji} disabled={emojiBusy} variant="outline">
+                  <Wand2 className="h-4 w-4 mr-1" /> {emojiBusy ? "Picking…" : emoji ? "Regenerate" : "Generate"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Upload your own art. Required: <strong>PNG</strong>, exactly <strong>300×300 pixels</strong>,{" "}
+                <strong>transparent background</strong>. Max 1 MB. It will be rendered in your side's color (silhouette filter).
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                  className="text-xs"
+                />
+                {imageFile && (
+                  <Button size="sm" variant="ghost" onClick={() => handleFile(null)}>Clear</Button>
+                )}
+              </div>
+              {imageError && <p className="text-xs text-destructive">{imageError}</p>}
+              {imagePreview && !imageError && (
+                <p className="text-xs text-muted-foreground">
+                  Ready: <span className="font-mono">{imageFile?.name}</span> · {(imageFile!.size / 1024).toFixed(0)} KB
+                </p>
+              )}
+            </>
+          )}
         </section>
+
 
         {/* Movement */}
         <section className="rounded-lg border bg-card p-4 space-y-3">
