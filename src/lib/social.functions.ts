@@ -416,9 +416,9 @@ export const listDiscoveryGames = createServerFn({ method: "GET" })
     });
     const cols = "id, slug, name, description, like_count, comment_count, created_at, author_id, design";
     const [newestRes, popularRes, archiveRes] = await Promise.all([
-      supa.from("published_games").select(cols).order("created_at", { ascending: false }).limit(10),
-      supa.from("published_games").select(cols).order("like_count", { ascending: false }).order("created_at", { ascending: false }).limit(10),
-      supa.from("published_games").select(cols).order("created_at", { ascending: false }).range(10, 109),
+      supa.from("published_games").select(cols).eq("is_hidden", false).order("created_at", { ascending: false }).limit(10),
+      supa.from("published_games").select(cols).eq("is_hidden", false).order("like_count", { ascending: false }).order("created_at", { ascending: false }).limit(10),
+      supa.from("published_games").select(cols).eq("is_hidden", false).order("created_at", { ascending: false }).range(10, 109),
     ]);
     if (newestRes.error) throw new Error(newestRes.error.message);
     if (popularRes.error) throw new Error(popularRes.error.message);
