@@ -180,9 +180,8 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [tipsOn, setTipsOn] = useState<boolean>(() => {
-    try { return localStorage.getItem("play:tips") !== "0"; } catch { return true; }
-  });
+  // tipsOn and showHints come from the parent (driven by profile defaults / pre-game dialog).
+
   const [takebackOn, setTakebackOn] = useState<boolean>(() => {
     try { return localStorage.getItem("play:takeback") === "1"; } catch { return false; }
   });
