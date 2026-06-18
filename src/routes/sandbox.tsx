@@ -73,12 +73,50 @@ function Sandbox() {
   };
 
 
+  const [userPresets, setUserPresets] = useState<UserPreset[]>(() => {
+    if (typeof window === "undefined") return [];
+    return loadUserPresets();
+  });
+
   const applyPreset = (id: string) => {
+    if (id.startsWith("user:")) {
+      const uid = id.slice(5);
+      const preset = userPresets.find((p) => p.id === uid);
+      if (!preset) return;
+      setDesign((d) => ({ ...d, placements: buildUserPresetPlacements(preset, d.rows, d.cols) }));
+      setSelectedSquare(null);
+      return;
+    }
     const preset = PRESETS.find((p) => p.id === id);
     if (!preset) return;
     setDesign((d) => ({ ...d, placements: preset.build(d.rows, d.cols) }));
     setSelectedSquare(null);
   };
+
+  const saveCurrentAsPreset = (name: string) => {
+    const preset = extractPresetFromDesign(design, name);
+    if (preset.backRank.length === 0) {
+      toast.error("Place at least one piece on White's back rank before saving a layout.");
+      return;
+    }
+    const next = upsertUserPreset(preset);
+    setUserPresets(next);
+    toast.success(`Saved layout "${name}"`);
+  };
+
+  const renameUserPreset = (id: string, name: string) => {
+    const existing = userPresets.find((p) => p.id === id);
+    if (!existing) return;
+    const next = upsertUserPreset({ ...existing, name });
+    setUserPresets(next);
+  };
+
+  const removeUserPreset = (id: string) => {
+    const next = deleteUserPreset(id);
+    setUserPresets(next);
+    toast.success("Layout deleted.");
+  };
+
 
   const swapPawns = (from: PieceId, to: PieceId) => {
     setDesign((d) => {
