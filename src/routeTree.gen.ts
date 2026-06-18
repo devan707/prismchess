@@ -33,6 +33,7 @@ import { Route as AuthenticatedForumRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMultiplayerIndexRouteImport } from './routes/_authenticated/multiplayer.index'
 import { Route as AuthenticatedMessagesIndexRouteImport } from './routes/_authenticated/messages.index'
 import { Route as AuthenticatedForumIndexRouteImport } from './routes/_authenticated/forum.index'
+import { Route as PiecesSlugEditRouteImport } from './routes/pieces.$slug.edit'
 import { Route as AuthenticatedUUsernameRouteImport } from './routes/_authenticated/u.$username'
 import { Route as AuthenticatedMultiplayerMatchIdRouteImport } from './routes/_authenticated/multiplayer.$matchId'
 import { Route as AuthenticatedMessagesThreadIdRouteImport } from './routes/_authenticated/messages.$threadId'
@@ -169,6 +170,11 @@ const AuthenticatedForumIndexRoute = AuthenticatedForumIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedForumRoute,
 } as any)
+const PiecesSlugEditRoute = PiecesSlugEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => PiecesSlugRoute,
+} as any)
 const AuthenticatedUUsernameRoute = AuthenticatedUUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
@@ -260,7 +266,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
-  '/pieces/$slug': typeof PiecesSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRouteWithChildren
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/u/$username': typeof AuthenticatedUUsernameRoute
+  '/pieces/$slug/edit': typeof PiecesSlugEditRoute
   '/forum/': typeof AuthenticatedForumIndexRoute
   '/messages/': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
@@ -295,7 +302,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
-  '/pieces/$slug': typeof PiecesSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRouteWithChildren
   '/pieces/new': typeof PiecesNewRoute
   '/pieces': typeof PiecesIndexRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/u/$username': typeof AuthenticatedUUsernameRoute
+  '/pieces/$slug/edit': typeof PiecesSlugEditRoute
   '/forum': typeof AuthenticatedForumIndexRoute
   '/messages': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer': typeof AuthenticatedMultiplayerIndexRoute
@@ -335,7 +343,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
-  '/pieces/$slug': typeof PiecesSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRouteWithChildren
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/_authenticated/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/_authenticated/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/_authenticated/u/$username': typeof AuthenticatedUUsernameRoute
+  '/pieces/$slug/edit': typeof PiecesSlugEditRoute
   '/_authenticated/forum/': typeof AuthenticatedForumIndexRoute
   '/_authenticated/messages/': typeof AuthenticatedMessagesIndexRoute
   '/_authenticated/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/messages/$threadId'
     | '/multiplayer/$matchId'
     | '/u/$username'
+    | '/pieces/$slug/edit'
     | '/forum/'
     | '/messages/'
     | '/multiplayer/'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
     | '/messages/$threadId'
     | '/multiplayer/$matchId'
     | '/u/$username'
+    | '/pieces/$slug/edit'
     | '/forum'
     | '/messages'
     | '/multiplayer'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/_authenticated/messages/$threadId'
     | '/_authenticated/multiplayer/$matchId'
     | '/_authenticated/u/$username'
+    | '/pieces/$slug/edit'
     | '/_authenticated/forum/'
     | '/_authenticated/messages/'
     | '/_authenticated/multiplayer/'
@@ -482,7 +494,7 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
-  PiecesSlugRoute: typeof PiecesSlugRoute
+  PiecesSlugRoute: typeof PiecesSlugRouteWithChildren
   PiecesNewRoute: typeof PiecesNewRoute
   PiecesIndexRoute: typeof PiecesIndexRoute
   ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
@@ -658,6 +670,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/forum/'
       preLoaderRoute: typeof AuthenticatedForumIndexRouteImport
       parentRoute: typeof AuthenticatedForumRoute
+    }
+    '/pieces/$slug/edit': {
+      id: '/pieces/$slug/edit'
+      path: '/edit'
+      fullPath: '/pieces/$slug/edit'
+      preLoaderRoute: typeof PiecesSlugEditRouteImport
+      parentRoute: typeof PiecesSlugRoute
     }
     '/_authenticated/u/$username': {
       id: '/_authenticated/u/$username'
@@ -837,6 +856,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface PiecesSlugRouteChildren {
+  PiecesSlugEditRoute: typeof PiecesSlugEditRoute
+}
+
+const PiecesSlugRouteChildren: PiecesSlugRouteChildren = {
+  PiecesSlugEditRoute: PiecesSlugEditRoute,
+}
+
+const PiecesSlugRouteWithChildren = PiecesSlugRoute._addFileChildren(
+  PiecesSlugRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -849,7 +880,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
-  PiecesSlugRoute: PiecesSlugRoute,
+  PiecesSlugRoute: PiecesSlugRouteWithChildren,
   PiecesNewRoute: PiecesNewRoute,
   PiecesIndexRoute: PiecesIndexRoute,
   ApiPublicHooksCleanupStaleChallengesRoute:

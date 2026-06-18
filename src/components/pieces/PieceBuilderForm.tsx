@@ -34,12 +34,23 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { requestPieceAbility, savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
+import { requestPieceAbility, savePiece, suggestPieceEmoji, updatePiece, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
+export interface PieceBuilderInitial {
+  pieceId: string;
+  slug: string;
+  name: string;
+  description: string;
+  def: PieceDef;
+  visibility: "private" | "public";
+  imageUrl: string | null;
+}
+
 interface Props {
   onSaved?: (pieceId: string, def: PieceDef) => void;
+  initial?: PieceBuilderInitial;
 }
 
 const MAX_STEPS = 4;
@@ -74,6 +85,9 @@ function buildPieceDef(opts: {
     def.rangedCapture = { spec: ranged.spec, timing: opts.ranged.timing };
   }
   if (opts.pointsOverride != null) def.pointsOverride = opts.pointsOverride;
+  // Persist the editable source for the ranged attack so re-editing later
+  // can restore the exact direction/range bands. Ignored by the engine.
+  (def as unknown as { __rangedSource?: RangedAttack }).__rangedSource = opts.ranged;
   return def;
 }
 
@@ -101,28 +115,41 @@ function summarizeOption(opt: MoveOption): string {
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
-export function PieceBuilderForm({ onSaved }: Props) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+export function PieceBuilderForm({ onSaved, initial }: Props) {
+  const isEdit = !!initial;
+  const initDef = initial?.def;
+  const initRangedSource = (initDef as unknown as { __rangedSource?: RangedAttack } | undefined)?.__rangedSource;
+  const hasUploadedImage = !!(initial?.imageUrl || initDef?.imageUrl);
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [iconPrompt, setIconPrompt] = useState("");
-  const [emoji, setEmoji] = useState("");
+  const [emoji, setEmoji] = useState(initDef && !hasUploadedImage ? (initDef.glyph || "") : "");
   const [emojiBusy, setEmojiBusy] = useState(false);
-  const [imageMode, setImageMode] = useState<"emoji" | "upload">("emoji");
+  const [imageMode, setImageMode] = useState<"emoji" | "upload">(hasUploadedImage ? "upload" : "emoji");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initial?.imageUrl ?? initDef?.imageUrl ?? null);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [options, setOptions] = useState<MoveOption[]>([defaultOption()]);
-  const [ranged, setRanged] = useState<RangedAttack>(defaultRangedAttack());
-  const [overrideEnabled, setOverrideEnabled] = useState(false);
-  const [overridePts, setOverridePts] = useState<number>(3);
+  const [options, setOptions] = useState<MoveOption[]>(
+    initDef?.options && initDef.options.length > 0 ? initDef.options : [defaultOption()],
+  );
+  const [ranged, setRanged] = useState<RangedAttack>(
+    initRangedSource
+      ? initRangedSource
+      : initDef?.rangedCapture
+        ? { ...defaultRangedAttack(), enabled: true, timing: initDef.rangedCapture.timing }
+        : defaultRangedAttack(),
+  );
+  const [overrideEnabled, setOverrideEnabled] = useState(initDef?.pointsOverride != null);
+  const [overridePts, setOverridePts] = useState<number>(initDef?.pointsOverride ?? 3);
   const [abilityRequest, setAbilityRequest] = useState("");
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
+  const update = useServerFn(updatePiece);
   const uploadImage = useServerFn(uploadPieceImage);
   const submitAbility = useServerFn(requestPieceAbility);
 
-  const id = useMemo(() => genId(), []);
+  const [id] = useState<string>(() => initDef?.id ?? genId());
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
 
@@ -248,14 +275,24 @@ export function PieceBuilderForm({ onSaved }: Props) {
     if ("error" in def) { toast.error(def.error); return; }
     setSaving(true);
     try {
-      const row = await save({
-        data: {
-          name: name.trim(),
-          description: description.trim(),
-          def: def as unknown as Record<string, unknown>,
-          visibility,
-        },
-      });
+      const row = isEdit
+        ? await update({
+            data: {
+              pieceId: initial!.pieceId,
+              name: name.trim(),
+              description: description.trim(),
+              def: def as unknown as Record<string, unknown>,
+              visibility,
+            },
+          })
+        : await save({
+            data: {
+              name: name.trim(),
+              description: description.trim(),
+              def: def as unknown as Record<string, unknown>,
+              visibility,
+            },
+          });
 
       if (imageMode === "upload" && imageFile) {
         const fd = new FormData();
@@ -275,19 +312,23 @@ export function PieceBuilderForm({ onSaved }: Props) {
       }
 
       toast.success(
-        visibility === "public"
-          ? `Published "${name.trim()}" to the community library`
-          : `Saved "${name.trim()}" to your library`,
+        isEdit
+          ? `Saved changes to "${name.trim()}"`
+          : visibility === "public"
+            ? `Published "${name.trim()}" to the community library`
+            : `Saved "${name.trim()}" to your library`,
       );
       onSaved?.(row.id, def);
-      // Reset
-      setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
-      setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
-      setOptions([defaultOption()]);
-      setRanged(defaultRangedAttack());
-      setOverrideEnabled(false);
-      setOverridePts(3);
-      setAbilityRequest("");
+      if (!isEdit) {
+        // Reset for the next piece (creation mode only).
+        setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
+        setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
+        setOptions([defaultOption()]);
+        setRanged(defaultRangedAttack());
+        setOverrideEnabled(false);
+        setOverridePts(3);
+        setAbilityRequest("");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the piece.");
     } finally {
@@ -634,10 +675,10 @@ export function PieceBuilderForm({ onSaved }: Props) {
               </p>
             )}
             <Button className="w-full" variant="outline" disabled={!!validation || saving} onClick={() => doSave("private")}>
-              Save private
+              {isEdit ? "Save changes (private)" : "Save private"}
             </Button>
             <Button className="w-full" disabled={!!validation || saving} onClick={() => doSave("public")}>
-              Publish public
+              {isEdit ? "Save changes (public)" : "Publish public"}
             </Button>
           </div>
         </div>

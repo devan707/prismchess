@@ -87,6 +87,66 @@ export const savePiece = createServerFn({ method: "POST" })
     throw new Error("Could not generate a unique link. Please try again.");
   });
 
+// ---------- Update an existing custom piece (owner only) ----------
+
+const UpdateInput = z.object({
+  pieceId: UuidSchema,
+  name: z.string().trim().min(1).max(60),
+  description: z.string().trim().max(400).default(""),
+  def: PieceDefJson,
+  visibility: z.enum(["private", "public"]),
+});
+
+export const updatePiece = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => UpdateInput.parse(i))
+  .handler(async ({ data, context }) => {
+    // Confirm ownership (RLS also enforces this, but a clear error beats a generic one).
+    const { data: existing, error: ownErr } = await context.supabase
+      .from("custom_pieces")
+      .select("id, author_id, image_url")
+      .eq("id", data.pieceId)
+      .maybeSingle();
+    if (ownErr) throw new Error(ownErr.message);
+    if (!existing) throw new Error("Piece not found.");
+    if (existing.author_id !== context.userId) throw new Error("You can only edit your own pieces.");
+
+    // Preserve the persisted imageUrl on the embedded def so renders stay correct.
+    const defWithImage = existing.image_url
+      ? { ...data.def, imageUrl: existing.image_url }
+      : data.def;
+
+    const { data: row, error } = await context.supabase
+      .from("custom_pieces")
+      .update({
+        name: data.name,
+        description: data.description,
+        def: defWithImage as never,
+        visibility: data.visibility,
+      })
+      .eq("id", data.pieceId)
+      .select("id, slug")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+// ---------- Get one of my pieces (by slug) for editing ----------
+
+export const getMyPieceBySlug = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ slug: z.string().trim().min(1).max(60) }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("custom_pieces")
+      .select("id, slug, name, description, def, visibility, image_url, author_id")
+      .eq("slug", data.slug)
+      .eq("author_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 // ---------- List queries ----------
 
 const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url";
