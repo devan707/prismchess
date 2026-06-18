@@ -969,7 +969,7 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
           if (m.kind === "portalSwap") continue;
           if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
           if (m.kind === "juggExit") continue;
-          if (m.kind === "castle") continue;
+          if (m.kind === "castle" || m.kind === "juggCastle") continue;
           // Prism cancels attacks only when the attacker would flip color
           // BEFORE reaching `sq` — i.e. it crosses an aura square on the
           // way in (and didn't already start inside the aura). A royal
