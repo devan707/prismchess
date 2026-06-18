@@ -251,7 +251,11 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
       if (p) { setSelected(sq); return; }
       setSelected(null);
     } else {
-      if (p) setSelected(sq);
+      if (p) {
+        // Enemy-piece inspection is opt-in (PvComputer only).
+        if (p.color !== humanColor && !allowEnemyInspect) return;
+        setSelected(sq);
+      }
     }
 
   };
