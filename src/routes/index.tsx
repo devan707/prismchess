@@ -42,8 +42,8 @@ function signatureGlyphs(id: string): [string, string, string] {
   switch (id) {
     case "classic-8": return ["♞", "♛", "♝"];
     case "mini-6": return ["♜", "♚", "♛"];
-    case "menagerie": return ["♞", "♛", "♝"];
-    case "grand-menagerie": return ["♜", "♛", "♞"];
+    case "menagerie-8": return ["🏹", "🧙", "🐉"];
+    case "grand-menagerie-12": return ["👑", "☠️", "🔺"];
     default: return ["♟", "♚", "♟"];
   }
 }
