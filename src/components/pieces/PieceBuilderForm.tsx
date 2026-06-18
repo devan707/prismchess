@@ -133,7 +133,7 @@ export function PieceBuilderForm({ onSaved, initial, template }: Props) {
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [imageMode, setImageMode] = useState<"emoji" | "upload">(hasUploadedImage ? "upload" : "emoji");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(initial?.imageUrl ?? initDef?.imageUrl ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(seed?.imageUrl ?? initDef?.imageUrl ?? null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [options, setOptions] = useState<MoveOption[]>(
     initDef?.options && initDef.options.length > 0 ? initDef.options : [defaultOption()],
