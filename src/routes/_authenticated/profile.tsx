@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { ArrowLeft } from "lucide-react";
+import { PlayPrefsForm } from "@/components/chess/PlayPrefsForm";
+import { DEFAULT_PREFS, loadDefaultPrefs, saveDefaultPrefs, type PlayPrefs } from "@/lib/play-prefs";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "Your profile — Prism Chess" }] }),
