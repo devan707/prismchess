@@ -1288,7 +1288,10 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     }
     // First-of-two King's Hand move: defer own-king safety to the second
     // step. Otherwise enforce it now (board pre-prism-flip).
-    const isFirstHand = !state.pendingHand && (m.piece.id === "H" || m.piece.id === "G" || m.piece.id === "L") && m.kind !== "handDouble";
+    // Royal hand-pieces (Regent/Lich King) must satisfy king-safety on BOTH
+    // steps — they can never move into or pass through check. Only the
+    // non-royal King's Hand (H) defers safety to its second step.
+    const isFirstHand = !state.pendingHand && m.piece.id === "H" && m.kind !== "handDouble";
     if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
