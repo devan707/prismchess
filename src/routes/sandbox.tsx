@@ -67,6 +67,10 @@ function Sandbox() {
   const fetchPublicGame = useServerFn(getPublishedGame);
   const [publishing, setPublishing] = useState(false);
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
+  // Set when this sandbox session is a remix of an existing published variant —
+  // recorded on publish so the new listing keeps a link back to the original
+  // author for credit display.
+  const [remixedFromId, setRemixedFromId] = useState<string | null>(null);
 
   // ?edit=<gameId>    → owner edit: updates the same listing on Publish.
   // ?duplicate=<gameId> → owner duplicate: hydrate then save as NEW.
@@ -94,6 +98,8 @@ function Sandbox() {
         setSaveName((isDuplicate || isRemix) ? `${row.name} (remix)` : row.name);
         setDescription(row.description);
         setPublishedGameId((isDuplicate || isRemix) ? null : row.id);
+        // Record the original-author link so credit survives republish.
+        setRemixedFromId((isDuplicate || isRemix) ? row.id : null);
         toast.info(
           isRemix
             ? `Remixing "${row.name}" — tweak the design and publish as your own variant.`
@@ -396,6 +402,8 @@ function Sandbox() {
           description: desc,
           design: design as unknown as Record<string, unknown>,
           tutorial: (tutorial ?? null) as unknown as Record<string, unknown> | null,
+          // Only set for brand-new listings — updates ignore this field server-side.
+          remixedFromId: publishedGameId ? null : remixedFromId,
         },
       });
       setPublishedGameId(res.id);

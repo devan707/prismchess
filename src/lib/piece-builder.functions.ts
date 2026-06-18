@@ -61,6 +61,7 @@ const SaveInput = z.object({
   description: z.string().trim().max(400).default(""),
   def: PieceDefJson,
   visibility: z.enum(["private", "public"]),
+  remixedFromId: UuidSchema.nullable().optional(),
 });
 
 export const savePiece = createServerFn({ method: "POST" })
@@ -78,6 +79,7 @@ export const savePiece = createServerFn({ method: "POST" })
           description: data.description,
           def: data.def as never,
           visibility: data.visibility,
+          remixed_from_id: data.remixedFromId ?? null,
         })
         .select("id, slug")
         .single();
@@ -311,7 +313,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
     });
     const { data: row, error } = await sb
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, remixed_from_id")
       .eq("slug", data.slug)
       .eq("visibility", "public")
       .eq("is_hidden", false)
@@ -322,13 +324,28 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
       id: string; slug: string; name: string; description: string;
       def: import("@/integrations/supabase/types").Json; visibility: string; like_count: number;
       created_at: string; author_id: string; image_url: string | null; is_hidden: boolean;
+      remixed_from_id: string | null;
     };
     const { data: prof } = await sb
       .from("profiles")
       .select("username, display_name")
       .eq("id", typedRow.author_id)
       .maybeSingle();
-    return { ...typedRow, author: (prof ?? null) as { username: string; display_name: string | null } | null };
+    // Look up the remix origin (only if still public/visible) for credit display.
+    let remixedFrom: { slug: string; name: string; author: { username: string; display_name: string | null } | null } | null = null;
+    if (typedRow.remixed_from_id) {
+      const { data: orig } = await sb
+        .from("custom_pieces")
+        .select("slug, name, author_id, visibility, is_hidden")
+        .eq("id", typedRow.remixed_from_id)
+        .maybeSingle();
+      if (orig && orig.visibility === "public" && !orig.is_hidden) {
+        const { data: origProf } = await sb
+          .from("profiles").select("username, display_name").eq("id", orig.author_id).maybeSingle();
+        remixedFrom = { slug: orig.slug, name: orig.name, author: (origProf ?? null) as { username: string; display_name: string | null } | null };
+      }
+    }
+    return { ...typedRow, author: (prof ?? null) as { username: string; display_name: string | null } | null, remixedFrom };
   });
 
 // ---------- Upload / clear image (PNG 300×300 transparent) ----------

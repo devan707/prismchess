@@ -373,6 +373,7 @@ export const publishGame = createServerFn({ method: "POST" })
     description: z.string().trim().min(1).max(2000),
     design: DesignJsonSchema,
     tutorial: TutorialJsonSchema,
+    remixedFromId: UuidSchema.nullable().optional(),
   }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -434,6 +435,7 @@ export const publishGame = createServerFn({ method: "POST" })
           description: data.description,
           design: data.design as never,
           tutorial: (data.tutorial ?? null) as never,
+          remixed_from_id: data.remixedFromId ?? null,
         })
         .select("id, slug").single();
       if (!error) return { ...inserted, updated: false as const };
@@ -534,7 +536,22 @@ export const getPublishedGame = createServerFn({ method: "POST" })
     if (!game) return null;
     const { data: author } = await supa
       .from("profiles").select("id, username, display_name, avatar").eq("id", game.author_id).maybeSingle();
-    return { game, author };
+    // Resolve remix origin for credit display (only if origin still visible).
+    let remixedFrom: { slug: string; name: string; author: { username: string; display_name: string | null } | null } | null = null;
+    const remixId = (game as { remixed_from_id?: string | null }).remixed_from_id ?? null;
+    if (remixId) {
+      const { data: orig } = await supa
+        .from("published_games")
+        .select("slug, name, author_id, is_hidden")
+        .eq("id", remixId)
+        .maybeSingle();
+      if (orig && !orig.is_hidden) {
+        const { data: origProf } = await supa
+          .from("profiles").select("username, display_name").eq("id", orig.author_id).maybeSingle();
+        remixedFrom = { slug: orig.slug, name: orig.name, author: (origProf ?? null) as { username: string; display_name: string | null } | null };
+      }
+    }
+    return { game, author, remixedFrom };
   });
 
 export const listMyPublishedGames = createServerFn({ method: "GET" })

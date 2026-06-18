@@ -324,6 +324,8 @@ export function PieceBuilderForm({ onSaved, initial, template }: Props) {
               description: description.trim(),
               def: def as unknown as Record<string, unknown>,
               visibility,
+              // Preserve original-author credit when this is a remix/duplicate.
+              remixedFromId: template?.pieceId ?? null,
             },
           });
 

@@ -149,6 +149,22 @@ function PieceDetail() {
                 </Link>
               </p>
             )}
+            {piece.remixedFrom && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Remixed from{" "}
+                <Link to="/pieces/$slug" params={{ slug: piece.remixedFrom.slug }} className="hover:underline font-medium">
+                  "{piece.remixedFrom.name}"
+                </Link>
+                {piece.remixedFrom.author && (
+                  <>
+                    {" "}by{" "}
+                    <Link to="/u/$username" params={{ username: piece.remixedFrom.author.username }} className="hover:underline font-medium">
+                      @{piece.remixedFrom.author.username}
+                    </Link>
+                  </>
+                )}
+              </p>
+            )}
             {piece.description && (
               <p className="text-sm mt-3 text-foreground/90">{piece.description}</p>
             )}

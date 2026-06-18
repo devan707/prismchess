@@ -69,7 +69,7 @@ function SharedGamePage() {
   if (data === null) return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>;
   if (!data) return <div className="min-h-screen flex flex-col items-center justify-center gap-3"><p className="text-sm text-muted-foreground">Game not found.</p><Link to="/"><Button size="sm">Home</Button></Link></div>;
 
-  const { game, author } = data;
+  const { game, author, remixedFrom } = data;
 
   const handlePlay = () => {
     saveDesign(game.design as unknown as Design);
@@ -122,13 +122,31 @@ function SharedGamePage() {
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <section className="rounded-xl border bg-card p-4">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="text-xs text-muted-foreground">
-              by{" "}
-              {author ? (
-                <Link to="/u/$username" params={{ username: author.username }} className="underline">
-                  {author.display_name ?? author.username}
-                </Link>
-              ) : "unknown"}
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <div>
+                by{" "}
+                {author ? (
+                  <Link to="/u/$username" params={{ username: author.username }} className="underline">
+                    {author.display_name ?? author.username}
+                  </Link>
+                ) : "unknown"}
+              </div>
+              {remixedFrom && (
+                <div>
+                  Remixed from{" "}
+                  <Link to="/g/$slug" params={{ slug: remixedFrom.slug }} className="underline font-medium">
+                    "{remixedFrom.name}"
+                  </Link>
+                  {remixedFrom.author && (
+                    <>
+                      {" "}by{" "}
+                      <Link to="/u/$username" params={{ username: remixedFrom.author.username }} className="underline font-medium">
+                        @{remixedFrom.author.username}
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <ReportDialog targetType="game" targetId={game.id} size="icon" label="" />
           </div>
