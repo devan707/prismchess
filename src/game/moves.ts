@@ -1121,11 +1121,15 @@ function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, Pie
       const steps = Math.max(aR, aC);
       const sR = steps ? dr / steps : 0;
       const sC = steps ? dc / steps : 0;
+      // If the piece STARTED inside the aura, it's already been claimed
+      // by the prism on a previous turn — moving out (even through other
+      // aura squares) should not re-flip it.
+      const startedInAura = inAura(move.from.r, move.from.c);
       let crossed = false;
       for (let s = 1; s < steps; s++) {
         if (inAura(move.from.r + s * sR, move.from.c + s * sC)) { crossed = true; break; }
       }
-      if (crossed && !inAura(move.to.r, move.to.c)) {
+      if (!startedInAura && crossed && !inAura(move.to.r, move.to.c)) {
         flipPieceAt(board, move.to.r, move.to.c, registry);
       }
     }
