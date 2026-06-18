@@ -79,9 +79,19 @@ function Discover() {
             <MessageSquare className="h-3 w-3" /> {g.comment_count}
           </Link>
         </div>
-        <Button size="sm" onClick={() => playPublished(g)}>
-          <Play className="h-3 w-3 mr-1" /> Play
-        </Button>
+        <div className="flex items-center gap-2">
+          <AdminMenu
+            show={isModOrAdmin}
+            actions={[
+              { label: "Hide from feeds", onClick: async () => { await setFlags({ data: { gameId: g.id, isHidden: true } }); reload(); } },
+              { label: "Feature", onClick: async () => { await setFlags({ data: { gameId: g.id, isFeatured: true } }); reload(); } },
+              { label: "Delete permanently", destructive: true, confirm: `Delete "${g.name}"? This cannot be undone.`, onClick: async () => { await del({ data: { gameId: g.id } }); reload(); } },
+            ]}
+          />
+          <Button size="sm" onClick={() => playPublished(g)}>
+            <Play className="h-3 w-3 mr-1" /> Play
+          </Button>
+        </div>
       </div>
     </Card>
   );
