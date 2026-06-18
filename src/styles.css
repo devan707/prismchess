@@ -52,11 +52,11 @@
   --background: oklch(0.98 0.01 90);
   --foreground: oklch(0.18 0.02 280);
 
-  /* Cards stay dark gray */
-  --card: oklch(0.22 0.02 280);
-  --card-foreground: oklch(0.97 0.01 280);
-  --popover: oklch(0.22 0.02 280);
-  --popover-foreground: oklch(0.97 0.01 280);
+  /* Cards are light to match the airy shell; text stays dark for contrast. */
+  --card: oklch(0.985 0.005 90 / 0.85);
+  --card-foreground: oklch(0.18 0.02 280);
+  --popover: oklch(0.985 0.005 90);
+  --popover-foreground: oklch(0.18 0.02 280);
 
   /* Primary = near-black; buttons get rainbow border via .prism-border */
   --primary: oklch(0.18 0.02 280);
@@ -182,37 +182,35 @@
   color: transparent;
 }
 
-/* ---- Contrast fixes on dark surfaces (cards, popovers) ----
-   Cards/popovers are dark; many tokens (primary, foreground, muted-foreground,
-   bg-background) resolve to LIGHT-theme values and disappear on them.
-   Force descendant text to inherit a light color, and remap common surface
-   utilities when nested inside a dark surface. Selector matches bg-card,
-   bg-card/40, bg-card/60, bg-popover, bg-popover/N, etc. */
+/* ---- Contrast fixes on light card/popover surfaces ----
+   Cards/popovers are LIGHT now. Force descendant text to dark so utilities
+   like text-foreground / text-primary stay readable, and remap surface
+   utilities to subtle dark-on-light fills. */
 [class*="bg-card"], [class*="bg-popover"] {
   color: var(--card-foreground);
 
-  /* readable text */
+  /* readable text — dark on light */
   & .text-primary { color: var(--card-foreground); }
   & .text-foreground { color: var(--card-foreground); }
-  & .text-foreground\/90 { color: oklch(0.97 0.01 280 / 0.9); }
-  & .text-foreground\/80 { color: oklch(0.97 0.01 280 / 0.8); }
-  & .text-foreground\/70 { color: oklch(0.97 0.01 280 / 0.7); }
-  & .text-muted-foreground { color: oklch(0.78 0.02 280); }
+  & .text-foreground\/90 { color: oklch(0.18 0.02 280 / 0.9); }
+  & .text-foreground\/80 { color: oklch(0.18 0.02 280 / 0.8); }
+  & .text-foreground\/70 { color: oklch(0.18 0.02 280 / 0.7); }
+  & .text-muted-foreground { color: oklch(0.40 0.02 280); }
 
-  /* surfaces / fills */
-  & .bg-primary\/10 { background-color: oklch(1 0 0 / 0.10); }
-  & .bg-secondary { background-color: oklch(1 0 0 / 0.08); }
-  & .bg-muted { background-color: oklch(1 0 0 / 0.08); }
-  & .bg-muted\/40 { background-color: oklch(1 0 0 / 0.05); }
-  & .bg-muted\/30 { background-color: oklch(1 0 0 / 0.04); }
-  & .bg-background { background-color: oklch(0.30 0.02 280); }
+  /* surfaces / fills — subtle dark tints over the light card */
+  & .bg-primary\/10 { background-color: oklch(0.18 0.02 280 / 0.08); }
+  & .bg-secondary { background-color: oklch(0.18 0.02 280 / 0.06); }
+  & .bg-muted { background-color: oklch(0.18 0.02 280 / 0.06); }
+  & .bg-muted\/40 { background-color: oklch(0.18 0.02 280 / 0.04); }
+  & .bg-muted\/30 { background-color: oklch(0.18 0.02 280 / 0.03); }
+  & .bg-background { background-color: oklch(0.96 0.01 90); }
 
   /* borders / hovers */
-  & .border-input { border-color: oklch(1 0 0 / 0.18); }
-  & .hover\:bg-muted\/50:hover { background-color: oklch(1 0 0 / 0.06); }
-  & .hover\:bg-muted:hover { background-color: oklch(1 0 0 / 0.08); }
-  & .hover\:bg-accent:hover { background-color: oklch(1 0 0 / 0.08); }
-  & .hover\:border-primary:hover { border-color: oklch(1 0 0 / 0.35); }
+  & .border-input { border-color: oklch(0.18 0.02 280 / 0.18); }
+  & .hover\:bg-muted\/50:hover { background-color: oklch(0.18 0.02 280 / 0.05); }
+  & .hover\:bg-muted:hover { background-color: oklch(0.18 0.02 280 / 0.06); }
+  & .hover\:bg-accent:hover { background-color: oklch(0.18 0.02 280 / 0.06); }
+  & .hover\:border-primary:hover { border-color: oklch(0.18 0.02 280 / 0.35); }
 }
 
 @keyframes piece-slide {

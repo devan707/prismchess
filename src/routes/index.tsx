@@ -62,9 +62,8 @@ function readLastVariant(): LastVariant | null {
 }
 
 function pickFeatured(): GameType {
-  // Rotate by day-of-year so it changes daily but is stable across renders
-  const day = Math.floor(Date.now() / 86_400_000);
-  return BUILTIN_GAMES[day % BUILTIN_GAMES.length];
+  // Always feature Grand Menagerie on the main menu.
+  return BUILTIN_GAMES.find((g) => g.id === "grand-menagerie-12") ?? BUILTIN_GAMES[0];
 }
 
 function Home() {
