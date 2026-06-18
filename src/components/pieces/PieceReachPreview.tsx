@@ -125,7 +125,7 @@ export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
           <span className="text-emerald-600">○</span> move only ·{" "}
           <span className="text-red-600">●</span> capture only ·{" "}
           <span className="text-sky-600">●</span> slide
-          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">●</span> ranged</>)}
+          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">◎</span> ranged</>)}
           {" · "}<span className="text-amber-600">ring</span> = conditional
         </p>
       )}
