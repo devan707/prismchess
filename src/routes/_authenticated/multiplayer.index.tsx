@@ -16,7 +16,7 @@ import {
 } from "@/lib/multiplayer.functions";
 import { BUILTIN_GAMES } from "@/game/library";
 import { loadSavedGames, type SavedGame } from "@/game/library";
-import { Home, Swords, Users, Plus, Copy, Trash2, Clock, Hourglass } from "lucide-react";
+import { Home, Swords, Users, Plus, Copy, Trash2, Clock, Hourglass, Zap } from "lucide-react";
 import { toast } from "sonner";
 import type { Color, Design } from "@/game/types";
 
@@ -29,9 +29,14 @@ type OpenChallenge = Awaited<ReturnType<typeof listOpenChallenges>>[number];
 type MyMatch = Awaited<ReturnType<typeof listMyMatches>>[number];
 
 function TimeControlLabel({ tc }: { tc: string }) {
-  if (tc === "10min") return <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> 10 min</span>;
-  if (tc === "30min") return <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> 30 min</span>;
   if (tc === "3day") return <span className="inline-flex items-center gap-1"><Hourglass className="h-3 w-3" /> 3 days/move</span>;
+  const m = /^(\d+)min$/.exec(tc);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    const Icon = n <= 3 ? Zap : Clock;
+    const label = n <= 3 ? `Blitz ${n} min` : `${n} min`;
+    return <span className="inline-flex items-center gap-1"><Icon className="h-3 w-3" /> {label}</span>;
+  }
   return <span>{tc}</span>;
 }
 
@@ -206,7 +211,8 @@ function CreateChallengeButton({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState<SavedGame[]>([]);
   const [selectedKey, setSelectedKey] = useState<string>("builtin:classic-8");
-  const [timeControl, setTimeControl] = useState<"10min" | "30min" | "3day">("10min");
+  const [timeControl, setTimeControl] = useState<"2min" | "10min" | "30min" | "3day" | "custom">("10min");
+  const [customMinutes, setCustomMinutes] = useState<number>(5);
   const [hostColor, setHostColor] = useState<Color>("w");
   const [visibility, setVisibility] = useState<"public" | "link">("public");
   const [busy, setBusy] = useState(false);
@@ -231,11 +237,15 @@ function CreateChallengeButton({ onCreated }: { onCreated: () => void }) {
         design = s.design;
         name = s.name;
       }
+      const resolvedTc =
+        timeControl === "custom"
+          ? `${Math.max(1, Math.min(180, Math.floor(customMinutes || 1)))}min`
+          : timeControl;
       const res = await create({
         data: {
           design: design as unknown as Record<string, unknown>,
           designName: name,
-          timeControl,
+          timeControl: resolvedTc,
           hostColor,
           visibility,
         },
@@ -317,11 +327,26 @@ function CreateChallengeButton({ onCreated }: { onCreated: () => void }) {
                 <Select value={timeControl} onValueChange={(v) => setTimeControl(v as typeof timeControl)}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="2min">Blitz · 2 min</SelectItem>
                     <SelectItem value="10min">10 min</SelectItem>
                     <SelectItem value="30min">30 min</SelectItem>
                     <SelectItem value="3day">3 days / move</SelectItem>
+                    <SelectItem value="custom">Custom…</SelectItem>
                   </SelectContent>
                 </Select>
+                {timeControl === "custom" && (
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground">Minutes per player</Label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={customMinutes}
+                      onChange={(e) => setCustomMinutes(Number(e.target.value))}
+                      className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Play as</Label>

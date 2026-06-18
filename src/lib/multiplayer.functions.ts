@@ -3,18 +3,23 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Design, Move, Color } from "@/game/types";
 
-const TC_BUDGET_MS: Record<string, number> = {
-  "10min": 10 * 60 * 1000,
-  "30min": 30 * 60 * 1000,
-  "3day": 3 * 24 * 60 * 60 * 1000,
-};
-const TC_PER_MOVE: Record<string, boolean> = {
-  "10min": false,
-  "30min": false,
-  "3day": true,
-};
+const THREE_DAY_MS = 3 * 24 * 60 * 60 * 1000;
+function budgetMsFor(tc: string): number {
+  if (tc === "3day") return THREE_DAY_MS;
+  const m = /^(\d+)min$/.exec(tc);
+  if (m) return Math.max(1, parseInt(m[1], 10)) * 60 * 1000;
+  return 10 * 60 * 1000;
+}
+function isPerMove(tc: string): boolean {
+  return tc === "3day";
+}
 
-const TimeControl = z.enum(["10min", "30min", "3day"]);
+// Accept either `<N>min` (1–180) or `3day`.
+const TimeControl = z.string().regex(/^(\d+min|3day)$/).refine((v) => {
+  if (v === "3day") return true;
+  const n = parseInt(v, 10);
+  return n >= 1 && n <= 180;
+}, { message: "Invalid time control" });
 const Visibility = z.enum(["public", "link"]);
 const ColorSchema = z.enum(["w", "b"]);
 
@@ -38,7 +43,7 @@ export const createChallenge = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const budget = TC_BUDGET_MS[data.timeControl];
+    const budget = budgetMsFor(data.timeControl);
     // Open challenges auto-expire after 15 min of inactivity so unjoined invites
     // don't pile up if the host closes the tab without cancelling.
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
@@ -300,8 +305,8 @@ export const submitMove = createServerFn({ method: "POST" })
     const now = Date.now();
     const lastAt = match.last_clock_update_at ? new Date(match.last_clock_update_at).getTime() : now;
     const elapsed = Math.max(0, now - lastAt);
-    const budget = TC_BUDGET_MS[match.time_control] ?? TC_BUDGET_MS["10min"];
-    const perMove = TC_PER_MOVE[match.time_control] ?? false;
+    const budget = budgetMsFor(match.time_control);
+    const perMove = isPerMove(match.time_control);
 
     const remainingBefore = meColor === "w" ? match.white_time_ms : match.black_time_ms;
     const remainingAfter = Math.max(0, remainingBefore - elapsed);
