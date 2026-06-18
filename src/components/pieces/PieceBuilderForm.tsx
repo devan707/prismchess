@@ -3,14 +3,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ABSOLUTE_DIR_OPTIONS,
   RELATIVE_DIR_OPTIONS,
   RANGED_TIMING_OPTIONS,
-  compileMovement,
+  OPTION_KIND_OPTIONS,
+  CONDITION_OPTIONS,
+  compileOption,
   compileRangedAttack,
   defaultStep,
+  defaultOption,
   defaultRangedAttack,
+  type MoveOption,
+  type MoveOptionKind,
+  type MoveCondition,
   type MoveStep,
   type RangedAttack,
   type RangedTiming,
@@ -22,7 +29,7 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
+import { requestPieceAbility, savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,18 +38,22 @@ interface Props {
 }
 
 const MAX_STEPS = 4;
+const MAX_OPTIONS = 6;
 
 function buildPieceDef(opts: {
   id: string;
   name: string;
   description: string;
   emoji: string;
-  steps: MoveStep[];
+  options: MoveOption[];
   ranged: RangedAttack;
   pointsOverride?: number;
 }): PieceDef | { error: string } {
-  const compiled = compileMovement(opts.steps);
-  if (compiled.error) return { error: compiled.error };
+  if (!opts.options.length) return { error: "Add at least one movement option." };
+  for (let i = 0; i < opts.options.length; i++) {
+    const c = compileOption(opts.options[i]);
+    if (c.error) return { error: `Option ${i + 1}: ${c.error}` };
+  }
   const ranged = compileRangedAttack(opts.ranged);
   if (ranged.error) return { error: ranged.error };
   const def: PieceDef = {
@@ -50,11 +61,10 @@ function buildPieceDef(opts: {
     name: opts.name,
     glyph: opts.emoji,
     emoji: true,
-    movement: compiled.moveSpec,
+    options: opts.options,
     description: opts.description,
     builtinCustom: false,
   };
-  if (compiled.captureSpec) def.capture = compiled.captureSpec;
   if (opts.ranged.enabled && (ranged.spec.leaps?.length ?? 0) > 0) {
     def.rangedCapture = { spec: ranged.spec, timing: opts.ranged.timing };
   }
@@ -64,6 +74,22 @@ function buildPieceDef(opts: {
 
 function genId(): string {
   return "u:" + Math.random().toString(36).slice(2, 8);
+}
+
+function summarizeOption(opt: MoveOption): string {
+  const kindLabel =
+    opt.kind === "move-only" ? "Move only"
+    : opt.kind === "capture-only" ? "Capture only"
+    : "Move or capture";
+  const s = opt.steps[0];
+  const dir = s
+    ? (s.direction.kind === "absolute"
+        ? (ABSOLUTE_DIR_OPTIONS.find((o) => o.value === s.direction.dir)?.label ?? "")
+        : "relative chain")
+    : "";
+  const dist = s ? (s.distance === "unlimited" ? "unlimited" : `${s.distance} sq`) : "";
+  const cond = opt.condition === "from-starting-square" ? " · starting only" : "";
+  return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
 export function PieceBuilderForm({ onSaved }: Props) {
@@ -76,31 +102,39 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [steps, setSteps] = useState<MoveStep[]>([defaultStep()]);
+  const [options, setOptions] = useState<MoveOption[]>([defaultOption()]);
   const [ranged, setRanged] = useState<RangedAttack>(defaultRangedAttack());
   const [overrideEnabled, setOverrideEnabled] = useState(false);
   const [overridePts, setOverridePts] = useState<number>(3);
+  const [abilityRequest, setAbilityRequest] = useState("");
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
   const uploadImage = useServerFn(uploadPieceImage);
+  const submitAbility = useServerFn(requestPieceAbility);
 
   const id = useMemo(() => genId(), []);
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
+
+  const optionError = useMemo(() => {
+    if (!options.length) return "Add at least one movement option.";
+    for (let i = 0; i < options.length; i++) {
+      const c = compileOption(options[i]);
+      if (c.error) return `Option ${i + 1}: ${c.error}`;
+    }
+    return null;
+  }, [options]);
 
   const validation = useMemo(() => {
     if (!name.trim()) return "Name your piece.";
     if (imageMode === "emoji" && !emoji) return "Pick or generate an emoji icon (or upload an image).";
     if (imageMode === "upload" && !imageFile) return "Upload a 300×300 PNG with a transparent background (or use an emoji).";
     if (imageError) return imageError;
-    const c = compileMovement(steps);
-    if (c.error) return c.error;
+    if (optionError) return optionError;
     if (compiledRanged.error) return compiledRanged.error;
     return null;
-  }, [name, emoji, imageMode, imageFile, imageError, steps, compiledRanged]);
-
-  const compiledMove = useMemo(() => compileMovement(steps), [steps]);
+  }, [name, emoji, imageMode, imageFile, imageError, optionError, compiledRanged]);
 
   const previewDef: PieceDef = {
     id,
@@ -108,8 +142,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
     glyph: emoji || "❓",
     emoji: true,
     imageUrl: imageMode === "upload" ? imagePreview ?? undefined : undefined,
-    movement: compiledMove.moveSpec,
-    capture: compiledMove.captureSpec,
+    options,
     description,
     rangedCapture: ranged.enabled && (compiledRanged.spec.leaps?.length ?? 0) > 0
       ? { spec: compiledRanged.spec, timing: ranged.timing }
@@ -119,22 +152,35 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const estimatedPts = useMemo(() => estimatePiecePoints(previewDef), [previewDef]);
   const finalPts = overrideEnabled ? overridePts : estimatedPts;
 
-  const updateStep = (idx: number, patch: Partial<MoveStep>) =>
-    setSteps((arr) => arr.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  const updateOption = (idx: number, patch: Partial<MoveOption>) =>
+    setOptions((arr) => arr.map((o, i) => (i === idx ? { ...o, ...patch } : o)));
+  const updateStep = (optIdx: number, stepIdx: number, patch: Partial<MoveStep>) =>
+    setOptions((arr) =>
+      arr.map((o, i) =>
+        i !== optIdx ? o : { ...o, steps: o.steps.map((s, j) => (j === stepIdx ? { ...s, ...patch } : s)) },
+      ),
+    );
+  const addStep = (optIdx: number) =>
+    setOptions((arr) =>
+      arr.map((o, i) =>
+        i !== optIdx
+          ? o
+          : {
+              ...o,
+              steps: [
+                ...o.steps,
+                { direction: { kind: "relative", rel: "any-perp" }, distance: 1, jumps: true, captures: true },
+              ],
+            },
+      ),
+    );
+  const removeStep = (optIdx: number, stepIdx: number) =>
+    setOptions((arr) =>
+      arr.map((o, i) => (i !== optIdx ? o : { ...o, steps: o.steps.filter((_, j) => j !== stepIdx) })),
+    );
 
-  const addStep = () => {
-    setSteps((arr) => [
-      ...arr,
-      {
-        direction: { kind: "relative", rel: "any-perp" },
-        distance: 1,
-        jumps: true,
-        captures: true,
-      },
-    ]);
-  };
-
-  const removeStep = (idx: number) => setSteps((arr) => arr.filter((_, i) => i !== idx));
+  const addOption = () => setOptions((arr) => [...arr, defaultOption()]);
+  const removeOption = (idx: number) => setOptions((arr) => arr.filter((_, i) => i !== idx));
 
   const handleEmoji = async () => {
     if (!name.trim() && !iconPrompt.trim()) {
@@ -162,14 +208,8 @@ export function PieceBuilderForm({ onSaved }: Props) {
     setImageFile(null);
     setImagePreview(null);
     if (!file) return;
-    if (file.type !== "image/png") {
-      setImageError("Image must be a PNG.");
-      return;
-    }
-    if (file.size > 1_000_000) {
-      setImageError("Image must be under 1 MB.");
-      return;
-    }
+    if (file.type !== "image/png") { setImageError("Image must be a PNG."); return; }
+    if (file.size > 1_000_000) { setImageError("Image must be under 1 MB."); return; }
     const reader = new FileReader();
     reader.onload = () => {
       const url = reader.result as string;
@@ -191,12 +231,9 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
   const doSave = async (visibility: "private" | "public") => {
     if (validation) { toast.error(validation); return; }
-    // For uploaded images we use a single-character placeholder glyph so the
-    // legacy emoji renderer never sees an empty string; PieceGlyph prefers
-    // `imageUrl` when present anyway.
     const effectiveEmoji = imageMode === "upload" ? "🖼️" : emoji;
     const def = buildPieceDef({
-      id, name: name.trim(), description: description.trim(), emoji: effectiveEmoji, steps, ranged,
+      id, name: name.trim(), description: description.trim(), emoji: effectiveEmoji, options, ranged,
       pointsOverride: overrideEnabled ? overridePts : undefined,
     });
     if ("error" in def) { toast.error(def.error); return; }
@@ -211,13 +248,21 @@ export function PieceBuilderForm({ onSaved }: Props) {
         },
       });
 
-      // After the row exists, upload the image (RLS keys on the row id).
       if (imageMode === "upload" && imageFile) {
         const fd = new FormData();
         fd.set("pieceId", row.id);
         fd.set("file", imageFile, "piece.png");
         const res = await uploadImage({ data: fd });
         def.imageUrl = res.imageUrl;
+      }
+
+      if (abilityRequest.trim()) {
+        try {
+          await submitAbility({ data: { pieceId: row.id, requestText: abilityRequest.trim() } });
+          toast.success("Special ability request submitted for review.");
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Couldn't submit ability request.");
+        }
       }
 
       toast.success(
@@ -229,10 +274,11 @@ export function PieceBuilderForm({ onSaved }: Props) {
       // Reset
       setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
       setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
-      setSteps([defaultStep()]);
+      setOptions([defaultOption()]);
       setRanged(defaultRangedAttack());
       setOverrideEnabled(false);
       setOverridePts(3);
+      setAbilityRequest("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the piece.");
     } finally {
@@ -323,32 +369,33 @@ export function PieceBuilderForm({ onSaved }: Props) {
           )}
         </section>
 
-
-        {/* Movement */}
+        {/* Movement options */}
         <section className="rounded-lg border bg-card p-4 space-y-3">
-          <h2 className="font-display text-lg font-semibold">3. Movement & melee attack</h2>
+          <h2 className="font-display text-lg font-semibold">3. Movement options</h2>
           <p className="text-xs text-muted-foreground">
-            Define one step at a time. Each step has a <strong>Captures on landing</strong> checkbox — leave it
-            on for standard chess (the piece captures wherever it can move). Turn it off to make a non-capturing
-            move (e.g. pawn-style forward). For multi-step (knight-like) chains, only the last step's capture
-            flag is used. For rook/bishop-like pieces, use a single step with unlimited distance.
+            Add one or more <strong>alternative moves</strong>. Each option is its own pattern with a kind
+            (move-or-capture, move-only, capture-only) and an optional condition. A pawn, for example, is
+            three options: forward push (move-only), two-square first push (move-only · starting only), and
+            diagonal capture (capture-only).
           </p>
           <div className="space-y-3">
-            {steps.map((step, idx) => (
-              <StepRow
+            {options.map((opt, idx) => (
+              <OptionCard
                 key={idx}
                 idx={idx}
-                step={step}
-                isLast={idx === steps.length - 1}
-                canRemove={steps.length > 1}
-                onChange={(patch) => updateStep(idx, patch)}
-                onRemove={() => removeStep(idx)}
+                option={opt}
+                canRemove={options.length > 1}
+                onChange={(patch) => updateOption(idx, patch)}
+                onRemove={() => removeOption(idx)}
+                onStepChange={(stepIdx, patch) => updateStep(idx, stepIdx, patch)}
+                onAddStep={() => addStep(idx)}
+                onRemoveStep={(stepIdx) => removeStep(idx, stepIdx)}
               />
             ))}
           </div>
-          {steps.length < MAX_STEPS && (
-            <Button variant="outline" size="sm" onClick={addStep}>
-              <Plus className="h-4 w-4 mr-1" /> Add step
+          {options.length < MAX_OPTIONS && (
+            <Button variant="outline" size="sm" onClick={addOption}>
+              <Plus className="h-4 w-4 mr-1" /> Add alternative move
             </Button>
           )}
         </section>
@@ -426,6 +473,24 @@ export function PieceBuilderForm({ onSaved }: Props) {
             </div>
           )}
         </section>
+
+        {/* Special ability request */}
+        <section className="rounded-lg border bg-card p-4 space-y-3">
+          <h2 className="font-display text-lg font-semibold">5. Special ability (optional, requires review)</h2>
+          <p className="text-xs text-muted-foreground">
+            Want something beyond movement — resurrection, swapping places, etc.? Describe it here. A reviewer
+            will look at the request and let you know if it can be added. Your piece is fully playable
+            regardless.
+          </p>
+          <Textarea
+            value={abilityRequest}
+            onChange={(e) => setAbilityRequest(e.target.value.slice(0, 800))}
+            placeholder="e.g. Once per game, may resurrect a friendly pawn on an adjacent empty square."
+            maxLength={800}
+            rows={3}
+          />
+          <p className="text-[11px] text-muted-foreground text-right">{abilityRequest.length} / 800</p>
+        </section>
       </div>
 
       {/* Right rail: live preview + save */}
@@ -443,7 +508,7 @@ export function PieceBuilderForm({ onSaved }: Props) {
           <div>
             <p className="text-xs text-muted-foreground mb-1">Reach from a center cell</p>
             <PieceReachPreview
-              steps={steps}
+              options={options}
               rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
             />
           </div>
@@ -506,26 +571,102 @@ export function PieceBuilderForm({ onSaved }: Props) {
   );
 }
 
+interface OptionCardProps {
+  idx: number;
+  option: MoveOption;
+  canRemove: boolean;
+  onChange: (patch: Partial<MoveOption>) => void;
+  onRemove: () => void;
+  onStepChange: (stepIdx: number, patch: Partial<MoveStep>) => void;
+  onAddStep: () => void;
+  onRemoveStep: (stepIdx: number) => void;
+}
+
+function OptionCard({ idx, option, canRemove, onChange, onRemove, onStepChange, onAddStep, onRemoveStep }: OptionCardProps) {
+  return (
+    <div className="rounded-md border bg-background p-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold">Option {idx + 1}</h4>
+          <p className="text-[11px] text-muted-foreground truncate">{summarizeOption(option)}</p>
+        </div>
+        {canRemove && (
+          <Button size="sm" variant="ghost" onClick={onRemove} className="h-7 w-7 p-0">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-2 text-sm">
+        <div>
+          <Label className="text-xs">Kind</Label>
+          <select
+            className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+            value={option.kind}
+            onChange={(e) => onChange({ kind: e.target.value as MoveOptionKind })}
+          >
+            {OPTION_KIND_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {OPTION_KIND_OPTIONS.find((o) => o.value === option.kind)?.hint}
+          </p>
+        </div>
+        <div>
+          <Label className="text-xs">Condition</Label>
+          <select
+            className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+            value={option.condition}
+            onChange={(e) => onChange({ condition: e.target.value as MoveCondition })}
+          >
+            {CONDITION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {option.steps.map((step, stepIdx) => (
+          <StepRow
+            key={stepIdx}
+            idx={stepIdx}
+            step={step}
+            canRemove={option.steps.length > 1}
+            onChange={(patch) => onStepChange(stepIdx, patch)}
+            onRemove={() => onRemoveStep(stepIdx)}
+          />
+        ))}
+        {option.steps.length < MAX_STEPS && (
+          <Button variant="outline" size="sm" onClick={onAddStep}>
+            <Plus className="h-4 w-4 mr-1" /> Add step
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface StepProps {
   idx: number;
   step: MoveStep;
-  isLast: boolean;
   canRemove: boolean;
   onChange: (patch: Partial<MoveStep>) => void;
   onRemove: () => void;
 }
 
-function StepRow({ idx, step, isLast, canRemove, onChange, onRemove }: StepProps) {
+function StepRow({ idx, step, canRemove, onChange, onRemove }: StepProps) {
   const isFirst = idx === 0;
   const dirKind = step.direction.kind;
 
   return (
-    <div className="rounded-md border bg-background p-3 space-y-2">
+    <div className="rounded-md border bg-muted/30 p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold">Step {idx + 1}</h4>
+        <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step {idx + 1}</h5>
         {canRemove && (
           <Button size="sm" variant="ghost" onClick={onRemove} className="h-7 w-7 p-0">
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         )}
       </div>
@@ -538,7 +679,7 @@ function StepRow({ idx, step, isLast, canRemove, onChange, onRemove }: StepProps
               checked={dirKind === "absolute"}
               onChange={() => onChange({ direction: { kind: "absolute", dir: "any-8" } })}
             />
-            Absolute direction
+            Absolute
           </label>
           <label className="flex items-center gap-1">
             <input
@@ -546,7 +687,7 @@ function StepRow({ idx, step, isLast, canRemove, onChange, onRemove }: StepProps
               checked={dirKind === "relative"}
               onChange={() => onChange({ direction: { kind: "relative", rel: "any-perp" } })}
             />
-            Relative to previous step
+            Relative to previous
           </label>
         </div>
       )}
@@ -603,21 +744,6 @@ function StepRow({ idx, step, isLast, canRemove, onChange, onRemove }: StepProps
           </label>
         </div>
       </div>
-
-      <label
-        className={`flex items-center gap-2 text-xs cursor-pointer pt-1 ${
-          !isLast ? "opacity-60" : ""
-        }`}
-        title={!isLast ? "For multi-step chains, only the last step's capture flag is used." : undefined}
-      >
-        <input
-          type="checkbox"
-          checked={step.captures}
-          onChange={(e) => onChange({ captures: e.target.checked })}
-        />
-        Captures on landing
-        {!isLast && <span className="text-muted-foreground">(only the last step's flag matters)</span>}
-      </label>
     </div>
   );
 }
