@@ -33,38 +33,29 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
   const legalTargets = legalFor(selected ?? dragFrom);
-  const inspectPiece = selected ? state.board[selected.r][selected.c] : null;
-  const inspectSelected = !!inspectPiece && inspectPiece.color !== humanColor;
-  // "Attack coverage": every square this enemy piece could capture IF an enemy were there.
-  // We probe each square by dropping a phantom victim and asking pseudoMovesFrom for a capture.
-  const inspectTargets: Square[] = (() => {
-    if (!inspectSelected || !selected || !inspectPiece) return [];
-    const attackerColor = inspectPiece.color;
-    const victimColor: "w" | "b" = attackerColor === "w" ? "b" : "w";
+  const selectedPieceForInspect = selected ? state.board[selected.r][selected.c] : null;
+  const isEnemyInspect = !!selectedPieceForInspect && selectedPieceForInspect.color !== humanColor;
+
+  // Attack pattern of the selected piece (any owner) — squares the piece
+  // threatens, i.e. could capture if an enemy stood there. Used to paint
+  // orange "attack-only" indicators (e.g. dragon strike on empty squares,
+  // pawn diagonals without a target).
+  const attackSquares: Square[] = (() => {
+    if (!selected || !selectedPieceForInspect) return [];
+    return attackSquaresFrom(state, selected);
+  })();
+  const attackSet = new Set(attackSquares.map((s) => `${s.r},${s.c}`));
+
+  // For enemy inspection we don't have legalFor — derive pseudo non-capture
+  // move squares directly so we can still paint green move-only dots.
+  const enemyMoveOnlyTargets: Square[] = (() => {
+    if (!isEnemyInspect || !selected) return [];
     const out: Square[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (r === selected.r && c === selected.c) continue;
-        const existing = state.board[r][c];
-        // If a friendly piece sits there, the attacker can't capture it; still
-        // counts as "covered" for the player's planning purposes — probe with
-        // a temporary swap to a phantom enemy.
-        const probeBoard = state.board.map((row, ri) =>
-          ri === r ? row.map((cell, ci) => (ci === c ? { id: "P", color: victimColor } as typeof cell : cell)) : row,
-        );
-        const probeState = { ...state, board: probeBoard } as typeof state;
-        const moves = pseudoMovesFrom(probeState, selected);
-        const hits = moves.some((m) => {
-          if (m.to.r !== r || m.to.c !== c) return false;
-          if (!m.captured) return false;
-          if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") return false;
-          if (m.kind === "juggShift" || m.kind === "juggExit") return false;
-          return true;
-        });
-        if (hits) out.push({ r, c });
-        // suppress unused warning
-        void existing;
-      }
+    for (const m of pseudoMovesFrom(state, selected)) {
+      if (m.captured) continue;
+      if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") continue;
+      if (m.kind === "juggExit") continue;
+      out.push(m.to);
     }
     return out;
   })();
