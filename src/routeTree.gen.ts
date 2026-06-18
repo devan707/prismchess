@@ -15,6 +15,8 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PiecesIndexRouteImport } from './routes/pieces.index'
+import { Route as PiecesNewRouteImport } from './routes/pieces.new'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -62,6 +64,16 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PiecesIndexRoute = PiecesIndexRouteImport.update({
+  id: '/pieces/',
+  path: '/pieces/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PiecesNewRoute = PiecesNewRouteImport.update({
+  id: '/pieces/new',
+  path: '/pieces/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GSlugRoute = GSlugRouteImport.update({
@@ -183,6 +195,8 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/new': typeof PiecesNewRoute
+  '/pieces/': typeof PiecesIndexRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
@@ -206,6 +220,8 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/new': typeof PiecesNewRoute
+  '/pieces': typeof PiecesIndexRoute
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
@@ -234,6 +250,8 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/new': typeof PiecesNewRoute
+  '/pieces/': typeof PiecesIndexRoute
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
   '/_authenticated/forum/suggest': typeof AuthenticatedForumSuggestRoute
@@ -262,6 +280,8 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/g/$slug'
+    | '/pieces/new'
+    | '/pieces/'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
@@ -285,6 +305,8 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/g/$slug'
+    | '/pieces/new'
+    | '/pieces'
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
@@ -312,6 +334,8 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/g/$slug'
+    | '/pieces/new'
+    | '/pieces/'
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
     | '/_authenticated/forum/suggest'
@@ -333,6 +357,8 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
+  PiecesNewRoute: typeof PiecesNewRoute
+  PiecesIndexRoute: typeof PiecesIndexRoute
   ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
 }
 
@@ -378,6 +404,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pieces/': {
+      id: '/pieces/'
+      path: '/pieces'
+      fullPath: '/pieces/'
+      preLoaderRoute: typeof PiecesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pieces/new': {
+      id: '/pieces/new'
+      path: '/pieces/new'
+      fullPath: '/pieces/new'
+      preLoaderRoute: typeof PiecesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$slug': {
@@ -600,6 +640,8 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
+  PiecesNewRoute: PiecesNewRoute,
+  PiecesIndexRoute: PiecesIndexRoute,
   ApiPublicHooksCleanupStaleChallengesRoute:
     ApiPublicHooksCleanupStaleChallengesRoute,
 }
