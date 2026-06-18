@@ -8,7 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { buildDefaultDesign, juggPartnerCandidates, PRESETS, saveCurrentMeta, saveDesign, validateDesign } from "@/game/design";
+import {
+  buildDefaultDesign,
+  buildUserPresetPlacements,
+  deleteUserPreset,
+  extractPresetFromDesign,
+  juggPartnerCandidates,
+  loadUserPresets,
+  PRESETS,
+  saveCurrentMeta,
+  saveDesign,
+  upsertUserPreset,
+  validateDesign,
+  type UserPreset,
+} from "@/game/design";
 import { saveSavedGame } from "@/game/library";
 import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
 import { buildRegistry, PIECE_LIBRARY, STANDARD_PIECE_IDS, BUILTIN_CUSTOM_IDS } from "@/game/pieces";
