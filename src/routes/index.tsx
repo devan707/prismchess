@@ -161,27 +161,31 @@ function Home() {
 
         {/* QUICK PLAY (featured) */}
         <section className="space-y-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Featured variant</h2>
-          <Card className="p-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/70 px-1">Featured variant</h2>
+          <Card className="p-4 rounded-sm">
             <div className="flex items-start gap-3">
-              <div className="h-14 w-14 rounded-md bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-primary shrink-0">
-                <Sparkles className="h-7 w-7" />
+              <div className="h-14 w-14 rounded-sm bg-gradient-to-br from-[#ff4d6d]/40 via-[#ffe24d]/30 to-[#4dc4ff]/40 flex items-center justify-center text-card-foreground shrink-0 font-display font-black text-2xl">
+                {featured.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-display font-semibold text-base">{featured.name}</div>
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{featured.description}</p>
+                <p className="text-xs text-card-foreground/70 line-clamp-2 mt-0.5">{featured.description}</p>
               </div>
             </div>
             <div className="mt-3 flex gap-2">
-              <Button className="flex-1" onClick={() => playBuiltin(featured)}>
+              <button
+                onClick={() => playBuiltin(featured)}
+                className="prism-border prism-border-hover flex-1 inline-flex items-center justify-center h-10 text-sm font-semibold tracking-wide"
+              >
                 <Play className="h-4 w-4 mr-2" /> Play vs AI
-              </Button>
+              </button>
               <Link to="/lobby" className="flex-shrink-0">
-                <Button variant="outline">More games</Button>
+                <Button variant="outline" className="rounded-sm h-10">More games</Button>
               </Link>
             </div>
           </Card>
         </section>
+
 
         {/* SIGNATURE GAMES (built-in) */}
         <section className="space-y-2">
