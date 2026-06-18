@@ -705,12 +705,15 @@ function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
     const innerDist = Math.abs(juggInner.r - from.r) + Math.abs(juggInner.c - from.c);
     const partnerDist = Math.abs(partner.r - from.r) + Math.abs(partner.c - from.c);
     if (partnerDist !== innerDist + 1) continue; // pair not aligned outward
-    // King's destination = origin + 3*offset. Must equal inner or partner.
+    // King moves exactly 3 squares toward the Juggernaut. Its landing square
+    // must be empty OR be one of the Juggernaut's two halves (which vacate).
     const kingTo: Square = { r: from.r + 3 * o.dr, c: from.c + 3 * o.dc };
-    const isOnJugg =
+    if (!inBoardBounds(board, kingTo)) continue;
+    const landing = board[kingTo.r][kingTo.c];
+    const landingIsJugg =
       (kingTo.r === juggInner.r && kingTo.c === juggInner.c) ||
       (kingTo.r === partner.r && kingTo.c === partner.c);
-    if (!isOnJugg) continue;
+    if (landing && !landingIsJugg) continue;
     // Has either juggernaut half moved?
     const juggMoved = state.history.some(
       (m) => m.piece.color === king.color && m.piece.id === "J",
