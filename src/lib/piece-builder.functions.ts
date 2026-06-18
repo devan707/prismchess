@@ -87,12 +87,83 @@ export const savePiece = createServerFn({ method: "POST" })
     throw new Error("Could not generate a unique link. Please try again.");
   });
 
-// NOTE: There is intentionally NO updatePiece server fn. Custom pieces are
-// immutable once saved so other people's published games that embed the piece
-// keep working exactly as designed. To "edit" a piece, the UI forks it via
-// `/pieces/new?from=<slug>` and creates a brand-new piece (see savePiece).
+// ---------- Update an existing custom piece (owner only) ----------
+//
+// In-place edit. After the row is updated we also walk the author's OWN
+// published games and rewrite any embedded copy of this piece in their
+// `design.customPieces` so their published variants reflect the new design.
+// Other people's published games keep their frozen snapshot — we never touch
+// rows owned by someone else.
 
-// ---------- Get one of my pieces (by slug) for duplication/forking ----------
+const UpdateInput = z.object({
+  pieceId: UuidSchema,
+  name: z.string().trim().min(1).max(60),
+  description: z.string().trim().max(400).default(""),
+  def: PieceDefJson,
+  visibility: z.enum(["private", "public"]),
+});
+
+export const updatePiece = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => UpdateInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: existing, error: ownErr } = await context.supabase
+      .from("custom_pieces")
+      .select("id, author_id, image_url, def")
+      .eq("id", data.pieceId)
+      .maybeSingle();
+    if (ownErr) throw new Error(ownErr.message);
+    if (!existing) throw new Error("Piece not found.");
+    if (existing.author_id !== context.userId) throw new Error("You can only edit your own pieces.");
+
+    const defWithImage = existing.image_url
+      ? { ...data.def, imageUrl: existing.image_url }
+      : data.def;
+
+    const { data: row, error } = await context.supabase
+      .from("custom_pieces")
+      .update({
+        name: data.name,
+        description: data.description,
+        def: defWithImage as never,
+        visibility: data.visibility,
+      })
+      .eq("id", data.pieceId)
+      .select("id, slug")
+      .single();
+    if (error) throw new Error(error.message);
+
+    // Pull the engine-facing piece id out of the def (e.g. "u:abc123"). That is
+    // what's stored in design.customPieces[*].id — not the row UUID.
+    const enginePieceId = (defWithImage as { id?: unknown }).id;
+    let refreshedGames = 0;
+    if (typeof enginePieceId === "string" && enginePieceId.length > 0) {
+      const { data: myGames } = await context.supabase
+        .from("published_games")
+        .select("id, design")
+        .eq("author_id", context.userId);
+      for (const g of myGames ?? []) {
+        const design = g.design as { customPieces?: Array<{ id?: string }> } | null;
+        if (!design || !Array.isArray(design.customPieces)) continue;
+        let touched = false;
+        const nextPieces = design.customPieces.map((p) => {
+          if (p && p.id === enginePieceId) { touched = true; return defWithImage; }
+          return p;
+        });
+        if (!touched) continue;
+        const nextDesign = { ...design, customPieces: nextPieces };
+        const { error: upErr } = await context.supabase
+          .from("published_games")
+          .update({ design: nextDesign as never, updated_at: new Date().toISOString() })
+          .eq("id", g.id)
+          .eq("author_id", context.userId);
+        if (!upErr) refreshedGames += 1;
+      }
+    }
+    return { ...row, refreshedGames };
+  });
+
+// ---------- Get one of my pieces (by slug) for duplication/forking or editing ----------
 
 export const getMyPieceBySlug = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
