@@ -373,6 +373,7 @@ export const publishGame = createServerFn({ method: "POST" })
     description: z.string().trim().min(1).max(2000),
     design: DesignJsonSchema,
     tutorial: TutorialJsonSchema,
+    remixedFromId: UuidSchema.nullable().optional(),
   }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
