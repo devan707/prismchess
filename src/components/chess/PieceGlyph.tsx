@@ -66,6 +66,22 @@ export function PieceGlyph({ piece, def, className }: Props) {
             filter: `${piece.color === "w" ? "invert(1) hue-rotate(180deg)" : "none"} drop-shadow(0 0 1px rgba(0,0,0,0.9)) drop-shadow(0 0 2px rgba(0,0,0,0.7)) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`,
           }}
         />
+      ) : def?.imageUrl ? (
+        // User-uploaded PNG (300×300, transparent). Apply the same silhouette
+        // filter as built-in pieces so it reads on any square in either color.
+        <img
+          src={def.imageUrl}
+          alt={def.name}
+          draggable={false}
+          style={{
+            width: "90%",
+            height: "90%",
+            objectFit: "contain",
+            filter: undead
+              ? `${filter} drop-shadow(0 0 4px rgba(74,222,128,0.95)) drop-shadow(0 0 8px rgba(34,197,94,0.7))`
+              : filter,
+          }}
+        />
       ) : (
         <span
           className="relative"
