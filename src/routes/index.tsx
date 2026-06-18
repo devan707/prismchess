@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   BUILTIN_GAMES,
@@ -11,6 +11,8 @@ import {
   type SavedGame,
 } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
+import { getVariantStats, type VariantStats } from "@/lib/variant-stats.functions";
+import { PlayCount } from "@/components/chess/PlayCount";
 import { Hammer, Play, Trash2, Sparkles, MessagesSquare, Swords, History, BookOpen, Users, Mail } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import logoUrl from "@/assets/logo.png";
