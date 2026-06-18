@@ -26,6 +26,8 @@ export const FIXED_PIECE_POINTS: Record<string, number> = {
   Q: 9,
   D: 11,   // Dragon
   Y: 0,    // Prism — indestructible fixture
+  E: 4,    // Shadow Knight (knight + linked-partner constraint)
+  V: 6,    // Twin Tower  (rook + linked-partner constraint)
   G: 12,   // Regent (royal, informational)
   L: 12,   // Lich King (royal, informational)
   K: 0,    // King — royal, no material value (game ends on loss)

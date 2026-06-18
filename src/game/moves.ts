@@ -124,6 +124,23 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
 
+/** Find the other piece of the same id+color (the "twin") elsewhere on the board.
+ *  Used by linked pieces (Shadow Knight, Twin Tower). Returns null if no
+ *  partner exists or if more than one other candidate exists (ambiguous). */
+function findLinkPartner(board: Board, from: Square, piece: Piece): Square | null {
+  let found: Square | null = null;
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[0].length; c++) {
+      if (r === from.r && c === from.c) continue;
+      const t = board[r][c];
+      if (!t || t.id !== piece.id || t.color !== piece.color) continue;
+      if (found) return null; // ambiguous (3+ linked pieces) — disable
+      found = { r, c };
+    }
+  }
+  return found;
+}
+
 function promotionOptionsFor(state: GameState): PieceId[] {
   const out: PieceId[] = [];
   for (const id of Object.keys(state.registry)) {
@@ -605,7 +622,77 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
   }
 
 
-  // Generic data-driven piece — v2 option-based path
+  if (def.special === "shadowKnight" || def.special === "twinTower") {
+    const partnerSq = findLinkPartner(board, from, piece);
+    if (!partnerSq) return moves; // orphan link piece can't act
+    const partnerPiece = board[partnerSq.r][partnerSq.c]!;
+    const blocker = (o: Piece | null) =>
+      isBarricade(o, state.registry) || isFixture(o, state.registry);
+
+    if (def.special === "shadowKnight") {
+      const KN: Offset[] = [
+        { dr: 2, dc: 1 }, { dr: 2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -2, dc: -1 },
+        { dr: 1, dc: 2 }, { dr: 1, dc: -2 }, { dr: -1, dc: 2 }, { dr: -1, dc: -2 },
+      ];
+      for (const o of KN) {
+        const to = { r: from.r + o.dr, c: from.c + o.dc };
+        const pTo = { r: partnerSq.r - o.dr, c: partnerSq.c - o.dc };
+        if (!inBoardBounds(board, to) || !inBoardBounds(board, pTo)) continue;
+        // Destinations cannot collide.
+        if (to.r === pTo.r && to.c === pTo.c) continue;
+        // Treat partner's pre-move square as empty for own landing, and vice versa.
+        const ownOcc = (to.r === partnerSq.r && to.c === partnerSq.c) ? null : board[to.r][to.c];
+        const partnerOcc = (pTo.r === from.r && pTo.c === from.c) ? null : board[pTo.r][pTo.c];
+        if (blocker(ownOcc) || blocker(partnerOcc)) continue;
+        if (ownOcc && ownOcc.color === piece.color) continue;
+        if (partnerOcc && partnerOcc.color === piece.color) continue;
+        moves.push({
+          from, to, piece,
+          captured: ownOcc && ownOcc.color !== piece.color ? ownOcc : null,
+          kind: "shadowLink",
+          partnerFrom: partnerSq,
+          partnerTo: pTo,
+          partnerPiece,
+          partnerCaptured: partnerOcc && partnerOcc.color !== piece.color ? partnerOcc : null,
+        });
+      }
+      return moves;
+    }
+
+    // twinTower — slide both pieces the same (dr, dc) along an orthogonal axis.
+    const DIRS: Offset[] = [
+      { dr: 1, dc: 0 }, { dr: -1, dc: 0 }, { dr: 0, dc: 1 }, { dr: 0, dc: -1 },
+    ];
+    for (const d of DIRS) {
+      for (let dist = 1; ; dist++) {
+        const to = { r: from.r + d.dr * dist, c: from.c + d.dc * dist };
+        const pTo = { r: partnerSq.r + d.dr * dist, c: partnerSq.c + d.dc * dist };
+        if (!inBoardBounds(board, to) || !inBoardBounds(board, pTo)) break;
+        if (to.r === pTo.r && to.c === pTo.c) break;
+        const ownOcc = (to.r === partnerSq.r && to.c === partnerSq.c) ? null : board[to.r][to.c];
+        const partnerOcc = (pTo.r === from.r && pTo.c === from.c) ? null : board[pTo.r][pTo.c];
+        if (blocker(ownOcc) || blocker(partnerOcc)) break;
+        if (ownOcc && ownOcc.color === piece.color) break;
+        if (partnerOcc && partnerOcc.color === piece.color) break;
+        const ownEnemy = !!(ownOcc && ownOcc.color !== piece.color);
+        const partnerEnemy = !!(partnerOcc && partnerOcc.color !== piece.color);
+        moves.push({
+          from, to, piece,
+          captured: ownEnemy ? ownOcc : null,
+          kind: "twinLink",
+          partnerFrom: partnerSq,
+          partnerTo: pTo,
+          partnerPiece,
+          partnerCaptured: partnerEnemy ? partnerOcc : null,
+        });
+        // Either lane hitting an enemy stops the slide for both.
+        if (ownEnemy || partnerEnemy) break;
+      }
+    }
+    return moves;
+  }
+
+
   if (def.options && def.options.length > 0) {
     const onStartingSquare = !state.history.some(
       (m) =>
@@ -901,6 +988,17 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     b[move.from.r][move.from.c] = friendly;
     return b;
   }
+  if ((move.kind === "shadowLink" || move.kind === "twinLink") &&
+      move.from && move.partnerFrom && move.partnerTo && move.partnerPiece) {
+    // Clear both source squares first, then write both destinations. This
+    // correctly handles cases where partner lands on the mover's vacated
+    // square (or vice versa).
+    b[move.from.r][move.from.c] = null;
+    b[move.partnerFrom.r][move.partnerFrom.c] = null;
+    b[move.to.r][move.to.c] = { id: move.piece.id, color: move.piece.color };
+    b[move.partnerTo.r][move.partnerTo.c] = { id: move.partnerPiece.id, color: move.partnerPiece.color };
+    return b;
+  }
   if (move.kind === "resurrect" && move.resurrectPieceId) {
     // Legacy path (graveyard-based resurrect). Necromancer stays.
     b[move.to.r][move.to.c] = { id: move.resurrectPieceId, color: move.piece.color };
@@ -1035,8 +1133,10 @@ export function attackSquaresFrom(state: GameState, from: Square): Square[] {
         ? legalMovesFrom(probeState, from)
         : pseudoMovesFrom(probeState, from);
       const hits = moves.some((m) => {
-        if (m.to.r !== r || m.to.c !== c) return false;
-        if (!m.captured) return false;
+        const ownHit = m.to.r === r && m.to.c === c && !!m.captured;
+        const partnerHit = (m.kind === "shadowLink" || m.kind === "twinLink") &&
+          !!m.partnerTo && m.partnerTo.r === r && m.partnerTo.c === c && !!m.partnerCaptured;
+        if (!ownHit && !partnerHit) return false;
         if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") return false;
         if (m.kind === "juggShift" || m.kind === "juggExit") return false;
         return true;
@@ -1061,7 +1161,10 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
       if (!p || p.color !== byColor) continue;
       const moves = pseudoMovesFrom(scanState, { r, c });
       for (const m of moves) {
-        if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
+        const partnerHits =
+          (m.kind === "shadowLink" || m.kind === "twinLink") &&
+          !!m.partnerTo && m.partnerTo.r === sq.r && m.partnerTo.c === sq.c;
+        if (((m.to.r === sq.r && m.to.c === sq.c) || partnerHits) && m.kind !== "drop") {
           if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
           if (m.kind === "portalSwap") continue;
           if (m.kind === "resurrect" || m.kind === "necroRaise") continue;
@@ -1131,7 +1234,7 @@ function applyMoveToState(state: GameState, move: Move): GameState {
     reserves[move.piece.color][move.dropPieceId] = Math.max(0, (reserves[move.piece.color][move.dropPieceId] ?? 0) - 1);
   }
   let captured = state.captured;
-  if (move.captured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
+  if (move.captured || move.partnerCaptured || move.kind === "resurrect" || move.kind === "necroRaise" || move.juggTrampled) {
     const w = [...state.captured.w];
     const b = [...state.captured.b];
     const targetPool = state.turn === "w" ? w : b;
@@ -1141,6 +1244,9 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       if (move.captured.id === "J") {
         targetPool.push({ id: "J", color: move.captured.color });
       }
+    }
+    if (move.partnerCaptured) {
+      targetPool.push(move.partnerCaptured);
     }
     if (move.juggTrampled) {
       for (const p of move.juggTrampled) {
@@ -1180,6 +1286,14 @@ function applyMoveToState(state: GameState, move: Move): GameState {
         nextCorpses.push({ square: part, pieceId: "J", originalOwner: move.captured.color });
       }
     }
+  }
+  // Linked-piece partner capture: record corpse at partnerTo.
+  if (move.partnerCaptured && move.partnerTo && !move.partnerCaptured.raisedOnce) {
+    nextCorpses.push({
+      square: move.partnerTo,
+      pieceId: move.partnerCaptured.id,
+      originalOwner: move.partnerCaptured.color,
+    });
   }
   // Juggernaut trample: record a corpse on each trampled square along the
   // charge lane (both lead and partner rows/cols).

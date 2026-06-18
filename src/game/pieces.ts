@@ -189,10 +189,28 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     builtinCustom: true,
     description: "Indestructible single-square rainbow board fixture. Cannot move, cannot be captured, and blocks movement like a wall. Any non-royal piece that passes through any of the 8 squares adjacent to the Prism (the rainbow 'aura') is instantly flipped to the opposite color. At the end of EVERY turn, every non-royal piece still standing in the aura is flipped again — so to keep a converted enemy piece you must walk it out of the aura on your next turn. Kings are immune.",
   },
+  E: {
+    id: "E",
+    name: "Shadow Knight",
+    glyph: "🐴",
+    emoji: true,
+    special: "shadowKnight",
+    builtinCustom: true,
+    description: "Linked through the Prism to its twin. Moves and captures like a Knight (L-shape, jumps pieces). Each side's two Shadow Knights are bound: whenever one moves, the OTHER must mirror that movement across the center — same offset, negated — as a single action. If either Shadow Knight cannot complete its mirrored move (off-board, friendly, blocker), the whole move is illegal. Either or both may capture on the same linked move. If a Shadow Knight's partner has been captured, the survivor cannot move.",
+  },
+  V: {
+    id: "V",
+    name: "Twin Tower",
+    glyph: "🏰",
+    emoji: true,
+    special: "twinTower",
+    builtinCustom: true,
+    description: "Linked through magical symmetry to its twin. Moves and captures like a Rook (any number of squares orthogonally; cannot jump). Each side's two Twin Towers are bound: whenever one moves, the OTHER must perform the EXACT same movement (same direction and distance) as a single action. Both paths must be clear, neither destination may hold a friendly piece. Either or both may capture on the same linked move. If a Twin Tower's partner has been captured, the survivor cannot move.",
+  },
 };
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
-export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "G", "L", "A", "D", "X", "T", "M", "S", "J", "Z", "W", "Y"];
+export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "G", "L", "A", "D", "X", "T", "M", "S", "J", "Z", "W", "Y", "E", "V"];
 export const ALL_BUILTIN_IDS: PieceId[] = [...STANDARD_PIECE_IDS, ...BUILTIN_CUSTOM_IDS];
 
 /** Build a registry from the built-ins + user-defined pieces. */

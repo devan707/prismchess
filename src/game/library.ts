@@ -81,6 +81,13 @@ export const BUILTIN_GAMES: GameType[] = [
     build: () => presetDesign(12, 12, "grand-menagerie"),
   },
   {
+    id: "house-of-mirrors-8",
+    name: "House of Mirrors",
+    description: "Classical 8×8 chess with a magical twist: Rooks become Twin Towers and Knights become Shadow Knights. Every linked pair moves together as one — same direction for towers, mirrored across the center for shadow knights. Familiar opening theory, completely different piece coordination.",
+    rows: 8, cols: 8, builtin: true,
+    build: () => presetDesign(8, 8, "house-of-mirrors"),
+  },
+  {
     id: "lone-king-8",
     name: "Pawns & King",
     description: "Solo king behind a wall of pawns. Calm canvas to learn on.",
