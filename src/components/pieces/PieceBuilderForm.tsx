@@ -120,18 +120,22 @@ function summarizeOption(opt: MoveOption): string {
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
-export function PieceBuilderForm({ onSaved, template }: Props) {
-  const initDef = template?.def;
+export function PieceBuilderForm({ onSaved, initial, template }: Props) {
+  const isEdit = !!initial;
+  const seed = initial ?? template;
+  const initDef = seed?.def;
   const initRangedSource = (initDef as unknown as { __rangedSource?: RangedAttack } | undefined)?.__rangedSource;
-  const hasUploadedImage = !!(template?.imageUrl || initDef?.imageUrl);
-  const [name, setName] = useState(template ? `${template.name} (copy)` : "");
-  const [description, setDescription] = useState(template?.description ?? "");
+  const hasUploadedImage = !!(seed?.imageUrl || initDef?.imageUrl);
+  const [name, setName] = useState(
+    initial?.name ?? (template ? `${template.name} (copy)` : ""),
+  );
+  const [description, setDescription] = useState(seed?.description ?? "");
   const [iconPrompt, setIconPrompt] = useState("");
   const [emoji, setEmoji] = useState(initDef && !hasUploadedImage ? (initDef.glyph || "") : "");
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [imageMode, setImageMode] = useState<"emoji" | "upload">(hasUploadedImage ? "upload" : "emoji");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(template?.imageUrl ?? initDef?.imageUrl ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(seed?.imageUrl ?? initDef?.imageUrl ?? null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [options, setOptions] = useState<MoveOption[]>(
     initDef?.options && initDef.options.length > 0 ? initDef.options : [defaultOption()],
@@ -149,11 +153,12 @@ export function PieceBuilderForm({ onSaved, template }: Props) {
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
+  const update = useServerFn(updatePiece);
   const uploadImage = useServerFn(uploadPieceImage);
   const submitAbility = useServerFn(requestPieceAbility);
 
-  // Always a fresh id — pieces are immutable once published into the library.
-  const [id] = useState<string>(() => genId());
+  // Edit reuses the original piece id; new pieces (including duplicates) get a fresh id.
+  const [id] = useState<string>(() => (isEdit && initDef?.id) ? initDef.id : genId());
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
 
