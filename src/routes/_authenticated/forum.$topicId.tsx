@@ -99,8 +99,9 @@ function TopicPage() {
             </div>
           )}
           {topic.shared_piece && (() => {
-            const sp = topic.shared_piece;
-            const def: PieceDef = { ...(sp.def as PieceDef), imageUrl: sp.image_url ?? (sp.def as PieceDef).imageUrl };
+            const sp = topic.shared_piece as { id: string; slug: string; name: string; description: string; def: unknown; image_url: string | null };
+            const baseDef = (sp.def ?? {}) as PieceDef;
+            const def: PieceDef = { ...baseDef, imageUrl: sp.image_url ?? baseDef.imageUrl };
             return (
               <Link
                 to="/pieces/$slug"
