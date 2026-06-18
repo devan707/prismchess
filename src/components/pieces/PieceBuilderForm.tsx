@@ -118,13 +118,16 @@ function summarizeOption(opt: MoveOption): string {
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
-export function PieceBuilderForm({ onSaved, initial }: Props) {
+export function PieceBuilderForm({ onSaved, initial, template }: Props) {
   const isEdit = !!initial;
-  const initDef = initial?.def;
+  const seed = initial ?? template;
+  const initDef = seed?.def;
   const initRangedSource = (initDef as unknown as { __rangedSource?: RangedAttack } | undefined)?.__rangedSource;
-  const hasUploadedImage = !!(initial?.imageUrl || initDef?.imageUrl);
-  const [name, setName] = useState(initial?.name ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
+  const hasUploadedImage = !!(seed?.imageUrl || initDef?.imageUrl);
+  const [name, setName] = useState(
+    initial?.name ?? (template ? `${template.name} (copy)` : ""),
+  );
+  const [description, setDescription] = useState(seed?.description ?? "");
   const [iconPrompt, setIconPrompt] = useState("");
   const [emoji, setEmoji] = useState(initDef && !hasUploadedImage ? (initDef.glyph || "") : "");
   const [emojiBusy, setEmojiBusy] = useState(false);
