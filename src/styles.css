@@ -36,6 +36,7 @@
   --color-board-dark: var(--board-dark);
   --color-board-highlight: var(--board-highlight);
   --color-board-legal: var(--board-legal);
+  --color-board-attack: var(--board-attack);
   --color-board-capture: var(--board-capture);
   --color-board-check: var(--board-check);
   --color-board-last: var(--board-last);
