@@ -103,7 +103,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
   L: {
     id: "L",
     name: "Lich King",
-    glyph: "💀",
+    glyph: "☠️",
     emoji: true,
     royal: true,
     movement: { leaps: KING_OFFSETS },
