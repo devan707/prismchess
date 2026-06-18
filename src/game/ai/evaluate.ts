@@ -601,7 +601,7 @@ function kingSafetyTerm(state: GameState, color: Color): number {
           }
         }
       }
-      const pressure = zoneAttacks * zoneAttacks * 18 - defenders * 14 - shield * 10;
+      const pressure = zoneAttacks * zoneAttacks * 24 - defenders * 14 - shield * 10;
       const directHit = royalAttacked ? 250 : 0;
       const severity = pressure + directHit;
       if (isOurs) total -= severity;
@@ -658,24 +658,32 @@ function threatTerm(state: GameState, color: Color): number {
   const cols = board[0]?.length ?? 0;
   const opp: Color = color === "w" ? "b" : "w";
   let total = 0;
+  let threatCount = 0;
+  let biggestThreat = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const p = board[r][c];
       if (!p || p.color !== opp) continue;
       const def = state.registry[p.id];
       if (def?.immobile) continue;
-      // Is the enemy piece attacked by us?
-      if (!isSquareAttacked(state, { r, c }, color)) continue;
-      const victim = valueFor(p.id, def);
-      // Defended? Then it's a trade — only counts if their defenders are
-      // worth more than the cheapest attacker available; approximate by
-      // calling it "half value" instead of doing a full SEE here.
-      const defended = isSquareAttacked(state, { r, c }, opp);
-      total += defended ? victim * 0.08 : victim * 0.35;
+      // True material we'd win if we captured this piece right now (full
+      // recapture sequence resolved). Zero if the trade loses for us.
+      const gain = expectedGainAt(state, { r, c }, color);
+      if (gain <= 0) continue;
+      // Royal-pressure carries extra weight — even an unrealized threat on
+      // the enemy king/regent is a real planning anchor.
+      const royalMult = def?.royal ? 1.5 : 1;
+      total += gain * 0.45 * royalMult;
+      threatCount += 1;
+      if (gain > biggestThreat) biggestThreat = gain;
     }
   }
+  // Double-attack bonus: creating multiple simultaneous winning threats is
+  // how the AI executes forks / discovered attacks instead of just shuffling.
+  if (threatCount >= 2) total += biggestThreat * 0.25 + (threatCount - 1) * 30;
   return total;
 }
+
 
 /**
  * Penalize the side whose recent quiet moves chain through the same piece.
@@ -706,10 +714,12 @@ function shuffleTerm(state: GameState, color: Color): number {
     }
   }
   if (chain < 2) return 0;
+  // Heavy penalty so back-and-forth shuffling is never the search's best move.
   const weight =
-    special === "dragon" || special === "portal" || special === "necromancer" || special === "wizard" ? 70 : 30;
+    special === "dragon" || special === "portal" || special === "necromancer" || special === "wizard" ? 160 : 70;
   return -(chain - 1) * weight;
 }
+
 
 /** Convert "g12" → {r:11, c:6}. Returns null on parse failure / out of bounds. */
 function parseAlg(sq: string, rows: number, cols: number): { r: number; c: number } | null {
@@ -754,7 +764,6 @@ function hangingTerm(state: GameState, color: Color): number {
   const board = state.board;
   const rows = board.length;
   const cols = board[0]?.length ?? 0;
-  const opp: Color = color === "w" ? "b" : "w";
   let penalty = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -763,19 +772,17 @@ function hangingTerm(state: GameState, color: Color): number {
       const def = state.registry[p.id];
       if (def?.immobile) continue; // Prism / Barricade-style fixtures
       if (def?.special === "juggernaut") continue; // huge & special-cased
+      // Real swap-off loss. Already returns 0 if the opp's capture sequence
+      // would lose material for them.
+      const loss = expectedLossAt(state, { r, c }, color);
+      if (loss <= 0) continue;
+      // Heavier weighting on big pieces so the AI never casually hangs a
+      // Queen / Dragon / Wizard / Necromancer / royal.
       const v = valueFor(p.id, def);
-      if (v < 50) continue;
-      const attacked = isSquareAttacked(state, { r, c }, opp);
-      if (!attacked) continue;
-      // Test "defended" by temporarily flipping the resident piece's colour so
-      // friendly attackers (which can't normally target their own square) show
-      // up as recapturers.
-      const saved = board[r][c];
-      board[r][c] = { id: p.id, color: opp };
-      const defended = isSquareAttacked(state, { r, c }, color);
-      board[r][c] = saved;
-      penalty -= defended ? v * 0.25 : v * 0.9;
+      const heavy = v >= 700 ? 1.15 : v >= 400 ? 1.0 : 0.9;
+      penalty -= loss * heavy;
     }
   }
   return penalty;
 }
+
