@@ -55,6 +55,19 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   })();
   const attackSet = new Set(attackSquares.map((s) => `${s.r},${s.c}`));
 
+  // Ranged attacks (archer shoot, dragon strike) get crosshair markers;
+  // melee threats stay as orange dots.
+  const rangedAttackSet: Set<string> = (() => {
+    const out = new Set<string>();
+    if (!selected || !selectedPieceForInspect) return out;
+    for (const m of pseudoMovesFrom(state, selected)) {
+      if (m.kind === "archerShoot" || m.kind === "dragonAttack") {
+        out.add(`${m.to.r},${m.to.c}`);
+      }
+    }
+    return out;
+  })();
+
   // For enemy inspection we don't have legalFor — derive pseudo non-capture
   // move squares directly so we can still paint green move-only dots.
   const enemyMoveOnlyTargets: Square[] = (() => {
@@ -312,19 +325,20 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           //   GREEN= legal/pseudo move to an empty square (no attack threatened).
           //   ORANGE= square is threatened (could capture if enemy were here),
           //           but no enemy currently stands there.
-          let markerKind: "capture" | "move" | "attack" | null = null;
+          let markerKind: "capture" | "move" | "attack" | "ranged" | null = null;
+          const isRanged = rangedAttackSet.has(`${r},${c}`);
           if (juggTrample) {
             markerKind = "capture";
           } else if (juggFoot) {
             markerKind = null; // juggernaut footprint paints its own overlay
           } else if (isEnemyInspect) {
-            if (isAttackPattern && piece && piece.color === humanColor) markerKind = "capture";
-            else if (isAttackPattern && !piece) markerKind = "attack";
+            if (isAttackPattern && piece && piece.color === humanColor) markerKind = isRanged ? "ranged" : "capture";
+            else if (isAttackPattern && !piece) markerKind = isRanged ? "ranged" : "attack";
             else if (isEnemyMoveOnly && !piece) markerKind = "move";
           } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
             if (showHints) {
-              if (isLegalRaw && piece && piece.color !== humanColor) markerKind = "capture";
-              else if (isAttackPattern && !piece) markerKind = "attack";
+              if (isLegalRaw && piece && piece.color !== humanColor) markerKind = isRanged ? "ranged" : "capture";
+              else if (isAttackPattern && !piece) markerKind = isRanged ? "ranged" : "attack";
               else if (isLegalRaw && !piece) markerKind = "move";
             }
           }
@@ -400,6 +414,10 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   style={{ width: "30%", height: "30%", background: "var(--color-board-legal)" }} />
               )}
               {markerKind === "attack" && (
+                <div className="absolute rounded-full pointer-events-none"
+                  style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
+              )}
+              {markerKind === "ranged" && (
                 <div
                   className="absolute rounded-full pointer-events-none flex items-center justify-center"
                   style={{
