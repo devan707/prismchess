@@ -94,7 +94,7 @@ type PieceRow = {
   slug: string;
   name: string;
   description: string;
-  def: unknown;
+  def: Record<string, unknown>;
   visibility: string;
   like_count: number;
   created_at: string;

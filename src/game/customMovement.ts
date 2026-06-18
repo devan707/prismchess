@@ -136,12 +136,13 @@ export function compileMovement(steps: MoveStep[]): CompiledMovement {
     }
     const step = steps[stepIdx];
     const dist = step.distance as number;
+    const dirSpec = step.direction;
     let dirs: Offset[];
-    if (step.direction.kind === "absolute") {
-      dirs = absDirOffsets(step.direction.dir);
+    if (dirSpec.kind === "absolute") {
+      dirs = absDirOffsets(dirSpec.dir);
     } else {
       if (!prev) return;
-      dirs = relDirOffsets(prev, step.direction.rel);
+      dirs = relDirOffsets(prev, dirSpec.rel);
     }
     for (const d of dirs) {
       walk(stepIdx + 1, dr + d.dr * dist, dc + d.dc * dist, d);
