@@ -21,6 +21,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PiecesIndexRouteImport } from './routes/pieces.index'
 import { Route as PiecesNewRouteImport } from './routes/pieces.new'
+import { Route as PiecesSlugRouteImport } from './routes/pieces.$slug'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -103,6 +104,11 @@ const PiecesIndexRoute = PiecesIndexRouteImport.update({
 const PiecesNewRoute = PiecesNewRouteImport.update({
   id: '/pieces/new',
   path: '/pieces/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PiecesSlugRoute = PiecesSlugRouteImport.update({
+  id: '/pieces/$slug',
+  path: '/pieces/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GSlugRoute = GSlugRouteImport.update({
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces': typeof PiecesIndexRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
+  '/pieces/$slug': typeof PiecesSlugRoute
   '/pieces/new': typeof PiecesNewRoute
   '/pieces/': typeof PiecesIndexRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -366,6 +375,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/g/$slug'
+    | '/pieces/$slug'
     | '/pieces/new'
     | '/pieces/'
     | '/admin/audit'
@@ -400,6 +410,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/g/$slug'
+    | '/pieces/$slug'
     | '/pieces/new'
     | '/pieces'
     | '/admin/audit'
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/g/$slug'
+    | '/pieces/$slug'
     | '/pieces/new'
     | '/pieces/'
     | '/_authenticated/admin/audit'
@@ -470,6 +482,7 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   SandboxRoute: typeof SandboxRoute
   GSlugRoute: typeof GSlugRoute
+  PiecesSlugRoute: typeof PiecesSlugRoute
   PiecesNewRoute: typeof PiecesNewRoute
   PiecesIndexRoute: typeof PiecesIndexRoute
   ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
@@ -560,6 +573,13 @@ declare module '@tanstack/react-router' {
       path: '/pieces/new'
       fullPath: '/pieces/new'
       preLoaderRoute: typeof PiecesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pieces/$slug': {
+      id: '/pieces/$slug'
+      path: '/pieces/$slug'
+      fullPath: '/pieces/$slug'
+      preLoaderRoute: typeof PiecesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$slug': {
@@ -829,6 +849,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   SandboxRoute: SandboxRoute,
   GSlugRoute: GSlugRoute,
+  PiecesSlugRoute: PiecesSlugRoute,
   PiecesNewRoute: PiecesNewRoute,
   PiecesIndexRoute: PiecesIndexRoute,
   ApiPublicHooksCleanupStaleChallengesRoute:
