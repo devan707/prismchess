@@ -30,6 +30,8 @@ function ForumPage() {
   const like = useServerFn(toggleLike);
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const setFlags = useServerFn(adminSetTopicFlags);
+  const delTopic = useServerFn(adminDeleteForumTopic);
 
   const load = () => fetchTopics({}).then(setTopics).catch((e) => toast.error(e.message));
   useEffect(() => {
