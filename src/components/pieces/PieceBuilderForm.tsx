@@ -34,12 +34,23 @@ import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import { estimatePiecePoints } from "@/game/pieceValue";
-import { requestPieceAbility, savePiece, suggestPieceEmoji, uploadPieceImage } from "@/lib/piece-builder.functions";
+import { requestPieceAbility, savePiece, suggestPieceEmoji, updatePiece, uploadPieceImage } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
+export interface PieceBuilderInitial {
+  pieceId: string;
+  slug: string;
+  name: string;
+  description: string;
+  def: PieceDef;
+  visibility: "private" | "public";
+  imageUrl: string | null;
+}
+
 interface Props {
   onSaved?: (pieceId: string, def: PieceDef) => void;
+  initial?: PieceBuilderInitial;
 }
 
 const MAX_STEPS = 4;
