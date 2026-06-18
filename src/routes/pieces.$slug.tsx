@@ -14,7 +14,7 @@ import {
   createPieceShowcase,
 } from "@/lib/piece-builder.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Heart, MessageSquarePlus, Share2, Twitter, Facebook, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquarePlus, Share2, Twitter, Facebook, Link as LinkIcon, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/pieces/$slug")({
