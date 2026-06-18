@@ -15,7 +15,9 @@ import {
 } from "@/game/customMovement";
 import { PieceReachPreview } from "./PieceReachPreview";
 import { PieceById } from "@/components/chess/PieceGlyph";
+import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
+import { estimatePiecePoints } from "@/game/pieceValue";
 import { savePiece, suggestPieceEmoji } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,19 +39,21 @@ function buildPieceDef(opts: {
   description: string;
   emoji: string;
   steps: MoveStep[];
+  pointsOverride?: number;
 }): PieceDef | { error: string } {
   const compiled = compileMovement(opts.steps);
   if (compiled.error) return { error: compiled.error };
-  return {
+  const def: PieceDef = {
     id: opts.id,
     name: opts.name,
     glyph: opts.emoji,
     emoji: true,
     movement: compiled.spec,
     description: opts.description,
-    // Custom-piece marker so the engine and tools can identify it later.
     builtinCustom: false,
   };
+  if (opts.pointsOverride != null) def.pointsOverride = opts.pointsOverride;
+  return def;
 }
 
 function genId(): string {
