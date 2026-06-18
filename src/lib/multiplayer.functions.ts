@@ -308,7 +308,7 @@ export const submitMove = createServerFn({ method: "POST" })
     if (remainingAfter <= 0 && !perMove) {
       // Timeout — opponent wins.
       const winner: Color = meColor === "w" ? "b" : "w";
-      await context.supabase.from("matches").update({
+      await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
         status: "finished",
         result: winner,
         result_reason: "timeout",
@@ -327,7 +327,7 @@ export const submitMove = createServerFn({ method: "POST" })
       black_time_ms: meColor === "b" ? moverNewTime : match.black_time_ms,
       last_clock_update_at: new Date(now).toISOString(),
     };
-    const { error: uErr } = await context.supabase.from("matches").update(update as never).eq("id", data.matchId);
+    const { error: uErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update(update as never).eq("id", data.matchId);
     if (uErr) throw new Error(uErr.message);
 
     const { error: iErr } = await context.supabase.from("match_moves").insert({
@@ -375,7 +375,7 @@ export const resign = createServerFn({ method: "POST" })
       : context.userId === match.guest_id ? (match.host_color === "w" ? "b" : "w")
       : (() => { throw new Error("Not a player in this match."); })();
     const winner: Color = meColor === "w" ? "b" : "w";
-    const { error: uErr } = await context.supabase.from("matches").update({
+    const { error: uErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
       status: "finished",
       result: winner,
       result_reason: "resign",
@@ -416,7 +416,7 @@ export const markFinished = createServerFn({ method: "POST" })
       throw new Error("Not a player in this match.");
     }
     const result = data.winner ?? "draw";
-    const { error: uErr } = await context.supabase.from("matches").update({
+    const { error: uErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
       status: "finished",
       result,
       result_reason: data.reason,
@@ -540,7 +540,7 @@ export const respondDraw = createServerFn({ method: "POST" })
       payload: {},
     });
     if (data.accept) {
-      await context.supabase.from("matches").update({
+      await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
         status: "finished",
         result: "draw",
         result_reason: "draw_agreed",
@@ -575,7 +575,7 @@ export const claimTimeout = createServerFn({ method: "POST" })
     const elapsed = Math.max(0, Date.now() - lastAt);
     if (remaining - elapsed > 0) throw new Error("Opponent still has time.");
     const winner: Color = sideToMove === "w" ? "b" : "w";
-    await context.supabase.from("matches").update({
+    await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
       status: "finished",
       result: winner,
       result_reason: "timeout",
