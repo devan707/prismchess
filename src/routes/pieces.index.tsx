@@ -80,7 +80,10 @@ function PiecesIndex() {
   );
 }
 
-function Section({ title, rows, onLike }: { title: string; rows: Row[]; onLike: (r: Row) => void }) {
+function Section({ title, rows, onLike, reload }: { title: string; rows: Row[]; onLike: (r: Row) => void; reload: () => Promise<void> | void }) {
+  const { isModOrAdmin } = useIsAdmin();
+  const setFlags = useServerFn(adminSetCustomPieceFlags);
+  const del = useServerFn(adminDeleteCustomPiece);
   if (rows.length === 0) {
     return (
       <section>
@@ -101,7 +104,17 @@ function Section({ title, rows, onLike }: { title: string; rows: Row[]; onLike: 
                 <PieceById id={def.id} color="w" def={def} className="text-4xl" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-sm truncate">{row.name}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-sm truncate">{row.name}</h3>
+                  <AdminMenu
+                    show={isModOrAdmin}
+                    actions={[
+                      { label: "Hide from feeds", onClick: async () => { await setFlags({ data: { pieceId: row.id, isHidden: true } }); await reload(); } },
+                      { label: "Feature", onClick: async () => { await setFlags({ data: { pieceId: row.id, isFeatured: true } }); await reload(); } },
+                      { label: "Delete piece", destructive: true, confirm: `Delete "${row.name}"?`, onClick: async () => { await del({ data: { pieceId: row.id } }); await reload(); } },
+                    ]}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{row.description || "—"}</p>
                 <button
                   onClick={() => onLike(row)}
