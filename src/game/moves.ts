@@ -612,9 +612,6 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         (m.from && m.from.r === from.r && m.from.c === from.c) ||
         (m.to.r === from.r && m.to.c === from.c),
     );
-    // Lazy-compile via the customMovement helper (pure, cheap).
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { compileOption } = require("./customMovement") as typeof import("./customMovement");
     const seen = new Set<string>(); // dedupe across overlapping options
     for (const opt of def.options) {
       if (opt.condition === "from-starting-square" && !onStartingSquare) continue;
