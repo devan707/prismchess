@@ -119,15 +119,18 @@ export function PieceTestBoard({ def, options, rangedSpec, size = 9 }: Props) {
     const occ = board.get(key);
     // If a target is highlighted there, perform the action.
     const tgt = targets.find((t) => t.r === r && t.c === c);
-    if (selected && tgt) {
+    // A ranged target without an enemy on it is just a reach indicator —
+    // fall through to the tool so the user can drop an enemy there.
+    const fireable = tgt && !(tgt.kind === "ranged" && occ !== "enemy");
+    if (selected && fireable) {
       const next = new Map(board);
-      if (tgt.kind === "ranged") {
+      if (tgt!.kind === "ranged") {
         next.delete(key);
         pushLog(`Ranged-captured enemy at ${coord(r, c, size)}.`);
       } else {
         // move (and capture if enemy was there)
         next.delete(`${selfPos.r},${selfPos.c}`);
-        if (tgt.kind === "capture") pushLog(`Captured enemy at ${coord(r, c, size)}.`);
+        if (tgt!.kind === "capture") pushLog(`Captured enemy at ${coord(r, c, size)}.`);
         else pushLog(`Moved to ${coord(r, c, size)}.`);
         next.set(key, "self");
         setSelfPos({ r, c });
