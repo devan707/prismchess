@@ -184,15 +184,16 @@ function Home() {
 
       <header className="max-w-5xl mx-auto px-4 pt-2 pb-8 text-center">
         <div className="relative mx-auto w-fit">
-          <div aria-hidden className="absolute inset-0 -m-8 rounded-full bg-[radial-gradient(circle,rgba(245,235,255,0.18),transparent_65%)] blur-xl" />
+          <div aria-hidden className="absolute inset-0 -m-12 rounded-full bg-[radial-gradient(circle,rgba(255,250,240,0.55),rgba(255,250,240,0.15)_45%,transparent_70%)] blur-2xl" />
           <img
             src={logoUrl}
             alt="Prism Chess"
             width={320}
             height={320}
-            className="relative mx-auto h-44 w-44 sm:h-56 sm:w-56 drop-shadow-[0_0_30px_rgba(200,160,255,0.45)]"
+            className="relative mx-auto h-44 w-44 sm:h-56 sm:w-56"
           />
         </div>
+
         <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#d4baff]/80 font-medium">
           The Ultimate Variant Sandbox
         </p>
