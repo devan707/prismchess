@@ -211,10 +211,12 @@ export const PRESETS: Preset[] = [
     description: "Classical chess with magical symmetry. Each side's Rooks become Twin Towers and Knights become Shadow Knights — every linked pair moves together as one. Familiar opening theory, completely different coordination.",
     build: (rows, cols) => {
       if (rows < 8 || cols < 8) return PRESETS[0].build(rows, cols);
-      // Back rank: V E B Q K B E V — Twin Towers on the corners, Shadow Knights inside.
-      const back: PieceId[] = ["V", "E", "B", "Q", "K", "B", "E", "V"];
+      // Back rank template (8-wide): V E B Q K B E V — Twin Towers on the corners,
+      // Shadow Knights inside. Stretched symmetrically on wider boards.
+      const back = centerBackRank(["V", "E", "B", "Q", "K", "B", "E", "V"], cols);
       const placements: Placement[] = [];
       back.forEach((id, c) => {
+        if (!id) return;
         placements.push({ color: "w", pieceId: id, r: 0, c });
         placements.push({ color: "b", pieceId: id, r: rows - 1, c });
       });
