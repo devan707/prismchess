@@ -60,6 +60,14 @@ export interface PieceDef {
   movement?: MovementSpec;
   /** Optional separate capture pattern. */
   capture?: MovementSpec;
+  /** Optional ranged capture (Archer-style). The piece captures an enemy
+   *  on a matching square WITHOUT relocating. `timing` is informational
+   *  for now ("replace" = instead of a normal move/capture; "before"/"after"
+   *  reserved for future multi-action turns). */
+  rangedCapture?: {
+    spec: MovementSpec;
+    timing: "before" | "after" | "replace";
+  };
   /** Special hand-coded behavior. */
   special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter" | "juggernaut" | "assassin" | "wizard" | "prism" | "archer";
   /** Royal: loss of all royal pieces of a color = game over. */
