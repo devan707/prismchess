@@ -373,7 +373,11 @@ export const adminListAbilityRequests = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
-    const rows = (data ?? []) as Array<{ piece_id: string; author_id: string } & Record<string, unknown>>;
+    const rows = (data ?? []) as Array<{
+      id: string; piece_id: string; author_id: string; request_text: string;
+      status: string; admin_note: string | null; created_at: string;
+      reviewed_at: string | null; reviewed_by: string | null;
+    }>;
     const pieceIds = Array.from(new Set(rows.map((r) => r.piece_id)));
     const authorIds = Array.from(new Set(rows.map((r) => r.author_id)));
     const [{ data: pieces }, { data: profs }] = await Promise.all([
@@ -384,8 +388,8 @@ export const adminListAbilityRequests = createServerFn({ method: "GET" })
         ? context.supabase.from("profiles").select("id, username, display_name").in("id", authorIds)
         : Promise.resolve({ data: [] as Array<{ id: string; username: string; display_name: string | null }> }),
     ]);
-    const pieceMap = new Map((pieces ?? []).map((p: any) => [p.id, p]));
-    const profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+    const pieceMap = new Map((pieces ?? []).map((p: any) => [p.id, p as { id: string; name: string; slug: string }]));
+    const profMap = new Map((profs ?? []).map((p: any) => [p.id, p as { id: string; username: string; display_name: string | null }]));
     return rows.map((r) => ({
       ...r,
       piece: pieceMap.get(r.piece_id) ?? null,
