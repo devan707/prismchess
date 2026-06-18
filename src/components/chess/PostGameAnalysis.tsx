@@ -11,6 +11,7 @@ import { Board } from "@/components/chess/Board";
 import { analyzeGame, fmtMove } from "@/lib/api/analyze-game.functions";
 import { loadPlaybook, savePlaybook, resetPlaybook, type Playbook } from "@/game/ai/playbook";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
+import { loadCurrentMeta } from "@/game/design";
 import type { Color, Design, Difficulty, GameState, Square } from "@/game/types";
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -28,10 +29,11 @@ interface Props {
 }
 
 export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, humanColor, difficulty, outcome, designName }: Props) {
+  const variantId = useMemo(() => (typeof window !== "undefined" ? loadCurrentMeta()?.id : undefined), []);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [playbook, setPlaybookState] = useState<Playbook>(() => loadPlaybook());
+  const [playbook, setPlaybookState] = useState<Playbook>(() => loadPlaybook(variantId));
   const [error, setError] = useState<string | null>(null);
   // viewIndex: number of moves applied. 0 = starting position, history.length = final position.
   const [viewIndex, setViewIndex] = useState<number>(state.history.length);
@@ -87,7 +89,7 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
         ...result.updatedPlaybook,
         gamesReviewed: (playbook.gamesReviewed ?? 0) + (userMessage ? 0 : 1),
       };
-      savePlaybook(nextPlaybook);
+      savePlaybook(nextPlaybook, variantId);
       setPlaybookState(nextPlaybook);
       setTurns((prev) => [
         ...prev,
@@ -130,7 +132,8 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
   };
 
   const onReset = () => {
-    const fresh = resetPlaybook();
+    if (!confirm(`Reset the AI's memory for ${designName}? This wipes lessons, piece weights, and tactical notes for this variant only.`)) return;
+    const fresh = resetPlaybook(variantId);
     setPlaybookState(fresh);
     setTurns([]);
     initRef.current = false;
@@ -172,8 +175,8 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
                     </Badge>
                   ))}
                 </div>
-                <Button size="sm" variant="ghost" className="mt-3 w-full h-7 px-2 text-xs" onClick={onReset} title="Wipe all learned lessons">
-                  <RotateCcw className="h-3 w-3 mr-1" /> Reset playbook
+                <Button size="sm" variant="ghost" className="mt-3 w-full h-7 px-2 text-xs" onClick={onReset} title={`Wipe the AI's learned lessons for ${designName}`}>
+                  <RotateCcw className="h-3 w-3 mr-1" /> Reset AI memory for {designName}
                 </Button>
               </PopoverContent>
             </Popover>
