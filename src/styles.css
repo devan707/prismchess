@@ -155,21 +155,14 @@
       oklch(0.72 0.14 230),
       oklch(0.70 0.15 320)
     );
-}
-@utility prism-tile {
-  &::before {
-    content: "";
-    position: absolute;
-    inset: -20%;
-    background: inherit;
-    filter: blur(18px) saturate(0.85);
-    z-index: -1;
-  }
+  filter: blur(0.5px) saturate(0.75);
+
   &::after {
     content: "";
     position: absolute;
     inset: 0;
     background: oklch(0.55 0.005 280 / 0.5);
+    backdrop-filter: blur(6px);
     z-index: 0;
   }
 }
