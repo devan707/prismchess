@@ -138,24 +138,28 @@ function Home() {
         <section>
           <h2 className="font-display text-xl font-semibold mb-3">Built-in games</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {BUILTIN_GAMES.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => playBuiltin(g)}
-                className="group text-left rounded-xl border bg-card p-4 hover:border-primary hover:shadow-md transition"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-display font-semibold">{g.name}</h3>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {g.rows}×{g.cols}
+            {BUILTIN_GAMES.map((g) => {
+              const s = stats[`builtin:${g.id}`];
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => playBuiltin(g)}
+                  className="relative group text-left rounded-xl border bg-card p-4 pb-7 hover:border-primary hover:shadow-md transition"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-display font-semibold">{g.name}</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {g.rows}×{g.cols}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">{g.description}</p>
+                  <span className="inline-flex items-center text-xs font-medium text-primary group-hover:gap-2 gap-1 transition-all">
+                    <Play className="h-3 w-3" /> Play
                   </span>
-                </div>
-                <p className="text-xs text-muted-foreground mb-3">{g.description}</p>
-                <span className="inline-flex items-center text-xs font-medium text-primary group-hover:gap-2 gap-1 transition-all">
-                  <Play className="h-3 w-3" /> Play
-                </span>
-              </button>
-            ))}
+                  {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
+                </button>
+              );
+            })}
           </div>
         </section>
 
