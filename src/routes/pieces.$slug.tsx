@@ -124,6 +124,11 @@ function PieceDetail() {
       <header className="max-w-3xl mx-auto px-4 pt-6 pb-4 flex items-center justify-between gap-3">
         <Link to="/pieces"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Library</Button></Link>
         <div className="flex items-center gap-2">
+          <Link to="/pieces/new" search={{ from: piece.slug }}>
+            <Button size="sm" variant="default" title="Save as a new piece based on this one (the original is untouched)">
+              <Wand2 className="h-4 w-4 mr-1" /> Remix
+            </Button>
+          </Link>
           <Button size="sm" variant="outline" onClick={nativeShare}><Share2 className="h-4 w-4 mr-1" /> Share</Button>
         </div>
       </header>
