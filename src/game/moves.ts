@@ -1055,8 +1055,23 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
     return b;
   }
   if (move.kind === "archerShoot") {
-    // Archer stays in place; target enemy is removed (true ranged attack).
+    // Archer/Trebuchet stays in place; target enemy is removed (true ranged attack).
     b[move.to.r][move.to.c] = null;
+    // Ranged kill on a juggernaut destroys its partner half too.
+    if (move.captured && move.captured.id === "J") {
+      const wide = boardIsWide(b);
+      const { rows, cols } = rowsCols(b);
+      for (const o of juggPerpOffsets(wide)) {
+        const r = move.to.r + o.dr;
+        const c = move.to.c + o.dc;
+        if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+        const t = b[r][c];
+        if (t && t.id === "J" && t.color === move.captured.color) {
+          b[r][c] = null;
+          break;
+        }
+      }
+    }
     return b;
   }
   if (move.kind === "castle" && move.from && move.rookFrom && move.rookTo) {
