@@ -58,6 +58,7 @@ function Sandbox() {
   const genTutorial = useServerFn(generateGameTutorial);
   const publish = useServerFn(publishGame);
   const [publishing, setPublishing] = useState(false);
+  const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
 
