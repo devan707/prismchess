@@ -35,10 +35,10 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
 
       {showPlayCta && (
         <div className="fixed left-0 right-0 bottom-14 z-30 pointer-events-none">
-          <div className="max-w-3xl mx-auto px-4 pointer-events-auto">
+          <div className="max-w-3xl mx-auto px-0 sm:px-4 pointer-events-auto">
             <Link
               to="/lobby"
-              className="prism-border prism-border-hover flex h-14 items-center justify-center gap-2 font-display font-bold text-base tracking-[0.22em] uppercase shadow-lg shadow-black/20"
+              className="prism-border prism-border-hover flex h-14 items-center justify-center gap-2 font-display font-bold text-base tracking-[0.22em] uppercase shadow-lg shadow-black/20 sm:rounded-sm"
             >
               <Play className="h-5 w-5 fill-current" />
               Play
