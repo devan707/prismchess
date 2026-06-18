@@ -1436,9 +1436,18 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       if (move.captured.id === "J") {
         targetPool.push({ id: "J", color: move.captured.color });
       }
+      // Mirrored twins die in pairs (Shadow Knight, Twin Tower).
+      if ((move.captured.id === "E" || move.captured.id === "V") &&
+          mirrorTwinAt(state.board, move.epCapture ?? move.to, move.captured)) {
+        targetPool.push({ id: move.captured.id, color: move.captured.color });
+      }
     }
     if (move.partnerCaptured) {
       targetPool.push(move.partnerCaptured);
+      if ((move.partnerCaptured.id === "E" || move.partnerCaptured.id === "V") &&
+          move.partnerTo && mirrorTwinAt(state.board, move.partnerTo, move.partnerCaptured)) {
+        targetPool.push({ id: move.partnerCaptured.id, color: move.partnerCaptured.color });
+      }
     }
     if (move.juggTrampled) {
       for (const p of move.juggTrampled) {
