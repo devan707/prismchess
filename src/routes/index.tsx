@@ -183,55 +183,53 @@ function Home() {
       </div>
 
       <header className="max-w-5xl mx-auto px-4 pt-2 pb-8 text-center">
-        <img
-          src={logoUrl}
-          alt="Prism Chess"
-          width={320}
-          height={320}
-          className="mx-auto h-44 w-44 sm:h-56 sm:w-56 drop-shadow-[0_8px_30px_rgba(201,168,76,0.25)]"
-        />
-        <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#c9a84c]/80 font-medium">
+        <div className="relative mx-auto w-fit">
+          <div aria-hidden className="absolute inset-0 -m-12 rounded-full bg-[radial-gradient(circle,rgba(255,250,240,0.55),rgba(255,250,240,0.15)_45%,transparent_70%)] blur-2xl" />
+          <img
+            src={logoUrl}
+            alt="Prism Chess"
+            width={320}
+            height={320}
+            className="relative mx-auto h-44 w-44 sm:h-56 sm:w-56"
+          />
+        </div>
+
+        <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.25em] text-[#d4baff]/80 font-medium">
           The Ultimate Variant Sandbox
         </p>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 pb-16 space-y-10">
+
+      <main className="max-w-5xl mx-auto px-4 pb-32 space-y-10">
         {/* Primary actions */}
         <section className="space-y-3">
           <Link to="/multiplayer" className="block">
-            <button className="w-full flex items-center justify-center gap-3 bg-[#c9a84c] text-[#0a0d14] py-4 font-semibold shadow-[0_8px_30px_rgba(201,168,76,0.25)] hover:bg-[#d9b85c] active:scale-[0.99] transition">
-              <Swords className="h-5 w-5" /> Play Multiplayer
+            <button className="prism-button-primary w-full py-4 font-semibold text-base tracking-wide active:scale-[0.99] transition">
+              <span className="relative z-10 inline-flex items-center justify-center gap-3">
+                <Swords className="h-5 w-5" /> Play Multiplayer
+              </span>
             </button>
           </Link>
           <div className="grid grid-cols-2 gap-3">
             <Link to="/sandbox">
-              <button className="w-full home-panel-strong flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-wider text-foreground hover:border-[#c9a84c]/60 transition">
-                <Hammer className="h-6 w-6 text-[#c9a84c]" />
-                SANDBOX
+              <button className="prism-button w-full flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-widest active:scale-[0.99] transition">
+                <span className="relative z-10 flex flex-col items-center gap-2">
+                  <Hammer className="h-6 w-6" />
+                  SANDBOX
+                </span>
               </button>
             </Link>
             <Link to="/forum">
-              <button className="w-full home-panel-strong flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-wider text-foreground hover:border-[#c9a84c]/60 transition">
-                <MessagesSquare className="h-6 w-6 text-[#c9a84c]" />
-                COMMUNITY
+              <button className="prism-button w-full flex flex-col items-center justify-center gap-2 py-5 text-xs font-bold tracking-widest active:scale-[0.99] transition">
+                <span className="relative z-10 flex flex-col items-center gap-2">
+                  <MessagesSquare className="h-6 w-6" />
+                  COMMUNITY
+                </span>
               </button>
             </Link>
           </div>
-          {/* Secondary utility row */}
-          <div className="grid grid-cols-4 gap-2 pt-1">
-            {[
-              { to: "/friends", icon: Users, label: "Friends" },
-              { to: "/messages", icon: Mail, label: "Messages" },
-              { to: "/history", icon: History, label: "History" },
-              { to: "/help", icon: BookOpen, label: "Help" },
-            ].map(({ to, icon: Icon, label }) => (
-              <Link key={to} to={to} className="home-panel flex flex-col items-center justify-center py-3 gap-1 hover:border-[#c9a84c]/40 transition">
-                <Icon className="h-4 w-4 text-[#c9a84c]/90" />
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-              </Link>
-            ))}
-          </div>
         </section>
+
 
         {/* Built-in games */}
         <section>
@@ -364,8 +362,26 @@ function Home() {
           </section>
         )}
       </main>
+
+      {/* Fixed bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[rgba(6,5,12,0.85)] border-t border-[rgba(180,140,255,0.25)]">
+        <div className="max-w-5xl mx-auto px-4 py-3 grid grid-cols-4">
+          {[
+            { to: "/friends", icon: Users, label: "Friends" },
+            { to: "/messages", icon: Mail, label: "Messages" },
+            { to: "/history", icon: History, label: "History" },
+            { to: "/help", icon: BookOpen, label: "Help" },
+          ].map(({ to, icon: Icon, label }) => (
+            <Link key={to} to={to} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition">
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] font-bold tracking-widest uppercase">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
       </div>
     </div>
+
 
   );
 }

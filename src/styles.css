@@ -133,27 +133,69 @@
 }
 
 @utility home-aurora-bg {
-  background-color: #0a0d14;
+  background-color: #07060d;
   background-image:
-    radial-gradient(45rem 30rem at 15% 10%, oklch(0.55 0.22 150 / 0.35), transparent 60%),
-    radial-gradient(40rem 28rem at 85% 20%, oklch(0.55 0.22 220 / 0.32), transparent 60%),
-    radial-gradient(50rem 35rem at 80% 85%, oklch(0.55 0.24 320 / 0.30), transparent 65%),
-    radial-gradient(38rem 26rem at 10% 90%, oklch(0.62 0.20 60 / 0.28), transparent 60%),
-    radial-gradient(60rem 40rem at 50% 50%, oklch(0.45 0.18 190 / 0.22), transparent 70%);
+    radial-gradient(45rem 30rem at 15% 8%, oklch(0.50 0.25 300 / 0.45), transparent 60%),
+    radial-gradient(42rem 28rem at 88% 18%, oklch(0.50 0.25 260 / 0.40), transparent 60%),
+    radial-gradient(50rem 35rem at 80% 80%, oklch(0.55 0.28 340 / 0.40), transparent 65%),
+    radial-gradient(38rem 26rem at 8% 88%, oklch(0.55 0.24 220 / 0.35), transparent 60%),
+    radial-gradient(60rem 40rem at 50% 50%, oklch(0.40 0.22 290 / 0.30), transparent 70%);
 }
 
 @utility home-panel {
-  background-color: rgba(14, 18, 26, 0.82);
-  border: 1px solid rgba(201, 168, 76, 0.18);
+  background-color: rgba(10, 8, 18, 0.78);
+  border: 1px solid rgba(180, 140, 255, 0.18);
 }
 
 @utility home-panel-strong {
-  background-color: rgba(10, 13, 20, 0.90);
-  border: 1px solid rgba(201, 168, 76, 0.28);
+  background-color: rgba(6, 5, 12, 0.92);
+  border: 1px solid rgba(180, 140, 255, 0.28);
 }
 
 @utility home-accent-bar {
   border-left: 4px solid #c9a84c;
   padding-left: 0.75rem;
 }
+
+@utility prism-button {
+  position: relative;
+  background:
+    linear-gradient(rgba(8,6,16,0.92), rgba(8,6,16,0.92)) padding-box,
+    linear-gradient(135deg, #ff4d6d, #ffb347, #ffe66d, #6dffa1, #4dd0ff, #8a6dff, #ff4dff) border-box;
+  border: 1.5px solid transparent;
+  color: #f5f3ff;
+  overflow: hidden;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,77,109,0.18), rgba(109,255,161,0.10) 40%, rgba(77,208,255,0.14) 70%, rgba(255,77,255,0.18));
+    mix-blend-mode: screen;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  &:hover::before { opacity: 0.85; }
+}
+
+@utility prism-button-primary {
+  position: relative;
+  background:
+    linear-gradient(rgba(8,6,16,0.88), rgba(8,6,16,0.88)) padding-box,
+    linear-gradient(135deg, #ff4d6d, #ffb347, #ffe66d, #6dffa1, #4dd0ff, #8a6dff, #ff4dff) border-box;
+  border: 2px solid transparent;
+  color: #ffffff;
+  overflow: hidden;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,77,109,0.25), rgba(255,230,109,0.15) 35%, rgba(77,208,255,0.20) 70%, rgba(255,77,255,0.25));
+    mix-blend-mode: screen;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  &:hover::before { opacity: 1; }
+}
+
+
 
