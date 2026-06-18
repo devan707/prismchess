@@ -29,6 +29,7 @@ import {
   type StepDirRel,
 } from "@/game/customMovement";
 import { PieceReachPreview } from "./PieceReachPreview";
+import { PieceTestBoard } from "./PieceTestBoard";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
