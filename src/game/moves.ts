@@ -1067,6 +1067,8 @@ function flipPieceAt(board: Board, r: number, c: number, registry: Record<PieceI
   if (d.special === "prism") return;
   if (d.special === "juggernaut") return; // pair would desync
   if (d.special === "portal") return;
+  if (d.special === "wizard") return;
+  if (d.special === "necromancer") return;
   board[r][c] = { ...p, color: p.color === "w" ? "b" : "w" };
 }
 
