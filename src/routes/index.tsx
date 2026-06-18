@@ -178,27 +178,31 @@ function Home() {
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {saved.map((g) => (
-                <div key={g.id} className="rounded-xl border bg-card p-4 flex flex-col">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-display font-semibold truncate">{g.name}</h3>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      {g.design.rows}×{g.design.cols}
-                    </span>
+              {saved.map((g) => {
+                const s = stats[`saved:${g.id}`];
+                return (
+                  <div key={g.id} className="relative rounded-xl border bg-card p-4 pb-7 flex flex-col">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-display font-semibold truncate">{g.name}</h3>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {g.design.rows}×{g.design.cols}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Saved {new Date(g.createdAt).toLocaleDateString()}
+                    </p>
+                    <div className="mt-auto flex gap-2">
+                      <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
+                        <Play className="h-3 w-3 mr-1" /> Play
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {s && <PlayCount unique={s.unique} total={s.total} className="absolute bottom-2 right-3" />}
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Saved {new Date(g.createdAt).toLocaleDateString()}
-                  </p>
-                  <div className="mt-auto flex gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => playSaved(g)}>
-                      <Play className="h-3 w-3 mr-1" /> Play
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => removeSaved(g.id)} aria-label="Delete">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
