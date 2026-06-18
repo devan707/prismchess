@@ -367,3 +367,49 @@ export const listPieceShowcases = createServerFn({ method: "GET" })
       .limit(20);
     return topics ?? [];
   });
+
+// ---------- Special-ability requests ----------
+
+const AbilityRequestInput = z.object({
+  pieceId: UuidSchema,
+  requestText: z.string().trim().min(3).max(800),
+});
+
+export const requestPieceAbility = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => AbilityRequestInput.parse(i))
+  .handler(async ({ data, context }) => {
+    // Verify caller owns the piece.
+    const { data: piece, error: pErr } = await context.supabase
+      .from("custom_pieces")
+      .select("id, author_id")
+      .eq("id", data.pieceId)
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!piece) throw new Error("Piece not found.");
+    if (piece.author_id !== context.userId) throw new Error("You can only request abilities for your own pieces.");
+    const { data: row, error } = await context.supabase
+      .from("piece_ability_requests")
+      .insert({
+        piece_id: data.pieceId,
+        author_id: context.userId,
+        request_text: data.requestText,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  });
+
+export const listMyAbilityRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("piece_ability_requests")
+      .select("id, piece_id, request_text, status, admin_note, created_at, reviewed_at")
+      .eq("author_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
