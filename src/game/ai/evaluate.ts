@@ -197,20 +197,14 @@ export function seeMove(state: GameState, m: Move): number {
   const movingId = m.shapeshiftTo ?? m.promotion ?? m.piece.id;
   const movingVal = valueFor(movingId, state.registry[movingId]);
   const victimVal = m.captured ? valueFor(m.captured.id, state.registry[m.captured.id]) : 0;
-  // Build the post-move board (cheap shallow copy of just the affected rows).
+  // archerShoot doesn't relocate the archer; the victim is removed but the
+  // archer stays put. The shot is free because no friendly piece sits on the
+  // target square afterward to be recaptured.
+  if (m.kind === "archerShoot") return victimVal;
+  // Build the post-move board (cheap shallow copy).
   const board = state.board.map((row) => row.slice());
   board[m.from.r][m.from.c] = null;
-  // archerShoot doesn't relocate the archer; the victim is removed but the
-  // mover stays put. Model it as "no piece sits on sq after the shot".
-  if (m.kind === "archerShoot") {
-    board[m.to.r][m.to.c] = null;
-    const ghost: GameState = { ...state, board };
-    // Archer is still on its old square; no recapture on m.to. The shot is
-    // free unless the victim was defended... but it costs nothing to the
-    // archer because the archer didn't move. So net = victimVal.
-    void ghost;
-    return victimVal;
-  }
+
   board[m.to.r][m.to.c] = { id: movingId, color: m.piece.color };
   const ghost: GameState = { ...state, board };
   return seeSwapOff(ghost, m.to, m.piece.color, victimVal, movingVal);
