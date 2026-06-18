@@ -14,6 +14,8 @@
  */
 import type { Color, Difficulty, GameState, Move, Square } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
+// Note: check-giving moves are treated as "loud" via per-call computation in
+// qsearch (see below) — we can't fold it into isLoud() without a state arg.
 import { evaluate, valueFor } from "./evaluate";
 
 export interface SearchOptions {
@@ -161,12 +163,24 @@ class Searcher {
     if (standPat >= beta) return beta;
     if (standPat > alpha) alpha = standPat;
     const moves = allLegalMoves(state);
+    // PRINCIPLE #8 — forcing moves. Treat captures/promos/specials as loud,
+    // AND any move that delivers check (so qsearch follows mating sequences).
     const loud: Move[] = [];
-    for (const m of moves) if (isLoud(m)) loud.push(m);
+    const loudNexts: GameState[] = [];
+    for (const m of moves) {
+      if (isLoud(m)) { loud.push(m); loudNexts.push(applyMoveToState(state, m)); continue; }
+      // Only spend the applyMove cost on a quiet move when depthLeft is high
+      // enough to be worth following its check.
+      if (depthLeft >= 4) {
+        const next = applyMoveToState(state, m);
+        if (inCheck(next, next.turn)) { loud.push(m); loudNexts.push(next); }
+      }
+    }
     if (loud.length === 0) return standPat;
-    loud.sort((a, b) => orderingScore(state, b) - orderingScore(state, a));
-    for (const m of loud) {
-      const next = applyMoveToState(state, m);
+    // Pair-sort by orderingScore (captures first, checks after).
+    const order = loud.map((_, i) => i).sort((a, b) => orderingScore(state, loud[b]) - orderingScore(state, loud[a]));
+    for (const i of order) {
+      const next = loudNexts[i];
       const score = -this.qsearch(next, -beta, -alpha, depthLeft - 1);
       if (score >= beta) return beta;
       if (score > alpha) alpha = score;
