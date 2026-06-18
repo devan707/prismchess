@@ -478,6 +478,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
           if (occ && occ.color === piece.color) continue;
           if (dirIdxHistory.length === 2 &&
               dirIdxHistory[0] === i && dirIdxHistory[1] === i) continue;
+          // Assassin cannot end its 3-step infiltration on a square adjacent
+          // to its starting square — no king-step attacks/moves.
+          if (Math.max(Math.abs(nr - from.r), Math.abs(nc - from.c)) <= 1) continue;
           const prev = finals.get(key);
           if (prev === undefined || (prev === null && occ)) {
             finals.set(key, occ ?? null);
