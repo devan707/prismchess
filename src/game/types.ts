@@ -76,7 +76,7 @@ export interface PieceDef {
     timing: "before" | "after" | "replace";
   };
   /** Special hand-coded behavior. */
-  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter" | "juggernaut" | "assassin" | "wizard" | "prism" | "archer";
+  special?: "pawn" | "dragon" | "portal" | "necromancer" | "shapeshifter" | "juggernaut" | "assassin" | "wizard" | "prism" | "archer" | "shadowKnight" | "twinTower";
   /** Royal: loss of all royal pieces of a color = game over. */
   royal?: boolean;
   /** Cannot move; blocks travel; cannot be captured. */
