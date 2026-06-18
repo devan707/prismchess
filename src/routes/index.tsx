@@ -36,8 +36,23 @@ export const Route = createFileRoute("/")({
 function Home() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [stats, setStats] = useState<Record<string, VariantStats>>({});
 
   useEffect(() => { setSaved(loadSavedGames()); }, []);
+
+  const variantKeys = useMemo(() => [
+    ...BUILTIN_GAMES.map((g) => `builtin:${g.id}`),
+    ...saved.map((g) => `saved:${g.id}`),
+  ], [saved]);
+
+  useEffect(() => {
+    if (variantKeys.length === 0) return;
+    let cancelled = false;
+    getVariantStats({ data: { variantKeys } })
+      .then((s) => { if (!cancelled) setStats(s); })
+      .catch(() => { /* counters are best-effort */ });
+    return () => { cancelled = true; };
+  }, [variantKeys]);
 
   const playBuiltin = (g: GameType) => {
     const design = g.build();
