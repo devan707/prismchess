@@ -67,6 +67,10 @@ function Sandbox() {
   const fetchPublicGame = useServerFn(getPublishedGame);
   const [publishing, setPublishing] = useState(false);
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
+  // Set when this sandbox session is a remix of an existing published variant —
+  // recorded on publish so the new listing keeps a link back to the original
+  // author for credit display.
+  const [remixedFromId, setRemixedFromId] = useState<string | null>(null);
 
   // ?edit=<gameId>    → owner edit: updates the same listing on Publish.
   // ?duplicate=<gameId> → owner duplicate: hydrate then save as NEW.
