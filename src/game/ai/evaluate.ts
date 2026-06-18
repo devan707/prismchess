@@ -220,6 +220,8 @@ function expectedLossAt(state: GameState, sq: Square, color: Color): number {
   const piece = board[sq.r][sq.c];
   if (!piece || piece.color !== color) return 0;
   const opp: Color = color === "w" ? "b" : "w";
+  // Fast-path: not attacked at all → nothing to lose.
+  if (!isSquareAttacked(state, sq, opp)) return 0;
   const attackers = attackersOf(state, sq, opp);
   if (attackers.length === 0) return 0;
   const victimVal = valueFor(piece.id, state.registry[piece.id]);
@@ -243,6 +245,8 @@ function expectedGainAt(state: GameState, sq: Square, color: Color): number {
   const board = state.board;
   const piece = board[sq.r][sq.c];
   if (!piece || piece.color === color) return 0;
+  // Fast-path: not attacked by us → nothing to gain.
+  if (!isSquareAttacked(state, sq, color)) return 0;
   const attackers = attackersOf(state, sq, color);
   if (attackers.length === 0) return 0;
   const victimVal = valueFor(piece.id, state.registry[piece.id]);
@@ -254,6 +258,7 @@ function expectedGainAt(state: GameState, sq: Square, color: Color): number {
   const net = seeSwapOff(ghost, sq, color, victimVal, a.value);
   return Math.max(0, net);
 }
+
 
 
 
