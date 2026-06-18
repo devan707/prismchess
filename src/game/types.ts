@@ -74,6 +74,9 @@ export interface PieceDef {
   description?: string;
   /** Marks built-in custom pieces (King's Hand, Archer, Dragon, Barricade). */
   builtinCustom?: boolean;
+  /** Manual override for point value (pawn units). Wins over the fixed
+   *  table and the estimator when set. */
+  pointsOverride?: number;
 }
 
 export type MoveKind =

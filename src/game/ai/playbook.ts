@@ -19,6 +19,7 @@ export interface Playbook {
 
 const V1_KEY = "menagerie.ai.playbook.v1";
 const V2_PREFIX = "menagerie.ai.playbook.v2:";
+const V3_PREFIX = "menagerie.ai.playbook.v3:";
 const DEFAULT_VARIANT = "__default__";
 
 export const DEFAULT_PLAYBOOK: Playbook = {
@@ -69,20 +70,30 @@ export function normalizePlaybook(p: Partial<Playbook> | null | undefined): Play
 
 function keyFor(variantKey?: string | null): string {
   const k = (variantKey ?? DEFAULT_VARIANT).trim() || DEFAULT_VARIANT;
-  return V2_PREFIX + k;
+  return V3_PREFIX + k;
 }
 
-/** One-time migration of the old global playbook into the currently-loaded variant. */
+/**
+ * v2 → v3 migration. The point-value system changed under the AI's feet, so
+ * we discard everything except positional/opening preferences
+ * (`squareDefenseBonuses`). Old lessons, learned value multipliers, caution,
+ * and aggression weights are all reset.
+ */
 function migrateLegacyOnce(targetVariant: string): void {
   if (typeof window === "undefined") return;
   try {
-    const legacy = window.localStorage.getItem(V1_KEY);
-    if (!legacy) return;
     const tgtKey = keyFor(targetVariant);
-    if (!window.localStorage.getItem(tgtKey)) {
-      window.localStorage.setItem(tgtKey, legacy);
-    }
-    window.localStorage.removeItem(V1_KEY);
+    if (window.localStorage.getItem(tgtKey)) return; // already migrated
+    const v2Key = V2_PREFIX + ((targetVariant ?? DEFAULT_VARIANT).trim() || DEFAULT_VARIANT);
+    const v2Raw = window.localStorage.getItem(v2Key) ?? window.localStorage.getItem(V1_KEY);
+    if (!v2Raw) return;
+    let parsed: Partial<Playbook> | null = null;
+    try { parsed = JSON.parse(v2Raw) as Partial<Playbook>; } catch { parsed = null; }
+    const carried: Partial<Playbook> = {
+      squareDefenseBonuses: parsed?.squareDefenseBonuses ?? {},
+    };
+    const migrated = normalizePlaybook(carried);
+    window.localStorage.setItem(tgtKey, JSON.stringify(migrated));
   } catch { /* noop */ }
 }
 
@@ -144,7 +155,7 @@ export function resetAllPlaybooks(): void {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const k = window.localStorage.key(i);
-      if (k && (k.startsWith(V2_PREFIX) || k === V1_KEY)) toRemove.push(k);
+      if (k && (k.startsWith(V3_PREFIX) || k.startsWith(V2_PREFIX) || k === V1_KEY)) toRemove.push(k);
     }
     for (const k of toRemove) window.localStorage.removeItem(k);
   } catch { /* noop */ }

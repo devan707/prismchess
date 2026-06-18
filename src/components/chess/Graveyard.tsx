@@ -1,5 +1,6 @@
 import type { Color, GameState, Piece, PieceId } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
+import { MaterialBadge } from "./MaterialBadge";
 
 interface Props {
   state: GameState;
@@ -16,6 +17,9 @@ export function Graveyard({ state, humanColor }: Props) {
 
   return (
     <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card/80 backdrop-blur-sm p-2 shadow-sm">
+      <div className="flex items-center justify-end mb-1">
+        <MaterialBadge state={state} humanColor={humanColor} />
+      </div>
       <Row label="Opponent's graveyard" color={opp} pieces={oppFallen} state={state} />
       <div className="h-px bg-border my-1" />
       <Row label="Your graveyard" color={humanColor} pieces={humansFallen} state={state} />

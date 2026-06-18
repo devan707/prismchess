@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Color, PieceDef, PieceId } from "@/game/types";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { Eraser } from "lucide-react";
+import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 
 interface Props {
   pieces: PieceDef[];
@@ -89,8 +90,18 @@ export function PiecePalette({
       </div>
       {hovered && (() => {
         const def = pieces.find((p) => p.id === hovered);
-        if (!def?.description) return null;
-        return <p className="text-[11px] text-muted-foreground border-t pt-2">{def.description}</p>;
+        if (!def) return null;
+        return (
+          <div className="border-t pt-2 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold">{def.name}</span>
+              <PieceWorthBadge id={def.id} def={def} />
+            </div>
+            {def.description && (
+              <p className="text-[11px] text-muted-foreground">{def.description}</p>
+            )}
+          </div>
+        );
       })()}
     </div>
   );

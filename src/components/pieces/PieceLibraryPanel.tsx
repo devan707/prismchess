@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PieceById } from "@/components/chess/PieceGlyph";
+import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
 import {
   listDiscoveryPieces,
@@ -151,7 +152,10 @@ export function PieceLibraryPanel({ onAdd, alreadyInDesign }: Props) {
                       <PieceById id={def.id} color="w" def={def} className="text-2xl" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">{row.name}</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-xs font-medium truncate">{row.name}</p>
+                        <PieceWorthBadge id={def.id} def={def} className="flex-shrink-0" />
+                      </div>
                       <p className="text-[10px] text-muted-foreground truncate">{row.description || "—"}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">

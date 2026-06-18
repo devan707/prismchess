@@ -15,7 +15,9 @@ import {
 } from "@/game/customMovement";
 import { PieceReachPreview } from "./PieceReachPreview";
 import { PieceById } from "@/components/chess/PieceGlyph";
+import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
 import type { PieceDef } from "@/game/types";
+import { estimatePiecePoints } from "@/game/pieceValue";
 import { savePiece, suggestPieceEmoji } from "@/lib/piece-builder.functions";
 import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,19 +39,21 @@ function buildPieceDef(opts: {
   description: string;
   emoji: string;
   steps: MoveStep[];
+  pointsOverride?: number;
 }): PieceDef | { error: string } {
   const compiled = compileMovement(opts.steps);
   if (compiled.error) return { error: compiled.error };
-  return {
+  const def: PieceDef = {
     id: opts.id,
     name: opts.name,
     glyph: opts.emoji,
     emoji: true,
     movement: compiled.spec,
     description: opts.description,
-    // Custom-piece marker so the engine and tools can identify it later.
     builtinCustom: false,
   };
+  if (opts.pointsOverride != null) def.pointsOverride = opts.pointsOverride;
+  return def;
 }
 
 function genId(): string {
@@ -63,6 +67,8 @@ export function PieceBuilderForm({ onSaved }: Props) {
   const [emoji, setEmoji] = useState("");
   const [emojiBusy, setEmojiBusy] = useState(false);
   const [steps, setSteps] = useState<MoveStep[]>([defaultStep()]);
+  const [overrideEnabled, setOverrideEnabled] = useState(false);
+  const [overridePts, setOverridePts] = useState<number>(3);
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
@@ -85,6 +91,9 @@ export function PieceBuilderForm({ onSaved }: Props) {
     movement: compileMovement(steps).spec,
     description,
   };
+
+  const estimatedPts = useMemo(() => estimatePiecePoints(previewDef), [previewDef]);
+  const finalPts = overrideEnabled ? overridePts : estimatedPts;
 
   const updateStep = (idx: number, patch: Partial<MoveStep>) =>
     setSteps((arr) => arr.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
@@ -125,7 +134,10 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
   const doSave = async (visibility: "private" | "public") => {
     if (validation) { toast.error(validation); return; }
-    const def = buildPieceDef({ id, name: name.trim(), description: description.trim(), emoji, steps });
+    const def = buildPieceDef({
+      id, name: name.trim(), description: description.trim(), emoji, steps,
+      pointsOverride: overrideEnabled ? overridePts : undefined,
+    });
     if ("error" in def) { toast.error(def.error); return; }
     setSaving(true);
     try {
@@ -146,6 +158,8 @@ export function PieceBuilderForm({ onSaved }: Props) {
       // Reset
       setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
       setSteps([defaultStep()]);
+      setOverrideEnabled(false);
+      setOverridePts(3);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the piece.");
     } finally {
@@ -241,6 +255,46 @@ export function PieceBuilderForm({ onSaved }: Props) {
           <div>
             <p className="text-xs text-muted-foreground mb-1">Reach from a center cell</p>
             <PieceReachPreview steps={steps} />
+          </div>
+
+          {/* Worth */}
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold">Worth</span>
+              <PieceWorthBadge
+                id={previewDef.id}
+                def={{ ...previewDef, pointsOverride: finalPts }}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Estimated: <span className="font-mono tabular-nums">{estimatedPts}</span> pts
+              {" "}(calibrated to classical chess: P=1, N/B=3, R=5, Q=9).
+            </p>
+            <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={overrideEnabled}
+                onChange={(e) => {
+                  setOverrideEnabled(e.target.checked);
+                  if (e.target.checked) setOverridePts(estimatedPts);
+                }}
+              />
+              Override manually
+            </label>
+            {overrideEnabled && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={0.5}
+                  max={14}
+                  step={0.5}
+                  value={overridePts}
+                  onChange={(e) => setOverridePts(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="font-mono text-xs tabular-nums w-8 text-right">{overridePts}</span>
+              </div>
+            )}
           </div>
           <div className="border-t pt-3 space-y-2">
             {validation && (
