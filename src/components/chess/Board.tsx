@@ -414,6 +414,10 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   style={{ width: "30%", height: "30%", background: "var(--color-board-legal)" }} />
               )}
               {markerKind === "attack" && (
+                <div className="absolute rounded-full pointer-events-none"
+                  style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
+              )}
+              {markerKind === "ranged" && (
                 <div
                   className="absolute rounded-full pointer-events-none flex items-center justify-center"
                   style={{
