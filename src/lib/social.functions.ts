@@ -402,6 +402,54 @@ export const listPublishedGames = createServerFn({ method: "GET" })
     return rows.map((r) => ({ ...r, author: byId.get(r.author_id) ?? null }));
   });
 
+/**
+ * Discovery feed for the home page:
+ * - newest: 10 most recently published games
+ * - popular: 10 most-liked games (excluding any already in newest)
+ * - archive: everything else, newest first, up to 100
+ */
+export const listDiscoveryGames = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+    const cols = "id, slug, name, description, like_count, comment_count, created_at, author_id, design";
+    const [newestRes, popularRes, archiveRes] = await Promise.all([
+      supa.from("published_games").select(cols).order("created_at", { ascending: false }).limit(10),
+      supa.from("published_games").select(cols).order("like_count", { ascending: false }).order("created_at", { ascending: false }).limit(10),
+      supa.from("published_games").select(cols).order("created_at", { ascending: false }).range(10, 109),
+    ]);
+    if (newestRes.error) throw new Error(newestRes.error.message);
+    if (popularRes.error) throw new Error(popularRes.error.message);
+    if (archiveRes.error) throw new Error(archiveRes.error.message);
+    const newest = newestRes.data ?? [];
+    const popularAll = popularRes.data ?? [];
+    const archiveAll = archiveRes.data ?? [];
+    const newestIds = new Set(newest.map((g) => g.id));
+    const popular = popularAll.filter((g) => !newestIds.has(g.id)).slice(0, 10);
+    const featuredIds = new Set([...newestIds, ...popular.map((g) => g.id)]);
+    const archive = archiveAll.filter((g) => !featuredIds.has(g.id));
+
+    const all = [...newest, ...popular, ...archive];
+    const authorIds = Array.from(new Set(all.map((r) => r.author_id)));
+    const profiles = authorIds.length
+      ? (await supa.from("profiles").select("id, username, display_name, avatar").in("id", authorIds)).data ?? []
+      : [];
+    const byId = new Map(profiles.map((p: { id: string; username: string; display_name: string | null; avatar: string | null }) => [p.id, p]));
+    const decorate = (r: typeof newest[number]) => {
+      const d = r.design as { rows?: number; cols?: number } | null;
+      const { design: _design, ...rest } = r;
+      void _design;
+      return { ...rest, rows: d?.rows ?? null, cols: d?.cols ?? null, author: byId.get(r.author_id) ?? null };
+    };
+    return {
+      newest: newest.map(decorate),
+      popular: popular.map(decorate),
+      archive: archive.map(decorate),
+    };
+  });
+
 export const getPublishedGame = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ slug: z.string().min(1).max(120) }).parse(i))
   .handler(async ({ data }) => {
