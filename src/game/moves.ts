@@ -14,11 +14,31 @@ function isFriendly(p: Piece | null, color: Color): boolean {
 }
 
 function isBarricade(_p: Piece | null, _registry: Record<PieceId, PieceDef>): boolean {
-  // Barricades behave like ordinary pieces for blocking and capture — they
-  // simply can't move themselves (enforced by def.immobile in pseudoMovesFrom).
-  // Returning false here lets sliders stop on them, leapers capture them,
-  // pawns take them diagonally, and juggernauts trample them like anything else.
+  // Legacy hook: returning false here keeps the engine treating barricades as
+  // ordinary capturable pieces. Specific restrictions (pawn/archer can't kill
+  // them, front-arc immunity, etc.) live in dedicated filters below.
   return false;
+}
+
+/** A barricade-style piece: immobile (cannot move on its own). */
+function isImmobileBarricade(p: Piece | null, registry: Record<PieceId, PieceDef>): boolean {
+  return !!p && registry[p.id]?.immobile === true;
+}
+
+/** Pawns and Archers are too small to break a barricade. */
+function canDestroyBarricade(piece: Piece, registry: Record<PieceId, PieceDef>): boolean {
+  const def = registry[piece.id];
+  if (!def) return false;
+  if (piece.id === "P" || def.special === "pawn") return false;
+  if (def.special === "archer") return false;
+  return true;
+}
+
+/** A "trebuchet" is any custom siege piece whose name contains "trebuchet".
+ *  Trebuchets are the only attackers that can crack a juggernaut's front arc. */
+function isTrebuchet(def: PieceDef | undefined): boolean {
+  if (!def) return false;
+  return /trebuchet/i.test(def.name ?? "");
 }
 
 /** True for board fixtures (currently: the Prism) — impassable AND uncapturable.
