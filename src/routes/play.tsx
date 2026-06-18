@@ -427,6 +427,7 @@ function GameView({ humanColor, difficulty, design, flipped, muted, setHumanColo
           onDrop={(id, to) => viewingPast ? false : tryDrop(id, to)}
           disabled={viewingPast || terminal}
           onSelectionChange={handleSelectionChange}
+          allowEnemyInspect={enemyInspect}
         />
 
         {takebackOn && state.history.length > 0 && !terminal && !viewingPast && (
