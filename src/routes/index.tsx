@@ -195,7 +195,7 @@ function Home() {
         </p>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 pb-16 space-y-10">
+      <main className="max-w-5xl mx-auto px-4 pb-32 space-y-10">
         {/* Primary actions */}
         <section className="space-y-3">
           <Link to="/multiplayer" className="block">
