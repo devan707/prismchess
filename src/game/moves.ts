@@ -1009,11 +1009,15 @@ export function isSquareAttacked(state: GameState, sq: Square, byColor: Color): 
   const board = state.board;
   const aura = prismAuraCells(board, state.registry);
   const hasAura = aura.size > 0;
+  // When scanning enemy threats, ignore our own pendingHand — otherwise enemy
+  // hand-pieces (H/G/L) won't generate their 2-square handDouble attacks, and
+  // we'd miss threats from 2 squares away (e.g. enemy Regent/Lich King).
+  const scanState: GameState = state.pendingHand ? { ...state, pendingHand: null } : state;
   for (let r = 0; r < board.length; r++) {
     for (let c = 0; c < board[0].length; c++) {
       const p = board[r][c];
       if (!p || p.color !== byColor) continue;
-      const moves = pseudoMovesFrom(state, { r, c });
+      const moves = pseudoMovesFrom(scanState, { r, c });
       for (const m of moves) {
         if (m.to.r === sq.r && m.to.c === sq.c && m.kind !== "drop") {
           if (state.registry[p.id]?.special === "dragon" && !m.captured) continue;
