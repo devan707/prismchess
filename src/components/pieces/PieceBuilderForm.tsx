@@ -630,6 +630,7 @@ export function PieceBuilderForm({ onSaved, initial, template }: Props) {
             <PieceReachPreview
               options={options}
               rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
+              size={previewBoardSize}
             />
           </div>
 
@@ -637,11 +638,13 @@ export function PieceBuilderForm({ onSaved, initial, template }: Props) {
             <p className="text-xs font-semibold mb-1">Playtest</p>
             <p className="text-[11px] text-muted-foreground mb-2">
               Drop allies/enemies, then click your piece to see legal moves and try captures, blocks, and slides.
+              {ranged.enabled && " Orange squares show ranged reach — drop an enemy on one to fire."}
             </p>
             <PieceTestBoard
               def={previewDef}
               options={options}
               rangedSpec={ranged.enabled ? compiledRanged.spec : undefined}
+              size={previewBoardSize}
             />
           </div>
 
