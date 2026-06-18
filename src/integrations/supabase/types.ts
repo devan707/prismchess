@@ -72,6 +72,8 @@ export type Database = {
           def: Json
           description: string
           id: string
+          image_path: string | null
+          image_url: string | null
           is_featured: boolean
           is_hidden: boolean
           like_count: number
@@ -87,6 +89,8 @@ export type Database = {
           def: Json
           description?: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           is_featured?: boolean
           is_hidden?: boolean
           like_count?: number
@@ -102,6 +106,8 @@ export type Database = {
           def?: Json
           description?: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           is_featured?: boolean
           is_hidden?: boolean
           like_count?: number
@@ -242,11 +248,13 @@ export type Database = {
           id: string
           is_featured: boolean
           is_pinned: boolean
+          is_showcase: boolean
           last_activity_at: string
           like_count: number
           reply_count: number
           shared_design: Json | null
           shared_design_name: string | null
+          shared_piece_id: string | null
           title: string
           updated_at: string
         }
@@ -257,11 +265,13 @@ export type Database = {
           id?: string
           is_featured?: boolean
           is_pinned?: boolean
+          is_showcase?: boolean
           last_activity_at?: string
           like_count?: number
           reply_count?: number
           shared_design?: Json | null
           shared_design_name?: string | null
+          shared_piece_id?: string | null
           title: string
           updated_at?: string
         }
@@ -272,15 +282,25 @@ export type Database = {
           id?: string
           is_featured?: boolean
           is_pinned?: boolean
+          is_showcase?: boolean
           last_activity_at?: string
           like_count?: number
           reply_count?: number
           shared_design?: Json | null
           shared_design_name?: string | null
+          shared_piece_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "forum_topics_shared_piece_id_fkey"
+            columns: ["shared_piece_id"]
+            isOneToOne: false
+            referencedRelation: "custom_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       friendships: {
         Row: {
