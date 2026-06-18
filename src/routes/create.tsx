@@ -12,7 +12,7 @@ import { saveCurrentMeta, saveDesign } from "@/game/design";
 import { listMyPublishedGames, unpublishGame, listMyLikedGames, toggleLike } from "@/lib/social.functions";
 import { listMyPieces, listMyLikedPieces, deletePiece, unlikePiece } from "@/lib/piece-builder.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Hammer, Sparkles, Play, Trash2, Crown, Share2, Heart, MessageSquare, Pencil, ExternalLink, LogIn } from "lucide-react";
+import { Hammer, Sparkles, Play, Trash2, Crown, Share2, Heart, MessageSquare, Pencil, ExternalLink, LogIn, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/create")({
