@@ -167,6 +167,45 @@
   }
 }
 
+/* Muted prism gradient TEXT (for headings/labels on dark surfaces). */
+@utility prism-text {
+  background: linear-gradient(
+    90deg,
+    oklch(0.78 0.13 25),
+    oklch(0.82 0.12 70),
+    oklch(0.84 0.11 150),
+    oklch(0.80 0.12 230),
+    oklch(0.78 0.13 320)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Contrast fixes on dark cards ----
+   Cards are dark gray, but many shadcn tokens (primary, muted-foreground,
+   bg-background) resolve to LIGHT-theme values and disappear on dark cards.
+   These overrides remap those tokens to readable values whenever they
+   appear inside a .bg-card surface. */
+.bg-card {
+  /* readable text */
+  & .text-primary { color: var(--card-foreground); }
+  & .text-foreground { color: var(--card-foreground); }
+  & .text-muted-foreground { color: oklch(0.78 0.02 280); }
+
+  /* surfaces / fills */
+  & .bg-primary\/10 { background-color: oklch(1 0 0 / 0.10); }
+  & .bg-secondary { background-color: oklch(1 0 0 / 0.08); }
+  & .bg-muted { background-color: oklch(1 0 0 / 0.08); }
+  & .bg-background { background-color: oklch(0.30 0.02 280); }
+
+  /* borders / hovers */
+  & .border-input { border-color: oklch(1 0 0 / 0.18); }
+  & .hover\:bg-muted\/50:hover { background-color: oklch(1 0 0 / 0.06); }
+  & .hover\:bg-accent:hover { background-color: oklch(1 0 0 / 0.08); }
+  & .hover\:border-primary:hover { border-color: oklch(1 0 0 / 0.35); }
+}
+
 @keyframes piece-slide {
   from { transform: translate(var(--slide-x, 0), var(--slide-y, 0)); }
   to { transform: translate(0, 0); }
