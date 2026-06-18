@@ -366,12 +366,113 @@ export function evaluate(state: GameState, toMove: Color): number {
   // free/winning pieces the opponent left available.
   score += threatTerm(state, toMove);
   score -= threatTerm(state, toMove === "w" ? "b" : "w");
+  // PRINCIPLE #1 & #2: royal protection / royal attack. Dominant term for
+  // king-capture games — outweighs ordinary material trades by design.
+  score += kingSafetyTerm(state, toMove);
+  score -= kingSafetyTerm(state, toMove === "w" ? "b" : "w");
+  // PRINCIPLE #6 & #10: advance toward enemy royal, develop minor pieces
+  // off the back rank in the opening.
+  score += positionalTerm(state, toMove);
+  score -= positionalTerm(state, toMove === "w" ? "b" : "w");
   // Learned tactical squares — defend the ones the AI lost to last game.
   score += squareControlTerm(state, toMove, pb.squareDefenseBonuses);
   // Anti-shuffle: discourage repeatedly moving the same piece without capturing.
   score += shuffleTerm(state, toMove);
   score -= shuffleTerm(state, toMove === "w" ? "b" : "w");
   return score;
+}
+
+/**
+ * PRINCIPLE #1 — King safety (dominant). For each of `color`'s royal pieces:
+ *   - Massive penalty if the royal square itself is attacked (we're in check).
+ *   - Penalty per enemy-attacked square in the king's 3x3 zone, quadratic so
+ *     multiple attackers compound (real mating-net pressure).
+ *   - Bonus per friendly defender and per pawn/barricade shield in front.
+ * PRINCIPLE #2 — Royal attack. Symmetric reward for the same pressure on the
+ * opponent's royal, slightly attenuated so we don't sacrifice our own king to
+ * threaten theirs. This is how the AI sees forcing checks and mate threats
+ * BEFORE the capture actually happens at the leaf of search.
+ */
+function kingSafetyTerm(state: GameState, color: Color): number {
+  const board = state.board;
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+  const opp: Color = color === "w" ? "b" : "w";
+  let total = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = board[r][c];
+      if (!p) continue;
+      const def = state.registry[p.id];
+      if (!def?.royal) continue;
+      const isOurs = p.color === color;
+      const enemySide: Color = isOurs ? opp : color;
+      const allySide: Color = isOurs ? color : opp;
+      const royalAttacked = isSquareAttacked(state, { r, c }, enemySide);
+      let zoneAttacks = 0;
+      let defenders = 0;
+      let shield = 0;
+      const forwardDr = p.color === "w" ? 1 : -1;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (!inB(board, nr, nc)) continue;
+          if (isSquareAttacked(state, { r: nr, c: nc }, enemySide)) zoneAttacks += 1;
+          const t = board[nr][nc];
+          if (!t) continue;
+          if (t.color === allySide) {
+            defenders += 1;
+            if (dr === forwardDr) {
+              const tdef = state.registry[t.id];
+              if (tdef?.special === "pawn" || tdef?.special === "shapeshifter" || t.id === "X") shield += 1;
+            }
+          }
+        }
+      }
+      const pressure = zoneAttacks * zoneAttacks * 18 - defenders * 14 - shield * 10;
+      const directHit = royalAttacked ? 250 : 0;
+      const severity = pressure + directHit;
+      if (isOurs) total -= severity;
+      else total += severity * 0.75;
+    }
+  }
+  return total;
+}
+
+/**
+ * PRINCIPLE #6 / #10 — control and development. Small advancement bonus for
+ * pieces past the halfway line, and an opening-phase penalty for minor pieces
+ * still parked on their starting back rank (encourages developing knights,
+ * bishops, archers, wizards before launching attacks).
+ */
+function positionalTerm(state: GameState, color: Color): number {
+  const board = state.board;
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+  const wide = cols > rows;
+  const opening = (state.history?.length ?? 0) < 16;
+  const backRank = color === "w" ? 0 : (wide ? cols - 1 : rows - 1);
+  let total = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const p = board[r][c];
+      if (!p || p.color !== color) continue;
+      const def = state.registry[p.id];
+      if (!def || def.royal || def.immobile) continue;
+      const axis = wide ? c : r;
+      const len = wide ? cols : rows;
+      const forward = color === "w" ? axis : (len - 1 - axis);
+      const halfway = len / 2;
+      if (forward > halfway) total += Math.min(20, (forward - halfway) * 4);
+      if (opening) {
+        const onBack = (wide ? c : r) === backRank;
+        const isMinor = p.id === "N" || p.id === "B" || p.id === "A" || p.id === "W";
+        if (onBack && isMinor) total -= 18;
+      }
+    }
+  }
+  return total;
 }
 
 /**
