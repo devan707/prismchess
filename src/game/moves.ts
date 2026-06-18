@@ -1561,18 +1561,24 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     if (m.captured && m.captured.id === "J" && m.from && !trebuchetBypass) {
       if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) return false;
     }
-    // Knight side-attack on a juggernaut: the knight must land on the
-    // exposed side of the targeted half (the side opposite the partner).
-    // It cannot leap across the pair to strike the far half.
+    // Knight side-attack on a juggernaut: when flanking from the side, the
+    // knight must land on the exposed side of the targeted half (opposite
+    // the partner) — it cannot leap across the pair to strike the far half.
+    // Rear attacks (knight strictly behind the target) are always allowed.
     if (m.captured && m.captured.id === "J" && m.from && m.piece.id === "N") {
       const partner = findJuggPartner(state.board, m.to, m.captured.color, state.registry);
       if (partner) {
-        const perpAxis: "r" | "c" = wide ? "r" : "c";
-        const tp = m.to[perpAxis];
-        const pp = partner[perpAxis];
-        const kp = m.from[perpAxis];
-        // If knight sits strictly on the partner's side of the target, reject.
-        if ((kp - tp) !== 0 && Math.sign(kp - tp) === Math.sign(pp - tp)) return false;
+        const facingAxis: "r" | "c" = wide ? "c" : "r";
+        const dir = m.captured.color === "w" ? 1 : -1;
+        const isRear = (m.from[facingAxis] - m.to[facingAxis]) * dir < 0;
+        if (!isRear) {
+          const perpAxis: "r" | "c" = wide ? "r" : "c";
+          const tp = m.to[perpAxis];
+          const pp = partner[perpAxis];
+          const kp = m.from[perpAxis];
+          // If knight sits strictly on the partner's side of the target, reject.
+          if ((kp - tp) !== 0 && Math.sign(kp - tp) === Math.sign(pp - tp)) return false;
+        }
       }
     }
     // Front-arc immunity: a barricade cannot be captured from the front.
