@@ -90,6 +90,16 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     builtinCustom: true,
     description: "The king's right hand. Takes TWO king-steps per turn (one square in any direction, like a king). The second step is mandatory — it may return to its original square. Not royal: capturing it doesn't end the game, and it can step into attacked squares.",
   },
+  G: {
+    id: "G",
+    name: "Regent",
+    glyph: "👑",
+    emoji: true,
+    royal: true,
+    movement: { leaps: KING_OFFSETS },
+    builtinCustom: true,
+    description: "Royal heir who rules in two motions. Moves exactly like a King's Hand — TWO king-steps per turn, the second mandatory (may return to its starting square) — but is fully royal: it can be put in check and checkmating it wins the game. By the end of the turn it must not be in check.",
+  },
   A: {
     id: "A",
     name: "Archer",
@@ -189,7 +199,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
 };
 
 export const STANDARD_PIECE_IDS: PieceId[] = ["K", "Q", "R", "B", "N", "P"];
-export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "A", "D", "X", "T", "M", "S", "J", "Z", "W", "Y"];
+export const BUILTIN_CUSTOM_IDS: PieceId[] = ["H", "G", "A", "D", "X", "T", "M", "S", "J", "Z", "W", "Y"];
 export const ALL_BUILTIN_IDS: PieceId[] = [...STANDARD_PIECE_IDS, ...BUILTIN_CUSTOM_IDS];
 
 /** Build a registry from the built-ins + user-defined pieces. */

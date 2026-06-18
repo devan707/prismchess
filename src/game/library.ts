@@ -69,7 +69,7 @@ export const BUILTIN_GAMES: GameType[] = [
   {
     id: "menagerie-8",
     name: "Menagerie",
-    description: "Classic 8×8 reimagined — Dragons & a Wizard on the corners, Dragons as knights, Archers as bishops, Shapeshifter pawns.",
+    description: "Classic 8×8 reimagined — Archers as rooks, Dragons as knights, Wizards as bishops, a Regent leading the army, with an Assassin (White) and Necromancer (Black) flanking. Shapeshifter pawns up front.",
     rows: 8, cols: 8, builtin: true,
     build: () => presetDesign(8, 8, "menagerie"),
   },
