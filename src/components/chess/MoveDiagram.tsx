@@ -76,6 +76,30 @@ function buildDiagram(id: PieceId): Diagram | null {
     case "H":
       for (const [dr, dc] of ALL8) markers.push({ r: cr + dr, c: cc + dc, type: "b" });
       return { rows, cols, center, markers };
+    case "G":
+    case "L": {
+      // Regent / Lich King: TWO king-steps per turn (second is mandatory and
+      // may return to the starting square). Show every square reachable in
+      // up to 2 king-steps (Chebyshev ≤ 2) — the full 5×5 ring around the
+      // piece. Royal: must not end the turn in check.
+      const m: Array<{ r: number; c: number; type: Marker }> = [];
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          m.push({ r: cr + dr, c: cc + dc, type: "b" });
+        }
+      }
+      return {
+        rows,
+        cols,
+        center,
+        markers: m,
+        note:
+          id === "L"
+            ? "Lich King: two king-steps per turn (the second step is mandatory and may return to the starting square). Royal — checkmating it wins the game, and it can never step into or pass through check."
+            : "Regent: two king-steps per turn (the second step is mandatory and may return to the starting square). Royal — checkmating it wins the game, and it can never step into or pass through check.",
+      };
+    }
     case "Q":
       for (const [dr, dc] of ALL8) ray(markers, cr, cc, dr, dc, 3, "b");
       return { rows, cols, center, markers };
