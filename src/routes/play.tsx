@@ -336,7 +336,7 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
             size="icon"
             aria-label={tipsOn ? "Hide piece tips" : "Show piece tips"}
             aria-pressed={tipsOn}
-            onClick={() => setTipsOn((v) => !v)}
+            onClick={() => setTipsOn(!tipsOn)}
           >
             <Info className="h-4 w-4" />
           </Button>
