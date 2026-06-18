@@ -94,6 +94,9 @@ export function compileMovement(steps: MoveStep[]): CompiledMovement {
   // --- single-step shortcut: slide or leap ---
   if (steps.length === 1) {
     const s = steps[0];
+    if (s.direction.kind !== "absolute") {
+      return { spec: {}, error: "The first step must be an absolute direction." };
+    }
     const dirs = absDirOffsets(s.direction.dir);
     if (s.distance === "unlimited" && !s.jumps) {
       const slides: SlideDir[] = dirs.map((d) => ({ dr: d.dr, dc: d.dc }));

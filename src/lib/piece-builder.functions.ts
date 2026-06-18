@@ -107,13 +107,12 @@ export const listMyPieces = createServerFn({ method: "GET" })
 export const listDiscoveryPieces = createServerFn({ method: "GET" })
   .handler(async () => {
     const { createClient } = await import("@supabase/supabase-js");
-    const { Database } = await import("@/integrations/supabase/types").then((m) => ({ Database: null as unknown as typeof m extends { Database: infer D } ? D : never }));
-    void Database;
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_PUBLISHABLE_KEY;
     type Row = {
       id: string; slug: string; name: string; description: string;
-      def: unknown; visibility: string; like_count: number;
+      def: import("@/integrations/supabase/types").Json;
+      visibility: string; like_count: number;
       created_at: string; author_id: string;
     };
     if (!url || !key) return { newest: [] as Row[], popular: [] as Row[], archive: [] as Row[] };
