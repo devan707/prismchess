@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import { MoveDiagram } from "@/components/chess/MoveDiagram";
+import { PieceReachPreview } from "@/components/pieces/PieceReachPreview";
 import { PIECE_LIBRARY } from "@/game/pieces";
 import type { GameTutorial } from "@/game/tutorials";
+import type { PieceDef } from "@/game/types";
+import type { MoveOption } from "@/game/customMovement";
 import { markTutorialSeen } from "@/lib/tutorial-state";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +20,9 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Show "first time playing" banner. */
   isFirstTime?: boolean;
+  /** User-defined pieces shipped with the variant — used to render diagrams
+   *  for custom pieces that aren't in the built-in PIECE_LIBRARY. */
+  customPieces?: PieceDef[];
 }
 
 export function TutorialDialog({
