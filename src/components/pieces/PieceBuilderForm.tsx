@@ -84,8 +84,9 @@ function summarizeOption(opt: MoveOption): string {
   const s = opt.steps[0];
   let dir = "";
   if (s) {
-    if (s.direction.kind === "absolute") {
-      dir = ABSOLUTE_DIR_OPTIONS.find((o) => o.value === s.direction.dir)?.label ?? "";
+    const d = s.direction;
+    if (d.kind === "absolute") {
+      dir = ABSOLUTE_DIR_OPTIONS.find((o) => o.value === d.dir)?.label ?? "";
     } else {
       dir = "relative chain";
     }
