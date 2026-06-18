@@ -1074,12 +1074,35 @@ function flipPieceAt(board: Board, r: number, c: number, registry: Record<PieceI
   board[r][c] = { ...p, color: p.color === "w" ? "b" : "w" };
 }
 
-function applyPrismFlips(board: Board, _move: Move, registry: Record<PieceId, PieceDef>) {
+function applyPrismFlips(board: Board, move: Move, registry: Record<PieceId, PieceDef>) {
   const aura = prismAuraCells(board, registry);
   if (aura.size === 0) return;
-  // Prism light is a unified field — passing through one or many aura squares
-  // does not flip a piece. Only pieces still standing in the aura at the end
-  // of the turn flip, and they flip exactly once.
+  const inAura = (r: number, c: number) => aura.has(`${r},${c}`);
+  // Prism light is a unified field — crossing one or many aura squares only
+  // flips a piece once. Pass-through: a linear move that crossed the aura and
+  // ended outside it flips the mover a single time here. Pieces that end
+  // inside the aura are flipped by the end-of-turn sweep below (also once).
+  if (move.from && move.kind !== "drop" && move.kind !== "portalSwap" &&
+      move.kind !== "necroRaise" && move.kind !== "resurrect" &&
+      move.kind !== "juggShift" && move.kind !== "juggCharge" && move.kind !== "juggExit") {
+    const dr = move.to.r - move.from.r;
+    const dc = move.to.c - move.from.c;
+    const aR = Math.abs(dr), aC = Math.abs(dc);
+    const linear = aR === 0 || aC === 0 || aR === aC;
+    if (linear) {
+      const steps = Math.max(aR, aC);
+      const sR = steps ? dr / steps : 0;
+      const sC = steps ? dc / steps : 0;
+      let crossed = false;
+      for (let s = 1; s < steps; s++) {
+        if (inAura(move.from.r + s * sR, move.from.c + s * sC)) { crossed = true; break; }
+      }
+      if (crossed && !inAura(move.to.r, move.to.c)) {
+        flipPieceAt(board, move.to.r, move.to.c, registry);
+      }
+    }
+  }
+  // End-of-turn sweep: every non-royal piece currently in the aura flips once.
   for (const key of aura) {
     const [r, c] = key.split(",").map(Number);
     flipPieceAt(board, r, c, registry);
