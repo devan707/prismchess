@@ -191,20 +191,24 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
     });
     const { data: row, error } = await sb
       .from("custom_pieces")
-      .select(PIECE_COLS + ", is_hidden")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden")
       .eq("slug", data.slug)
       .eq("visibility", "public")
       .eq("is_hidden", false)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return null;
-    // Author profile (public username/display name).
+    const typedRow = row as {
+      id: string; slug: string; name: string; description: string;
+      def: unknown; visibility: string; like_count: number;
+      created_at: string; author_id: string; image_url: string | null; is_hidden: boolean;
+    };
     const { data: prof } = await sb
       .from("profiles")
       .select("username, display_name")
-      .eq("id", row.author_id)
+      .eq("id", typedRow.author_id)
       .maybeSingle();
-    return { ...row, author: prof ?? null };
+    return { ...typedRow, author: (prof ?? null) as { username: string; display_name: string | null } | null };
   });
 
 // ---------- Upload / clear image (PNG 300×300 transparent) ----------
