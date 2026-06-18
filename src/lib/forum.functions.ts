@@ -26,7 +26,7 @@ export const listTopics = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: topics, error } = await context.supabase
       .from("forum_topics")
-      .select("id, title, body, author_id, reply_count, like_count, last_activity_at, created_at, is_featured, is_pinned, shared_design_name")
+      .select("id, title, body, author_id, reply_count, like_count, last_activity_at, created_at, is_featured, is_pinned, shared_design, shared_design_name")
       .order("is_pinned", { ascending: false })
       .order("is_featured", { ascending: false })
       .order("last_activity_at", { ascending: false })

@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listTopics, toggleLike } from "@/lib/forum.functions";
 import { getMyRole } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2, Play } from "lucide-react";
 import { toast } from "sonner";
+import { saveDesign } from "@/game/design";
+import type { Design } from "@/game/types";
 
 export const Route = createFileRoute("/_authenticated/forum/")({
   head: () => ({
@@ -20,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/forum/")({
 type Topic = Awaited<ReturnType<typeof listTopics>>[number];
 
 function ForumPage() {
+  const navigate = useNavigate();
   const fetchTopics = useServerFn(listTopics);
   const fetchRole = useServerFn(getMyRole);
   const like = useServerFn(toggleLike);
@@ -98,6 +101,24 @@ function ForumPage() {
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{t.body}</p>
                   </Link>
                   <div className="flex flex-col items-end gap-2 shrink-0">
+                    {t.shared_design && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            saveDesign(t.shared_design as unknown as Design);
+                            navigate({ to: "/play" });
+                          } catch {
+                            toast.error("Couldn't load that game.");
+                          }
+                        }}
+                      >
+                        <Play className="h-3.5 w-3.5 mr-1" /> Play
+                      </Button>
+                    )}
                     <button
                       onClick={() => onLike(t)}
                       className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${t.liked_by_me ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}

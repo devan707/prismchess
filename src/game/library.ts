@@ -27,11 +27,12 @@ function pawnRow(row: number, cols: number): Placement[] {
 
 function presetDesign(rows: number, cols: number, presetId: string): Design {
   const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[0];
+  const includeBarricade = presetId === "menagerie" || presetId === "grand-menagerie";
   return {
     rows,
     cols,
     placements: preset.build(rows, cols),
-    reserves: defaultReserves(),
+    reserves: defaultReserves([], { includeBarricade }),
     customPieces: loadCustomPieces(),
   };
 }
@@ -55,7 +56,7 @@ export const BUILTIN_GAMES: GameType[] = [
         ...back.map((id, c) => ({ color: "w" as const, pieceId: id, r: 0, c })),
         ...pawnRow(1, 6),
       ], 6);
-      return { rows: 6, cols: 6, placements, reserves: defaultReserves(), customPieces: loadCustomPieces() };
+      return { rows: 6, cols: 6, placements, reserves: defaultReserves([], { includeBarricade: false }), customPieces: loadCustomPieces() };
     },
   },
   {
