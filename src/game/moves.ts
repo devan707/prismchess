@@ -1288,6 +1288,7 @@ export function applyMoveToBoard(board: Board, move: Move): Board {
       }
     }
   }
+  killMirrorTwin(b, move.to, move.captured);
   return b;
 }
 
