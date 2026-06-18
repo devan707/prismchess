@@ -127,7 +127,7 @@ Your job:
    - aggressionBonus (-150..150): positive if the AI missed clearly good trades, negative if it traded too greedily.
    - squareDefenseBonuses (-300..300 per square, ≤ 8 entries): the most direct lever for specific tactics. When the user describes a square they used to win (e.g. "Archer mate on g12"), add that square with weight 100–200. Prune squares from past games that are no longer relevant.
 
-5. Keep lessons short, imperative, piece-specific. Example: "The Assassin has two move modes per turn — a 1-square king-step (can capture adjacent), OR a 3-step infiltration that only captures on the 3rd step. Keep the King out of both: not adjacent, and 4+ squares from any 3-step landing arc."
+5. Keep lessons short, imperative, piece-specific. Example: "The Assassin moves via a single 3-step infiltration per turn — it cannot move or capture onto adjacent squares, and only captures on the 3rd step. Keep the King 4+ squares away from any 3-step landing arc; adjacency is now safe."
 
 6. If the user explicitly asks you to forget or change something, honor it.`;
 
