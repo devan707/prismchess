@@ -62,7 +62,12 @@ function JoinPage() {
               {" "}invited you to play <span className="font-semibold">{data.match.design_name}</span>.
             </p>
             <p className="text-xs text-muted-foreground">
-              Time control: {data.match.time_control === "3day" ? "3 days/move" : data.match.time_control === "30min" ? "30 minutes" : "10 minutes"}
+              Time control: {(() => {
+                const tc = data.match.time_control;
+                if (tc === "3day") return "3 days/move";
+                const m = /^(\d+)min$/.exec(tc);
+                return m ? `${m[1]} minute${m[1] === "1" ? "" : "s"}` : tc;
+              })()}
               {" · "}
               You'll play {data.match.host_color === "w" ? "Black" : "White"}.
             </p>
