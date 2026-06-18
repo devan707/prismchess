@@ -810,7 +810,15 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
     for (const t of captureTargets) {
       const occ = board[t.r][t.c];
-      if (occ && occ.color !== piece.color && !isBarricade(occ, state.registry)) {
+      if (!occ) continue;
+      const targetIsBarricade = isImmobileBarricade(occ, state.registry);
+      if (targetIsBarricade) {
+        // Friendly fire on barricades is allowed for pieces that can break
+        // them (not pawns, not archers). Front-arc immunity is enforced later.
+        if (canDestroyBarricade(piece, state.registry)) {
+          moves.push({ from, to: t, piece, captured: occ });
+        }
+      } else if (occ.color !== piece.color) {
         moves.push({ from, to: t, piece, captured: occ });
       }
     }
