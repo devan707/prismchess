@@ -435,6 +435,7 @@ export const publishGame = createServerFn({ method: "POST" })
           description: data.description,
           design: data.design as never,
           tutorial: (data.tutorial ?? null) as never,
+          remixed_from_id: data.remixedFromId ?? null,
         })
         .select("id, slug").single();
       if (!error) return { ...inserted, updated: false as const };
