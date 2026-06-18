@@ -99,12 +99,14 @@ export function PieceTestBoard({ def, options, rangedSpec, size = 9 }: Props) {
       }
     }
 
-    // ranged attacks — capture-only, don't move the piece
+    // ranged attacks — capture-only, don't move the piece.
+    // Show the reach even when empty so the user knows where to place an enemy.
     for (const o of rangedSpec?.leaps ?? []) {
       const r = selfPos.r + o.dr, cc = selfPos.c + o.dc;
       if (!inBounds(r, cc)) continue;
       const occ = board.get(`${r},${cc}`);
-      if (occ === "enemy") add({ r, c: cc, kind: "ranged", conditional: false });
+      if (occ === "self" || occ === "ally") continue;
+      add({ r, c: cc, kind: "ranged", conditional: occ !== "enemy" });
     }
 
     return out;
