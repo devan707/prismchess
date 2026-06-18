@@ -28,6 +28,7 @@ export function initialStateFromDesign(design: Design): GameState {
     registry,
     rows: design.rows,
     cols: design.cols,
+    pendingHand: null,
   };
 }
 
