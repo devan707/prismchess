@@ -677,6 +677,61 @@ function generateCastles(state: GameState, from: Square, king: Piece): Move[] {
       rookTo,
     });
   }
+
+  // Juggernaut castle: King jumps 2 squares toward an un-moved Juggernaut
+  // pair on the same rank; the Juggernaut slides into the King's original
+  // square + the square the King crossed. Same safety rules as castling.
+  for (const o of lateralOffsets) {
+    let r = from.r + o.dr;
+    let c = from.c + o.dc;
+    let juggInner: Square | null = null;
+    while (r >= 0 && r < rows && c >= 0 && c < cols) {
+      const t = board[r][c];
+      if (t) {
+        if (t.color === king.color && state.registry[t.id]?.special === "juggernaut") {
+          juggInner = { r, c };
+        }
+        break;
+      }
+      r += o.dr;
+      c += o.dc;
+    }
+    if (!juggInner) continue;
+    // Must be at least 2 squares away so king can move 2 without colliding.
+    const dist = Math.abs(juggInner.r - from.r) + Math.abs(juggInner.c - from.c);
+    if (dist < 2) continue;
+    // Locate the partner half (must exist on same rank, adjacent perpendicularly
+    // OR along the same lateral axis — for our castle we require the pair to
+    // lie on the King's back rank, side-by-side along the castling axis).
+    const partner = findJuggPartner(board, juggInner, king.color, state.registry);
+    if (!partner) continue;
+    // Pair must sit on the King's rank (i.e. partner offset is along the same
+    // axis as the castling direction). If perpendicular offset puts partner
+    // off the king's rank, we still allow it as long as the pair occupies the
+    // back rank and the path between K and inner-J is clear.
+    // Has either juggernaut half moved?
+    const juggMoved = state.history.some(
+      (m) => m.piece.color === king.color && m.piece.id === "J",
+    );
+    if (juggMoved) continue;
+    // Path between king and inner J must be empty (already true from scan).
+    const kingTo: Square = { r: from.r + 2 * o.dr, c: from.c + 2 * o.dc };
+    const passSq: Square = { r: from.r + o.dr, c: from.c + o.dc };
+    // King may not pass through or land on an attacked square.
+    if (isSquareAttacked(state, passSq, opp)) continue;
+    if (isSquareAttacked(state, kingTo, opp)) continue;
+    // Juggernaut ends on { from (King's origin), passSq }. Outer J half
+    // takes king's origin; inner J half takes passSq.
+    out.push({
+      from,
+      to: kingTo,
+      piece: king,
+      captured: null,
+      kind: "juggCastle",
+      juggFrom: [juggInner, partner],
+      juggTo: [passSq, { r: from.r, c: from.c }],
+    });
+  }
   return out;
 }
 
