@@ -112,28 +112,41 @@ function summarizeOption(opt: MoveOption): string {
   return `${kindLabel} · ${dir} · ${dist}${cond}`;
 }
 
-export function PieceBuilderForm({ onSaved }: Props) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+export function PieceBuilderForm({ onSaved, initial }: Props) {
+  const isEdit = !!initial;
+  const initDef = initial?.def;
+  const initRangedSource = (initDef as unknown as { __rangedSource?: RangedAttack } | undefined)?.__rangedSource;
+  const hasUploadedImage = !!(initial?.imageUrl || initDef?.imageUrl);
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [iconPrompt, setIconPrompt] = useState("");
-  const [emoji, setEmoji] = useState("");
+  const [emoji, setEmoji] = useState(initDef && !hasUploadedImage ? (initDef.glyph || "") : "");
   const [emojiBusy, setEmojiBusy] = useState(false);
-  const [imageMode, setImageMode] = useState<"emoji" | "upload">("emoji");
+  const [imageMode, setImageMode] = useState<"emoji" | "upload">(hasUploadedImage ? "upload" : "emoji");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initial?.imageUrl ?? initDef?.imageUrl ?? null);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [options, setOptions] = useState<MoveOption[]>([defaultOption()]);
-  const [ranged, setRanged] = useState<RangedAttack>(defaultRangedAttack());
-  const [overrideEnabled, setOverrideEnabled] = useState(false);
-  const [overridePts, setOverridePts] = useState<number>(3);
+  const [options, setOptions] = useState<MoveOption[]>(
+    initDef?.options && initDef.options.length > 0 ? initDef.options : [defaultOption()],
+  );
+  const [ranged, setRanged] = useState<RangedAttack>(
+    initRangedSource
+      ? initRangedSource
+      : initDef?.rangedCapture
+        ? { ...defaultRangedAttack(), enabled: true, timing: initDef.rangedCapture.timing }
+        : defaultRangedAttack(),
+  );
+  const [overrideEnabled, setOverrideEnabled] = useState(initDef?.pointsOverride != null);
+  const [overridePts, setOverridePts] = useState<number>(initDef?.pointsOverride ?? 3);
   const [abilityRequest, setAbilityRequest] = useState("");
   const [saving, setSaving] = useState(false);
   const suggest = useServerFn(suggestPieceEmoji);
   const save = useServerFn(savePiece);
+  const update = useServerFn(updatePiece);
   const uploadImage = useServerFn(uploadPieceImage);
   const submitAbility = useServerFn(requestPieceAbility);
 
-  const id = useMemo(() => genId(), []);
+  const [id] = useState<string>(() => initDef?.id ?? genId());
 
   const compiledRanged = useMemo(() => compileRangedAttack(ranged), [ranged]);
 
