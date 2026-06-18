@@ -14,6 +14,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { PlayPrefsForm } from "@/components/chess/PlayPrefsForm";
+import { loadDefaultPrefs, type PlayPrefs } from "@/lib/play-prefs";
 import { loadDesign, loadCurrentMeta, type CurrentGameMeta } from "@/game/design";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import type { Color, Design, Difficulty, PieceId, Square } from "@/game/types";
