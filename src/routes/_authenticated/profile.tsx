@@ -22,6 +22,7 @@ function ProfilePage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [prefs, setPrefs] = useState<PlayPrefs>(DEFAULT_PREFS);
 
   useEffect(() => {
     fetchProfile({}).then((p) => {
@@ -30,7 +31,11 @@ function ProfilePage() {
         setDisplayName(p.display_name ?? p.username);
       }
     }).catch((e) => toast.error(e.message));
+    setPrefs(loadDefaultPrefs());
   }, [fetchProfile]);
+
+  const updatePrefs = (next: PlayPrefs) => { setPrefs(next); saveDefaultPrefs(next); };
+
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
