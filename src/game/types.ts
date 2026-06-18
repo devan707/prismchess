@@ -107,6 +107,9 @@ export interface Move {
   /** Castling: rook source/destination squares. */
   rookFrom?: Square;
   rookTo?: Square;
+  /** Juggernaut castle: original + destination squares of both J halves. */
+  juggFrom?: [Square, Square];
+  juggTo?: [Square, Square];
 }
 
 export type Reserves = Record<PieceId, number>;
