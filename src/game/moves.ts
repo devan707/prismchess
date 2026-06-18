@@ -74,6 +74,8 @@ function emitFromSpec(
     // enemy
     return mode === "capture" || mode === "both";
   };
+
+  if (spec.leaps) {
     for (const o of spec.leaps) {
       const r = from.r + o.dr;
       const c = from.c + o.dc;
@@ -90,7 +92,12 @@ function emitFromSpec(
       let steps = 0;
       while (inB(r, c) && steps < max) {
         const t = board[r][c];
-        if (isBarricade(t, registry)) break;
+        if (isImmobileBarricade(t, registry)) {
+          // Barricade halts the slide. If we can break it, this square is a
+          // valid capture target; otherwise the slide just stops short.
+          if (mode !== "move" && canDestroyBarricade(piece, registry)) out.push({ r, c });
+          break;
+        }
         if (isFixture(t, registry)) break;
         if (!t) {
           if (mode !== "capture") out.push({ r, c });
