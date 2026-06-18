@@ -92,6 +92,9 @@ export function PieceBuilderForm({ onSaved }: Props) {
     description,
   };
 
+  const estimatedPts = useMemo(() => estimatePiecePoints(previewDef), [previewDef]);
+  const finalPts = overrideEnabled ? overridePts : estimatedPts;
+
   const updateStep = (idx: number, patch: Partial<MoveStep>) =>
     setSteps((arr) => arr.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
 
@@ -131,7 +134,10 @@ export function PieceBuilderForm({ onSaved }: Props) {
 
   const doSave = async (visibility: "private" | "public") => {
     if (validation) { toast.error(validation); return; }
-    const def = buildPieceDef({ id, name: name.trim(), description: description.trim(), emoji, steps });
+    const def = buildPieceDef({
+      id, name: name.trim(), description: description.trim(), emoji, steps,
+      pointsOverride: overrideEnabled ? overridePts : undefined,
+    });
     if ("error" in def) { toast.error(def.error); return; }
     setSaving(true);
     try {
