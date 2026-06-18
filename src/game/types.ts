@@ -78,7 +78,7 @@ export interface PieceDef {
 
 export type MoveKind =
   | "normal" | "double" | "ep" | "drop"
-  | "dragonAttack" | "portalSwap" | "resurrect" | "necroRaise"
+  | "dragonAttack" | "archerShoot" | "portalSwap" | "resurrect" | "necroRaise"
   | "juggShift" | "juggCharge" | "juggExit"
   | "castle" | "juggCastle" | "handPass" | "handDouble";
 
