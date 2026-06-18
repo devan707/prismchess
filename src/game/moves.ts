@@ -1493,6 +1493,11 @@ function applyMoveToState(state: GameState, move: Move): GameState {
         nextCorpses.push({ square: part, pieceId: "J", originalOwner: move.captured.color });
       }
     }
+    // Mirrored twin partner (E/V) also dies on capture.
+    const twinPart = mirrorTwinAt(state.board, sq, move.captured);
+    if (twinPart) {
+      nextCorpses.push({ square: twinPart, pieceId: move.captured.id, originalOwner: move.captured.color });
+    }
   }
   // Linked-piece partner capture: record corpse at partnerTo.
   if (move.partnerCaptured && move.partnerTo && !move.partnerCaptured.raisedOnce) {
@@ -1501,6 +1506,10 @@ function applyMoveToState(state: GameState, move: Move): GameState {
       pieceId: move.partnerCaptured.id,
       originalOwner: move.partnerCaptured.color,
     });
+    const twinPart = mirrorTwinAt(state.board, move.partnerTo, move.partnerCaptured);
+    if (twinPart) {
+      nextCorpses.push({ square: twinPart, pieceId: move.partnerCaptured.id, originalOwner: move.partnerCaptured.color });
+    }
   }
   // Juggernaut trample: record a corpse on each trampled square along the
   // charge lane (both lead and partner rows/cols).
