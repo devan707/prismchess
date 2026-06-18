@@ -30,13 +30,14 @@ import { ArrowLeft, Play, Save, Sparkles, Wand2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateGameTutorial, suggestGameDescription } from "@/lib/tutorial.functions";
-import { publishGame, getMyPublishedGame } from "@/lib/social.functions";
+import { publishGame, getMyPublishedGame, getPublishedGame } from "@/lib/social.functions";
 import { PieceLibraryPanel } from "@/components/pieces/PieceLibraryPanel";
 
 export const Route = createFileRoute("/sandbox")({
   validateSearch: (search: Record<string, unknown>) => ({
     edit: typeof search.edit === "string" ? search.edit : undefined,
     duplicate: typeof search.duplicate === "string" ? search.duplicate : undefined,
+    remix: typeof search.remix === "string" ? search.remix : undefined,
   }),
   head: () => ({
     meta: [
@@ -63,37 +64,49 @@ function Sandbox() {
   const genTutorial = useServerFn(generateGameTutorial);
   const publish = useServerFn(publishGame);
   const fetchMyGame = useServerFn(getMyPublishedGame);
+  const fetchPublicGame = useServerFn(getPublishedGame);
   const [publishing, setPublishing] = useState(false);
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
 
-  // If ?edit=<gameId> is present, hydrate the sandbox from that published variant
-  // and keep updating that same listing on Publish.
-  // If ?duplicate=<gameId> is present, hydrate from the source variant but save
-  // as a NEW listing (user must rename and/or tweak the design before publishing).
+  // ?edit=<gameId>    → owner edit: updates the same listing on Publish.
+  // ?duplicate=<gameId> → owner duplicate: hydrate then save as NEW.
+  // ?remix=<slug>     → public remix: hydrate from any published variant
+  //                     (yours or someone else's) and save as a NEW listing.
   useEffect(() => {
     const sourceId = search.edit ?? search.duplicate;
-    if (!sourceId) return;
+    const remixSlug = search.remix;
+    if (!sourceId && !remixSlug) return;
     const isDuplicate = !!search.duplicate;
+    const isRemix = !!remixSlug;
     let cancelled = false;
     (async () => {
       try {
-        const row = await fetchMyGame({ data: { gameId: sourceId } });
+        let row: { id: string; name: string; description: string; design: unknown } | null = null;
+        if (remixSlug) {
+          const res = await fetchPublicGame({ data: { slug: remixSlug } });
+          if (res?.game) row = { id: res.game.id, name: res.game.name, description: res.game.description, design: res.game.design };
+        } else if (sourceId) {
+          const mine = await fetchMyGame({ data: { gameId: sourceId } });
+          if (mine) row = mine as unknown as typeof row;
+        }
         if (cancelled || !row) return;
         setDesign(row.design as unknown as Design);
-        setSaveName(isDuplicate ? `${row.name} (copy)` : row.name);
+        setSaveName((isDuplicate || isRemix) ? `${row.name} (remix)` : row.name);
         setDescription(row.description);
-        setPublishedGameId(isDuplicate ? null : row.id);
+        setPublishedGameId((isDuplicate || isRemix) ? null : row.id);
         toast.info(
-          isDuplicate
-            ? `Duplicating "${row.name}" — rename and tweak before publishing.`
-            : `Editing "${row.name}" — Publish will update this listing.`,
+          isRemix
+            ? `Remixing "${row.name}" — tweak the design and publish as your own variant.`
+            : isDuplicate
+              ? `Duplicating "${row.name}" — rename and tweak before publishing.`
+              : `Editing "${row.name}" — Publish will update this listing.`,
         );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Couldn't load that game");
       }
     })();
     return () => { cancelled = true; };
-  }, [search.edit, search.duplicate, fetchMyGame]);
+  }, [search.edit, search.duplicate, search.remix, fetchMyGame, fetchPublicGame]);
 
 
   const registry = useMemo(() => buildRegistry(design.customPieces), [design.customPieces]);
