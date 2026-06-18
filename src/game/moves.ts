@@ -621,6 +621,20 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
     }
   }
 
+  // Custom ranged capture (Archer-style): capture an enemy on a matching
+  // square without relocating. Arrows fly over intervening pieces.
+  if (def.rangedCapture) {
+    for (const off of def.rangedCapture.spec.leaps ?? []) {
+      const to = { r: from.r + off.dr, c: from.c + off.dc };
+      if (!inBoardBounds(board, to)) continue;
+      const t = board[to.r][to.c];
+      if (!t) continue;
+      if (t.color === piece.color) continue;
+      if (isBarricade(t, state.registry)) continue;
+      if (isFixture(t, state.registry)) continue;
+      moves.push({ from, to, piece, captured: t, kind: "archerShoot" });
+    }
+
   // King's Hand combo step: a single 2-square king-line move that counts as
   // both of its required turn-steps. Only generated when no pending second
   // move is owed (otherwise the second step is a normal 1-square leap).
