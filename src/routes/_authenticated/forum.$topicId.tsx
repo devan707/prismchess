@@ -116,13 +116,19 @@ function TopicPage() {
                   {r.author?.display_name ?? r.author?.username ?? "unknown"} · {new Date(r.created_at).toLocaleString()}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{r.body}</p>
-                <div className="mt-2">
+                <div className="mt-2 flex items-center justify-between">
                   <button
                     onClick={() => onLike("reply", r.id)}
                     className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${r.liked_by_me ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     <Heart className={`h-3 w-3 ${r.liked_by_me ? "fill-current" : ""}`} /> {r.like_count}
                   </button>
+                  <AdminMenu
+                    show={isModOrAdmin}
+                    actions={[
+                      { label: "Delete reply", destructive: true, confirm: "Delete this reply?", onClick: async () => { await delReply({ data: { replyId: r.id } }); load(); } },
+                    ]}
+                  />
                 </div>
               </li>
             ))}
