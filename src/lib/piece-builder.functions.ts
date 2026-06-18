@@ -271,9 +271,20 @@ export const uploadPieceImage = createServerFn({ method: "POST" })
     if (upErr) throw new Error(upErr.message);
 
     const url = `/api/public/piece-img/${path}?v=${Date.now()}`;
+    // Also patch the embedded def so games that snapshot the piece def
+    // (sandbox saves, published games) keep the image when rendered later.
+    const { data: existing } = await context.supabase
+      .from("custom_pieces")
+      .select("def")
+      .eq("id", piece.id)
+      .maybeSingle();
+    const nextDef = {
+      ...(existing?.def && typeof existing.def === "object" ? (existing.def as Record<string, unknown>) : {}),
+      imageUrl: url,
+    };
     const { error: updErr } = await context.supabase
       .from("custom_pieces")
-      .update({ image_path: path, image_url: url })
+      .update({ image_path: path, image_url: url, def: nextDef as never })
       .eq("id", piece.id);
     if (updErr) throw new Error(updErr.message);
     return { ok: true as const, imageUrl: url };
