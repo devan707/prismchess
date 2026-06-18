@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import ReactMarkdown from "react-markdown";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -143,16 +143,16 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b">
+        <DialogHeader className="px-4 pt-3 pb-2 border-b">
           <div className="flex items-center gap-2 flex-wrap">
-            <DialogTitle className="flex items-center gap-2 mr-auto">
-              <Brain className="h-5 w-5" /> Post-game review
+            <DialogTitle className="flex items-center gap-2 mr-auto text-base">
+              <Brain className="h-4 w-4" /> Post-game review
             </DialogTitle>
             <Popover>
               <PopoverTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]">
                   <Sparkles className="h-3 w-3 mr-1" />
-                  Playbook · {playbook.lessons.length} lessons
+                  Playbook · {playbook.lessons.length}
                   <ChevronDown className="h-3 w-3 ml-1" />
                 </Button>
               </PopoverTrigger>
@@ -178,9 +178,6 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
               </PopoverContent>
             </Popover>
           </div>
-          <DialogDescription className="mt-1">
-            Step through the game move by move. Notes you send are tagged with the move shown — the AI reviews both sides and learns from your feedback.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 grid md:grid-cols-[minmax(260px,360px)_1fr] gap-0 overflow-hidden">
