@@ -14,6 +14,8 @@
  */
 import type { Color, Difficulty, GameState, Move, Square } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
+// Note: check-giving moves are treated as "loud" via per-call computation in
+// qsearch (see below) — we can't fold it into isLoud() without a state arg.
 import { evaluate, valueFor } from "./evaluate";
 
 export interface SearchOptions {
