@@ -98,14 +98,14 @@ function Create() {
   const editPublished = (g: MyGame) => {
     navigate({ to: "/sandbox", search: { edit: g.id } as never });
   };
-  const handleUnpublish = async (g: MyGame) => {
-    if (!confirm(`Unpublish "${g.name}"? It will be removed from the discover feed. Your local draft is unaffected.`)) return;
+  const handleDeleteGame = async (g: MyGame) => {
+    if (!confirm(`Delete "${g.name}"? It will be permanently removed from the discover feed. Your local draft is unaffected.`)) return;
     try {
       await unpublishFn({ data: { gameId: g.id } });
       setMyGames((prev) => prev.filter((x) => x.id !== g.id));
-      toast.success("Unpublished");
+      toast.success("Deleted");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't unpublish");
+      toast.error(e instanceof Error ? e.message : "Couldn't delete");
     }
   };
 
