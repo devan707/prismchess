@@ -176,6 +176,7 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
     state, status, tryMove, tryDrop, legalFor, legalDropSquares,
     selectedDrop, setSelectedDrop,
     undo, takeback, pendingPromotion, promotionOptions, confirmPromotion,
+    aiThinking, aiThinkingSince, nudgeAi,
   } = game;
 
   const [resignedBy, setResignedBy] = useState<Color | null>(null);
