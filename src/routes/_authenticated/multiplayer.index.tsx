@@ -237,11 +237,15 @@ function CreateChallengeButton({ onCreated }: { onCreated: () => void }) {
         design = s.design;
         name = s.name;
       }
+      const resolvedTc =
+        timeControl === "custom"
+          ? `${Math.max(1, Math.min(180, Math.floor(customMinutes || 1)))}min`
+          : timeControl;
       const res = await create({
         data: {
           design: design as unknown as Record<string, unknown>,
           designName: name,
-          timeControl,
+          timeControl: resolvedTc,
           hostColor,
           visibility,
         },
