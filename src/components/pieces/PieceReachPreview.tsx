@@ -1,47 +1,88 @@
 import { useMemo } from "react";
-import { compileMovement, type MoveStep } from "@/game/customMovement";
+import { compileOption, type MoveOption } from "@/game/customMovement";
 import type { MovementSpec } from "@/game/types";
 
 interface Props {
-  steps: MoveStep[];
+  options: MoveOption[];
   /** Optional ranged-attack squares (relative offsets from center). */
   rangedSpec?: MovementSpec;
   size?: number; // grid dimension
 }
 
+type Marker =
+  | "move-capture"
+  | "move-only"
+  | "capture-only"
+  | "slide"
+  | "ranged";
+
 /** Mini board that highlights every square the compiled piece can reach
- *  from a center cell. Green = leap landing (move + capture by default),
- *  blue = slider ray, orange = ranged-only capture (piece stays put). */
-export function PieceReachPreview({ steps, rangedSpec, size = 9 }: Props) {
-  const { moveSpec, captureSpec, error } = useMemo(() => compileMovement(steps), [steps]);
+ *  from a center cell. */
+export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
   const center = Math.floor(size / 2);
 
-  // Build a reach map.
-  const map = useMemo(() => {
-    const m = new Map<string, "leap" | "slide" | "move-only" | "ranged">();
-    for (const o of moveSpec.leaps ?? []) {
-      const r = center + o.dr, c = center + o.dc;
-      if (r < 0 || r >= size || c < 0 || c >= size) continue;
-      // If captureSpec is explicitly empty, this is a move-only square.
-      const captureOnly = captureSpec && (captureSpec.leaps?.length ?? 0) === 0 && (captureSpec.slides?.length ?? 0) === 0;
-      m.set(`${r},${c}`, captureOnly ? "move-only" : "leap");
-    }
-    for (const d of moveSpec.slides ?? []) {
-      const max = d.max && d.max > 0 ? d.max : size;
-      let r = center + d.dr, c = center + d.dc, n = 0;
-      while (r >= 0 && r < size && c >= 0 && c < size && n < max) {
-        m.set(`${r},${c}`, "slide");
-        r += d.dr; c += d.dc; n++;
+  const { map, conditional, error } = useMemo(() => {
+    const m = new Map<string, Marker>();
+    const cond = new Set<string>(); // squares only reachable conditionally
+    let firstError: string | undefined;
+
+    const put = (key: string, marker: Marker, isCond: boolean) => {
+      // Promote rules: move-capture > move-only / capture-only ; slide stays slide.
+      const prev = m.get(key);
+      if (!prev) m.set(key, marker);
+      else if (prev === "move-only" && marker === "capture-only") m.set(key, "move-capture");
+      else if (prev === "capture-only" && marker === "move-only") m.set(key, "move-capture");
+      else if (marker === "move-capture") m.set(key, "move-capture");
+      if (isCond) cond.add(key);
+      else cond.delete(key);
+    };
+
+    for (const opt of options) {
+      const c = compileOption(opt);
+      if (c.error) { firstError ??= c.error; continue; }
+      const isCond = opt.condition !== "none";
+      const baseMarker: Marker =
+        opt.kind === "move-only" ? "move-only"
+        : opt.kind === "capture-only" ? "capture-only"
+        : "move-capture";
+      for (const o of c.spec.leaps ?? []) {
+        const r = center + o.dr, cc = center + o.dc;
+        if (r < 0 || r >= size || cc < 0 || cc >= size) continue;
+        put(`${r},${cc}`, baseMarker, isCond);
+      }
+      for (const d of c.spec.slides ?? []) {
+        const max = d.max && d.max > 0 ? d.max : size;
+        let r = center + d.dr, cc = center + d.dc, n = 0;
+        while (r >= 0 && r < size && cc >= 0 && cc < size && n < max) {
+          put(`${r},${cc}`, "slide", isCond);
+          r += d.dr; cc += d.dc; n++;
+        }
       }
     }
     for (const o of rangedSpec?.leaps ?? []) {
-      const r = center + o.dr, c = center + o.dc;
-      if (r < 0 || r >= size || c < 0 || c >= size) continue;
-      // Ranged overlays movement marker.
-      m.set(`${r},${c}`, "ranged");
+      const r = center + o.dr, cc = center + o.dc;
+      if (r < 0 || r >= size || cc < 0 || cc >= size) continue;
+      m.set(`${r},${cc}`, "ranged");
     }
-    return m;
-  }, [moveSpec, captureSpec, rangedSpec, center, size]);
+    return { map: m, conditional: cond, error: firstError };
+  }, [options, rangedSpec, center, size]);
+
+  const dot = (marker: Marker | undefined, isCond: boolean) => {
+    if (!marker) return null;
+    const ring = isCond ? "ring-2 ring-amber-400/70 ring-offset-1 ring-offset-transparent" : "";
+    switch (marker) {
+      case "move-capture":
+        return <span className={`block w-2 h-2 rounded-full bg-emerald-500 ${ring}`} />;
+      case "move-only":
+        return <span className={`block w-2 h-2 rounded-full border-2 border-emerald-500 bg-transparent ${ring}`} />;
+      case "capture-only":
+        return <span className={`block w-2 h-2 rounded-full bg-red-500 ${ring}`} />;
+      case "slide":
+        return <span className={`block w-2 h-2 rounded-full bg-sky-500 ${ring}`} />;
+      case "ranged":
+        return <span className={`block w-2 h-2 rounded-full bg-orange-500`} />;
+    }
+  };
 
   return (
     <div className="space-y-1">
@@ -56,20 +97,17 @@ export function PieceReachPreview({ steps, rangedSpec, size = 9 }: Props) {
           const r = Math.floor(i / size), c = i % size;
           const isDark = (r + c) % 2 === 1;
           const isCenter = r === center && c === center;
-          const kind = map.get(`${r},${c}`);
+          const key = `${r},${c}`;
+          const kind = map.get(key);
+          const isCond = conditional.has(key);
           return (
             <div
               key={i}
               className="relative flex items-center justify-center aspect-square"
-              style={{
-                background: isDark ? "rgb(120 113 108 / 0.35)" : "rgb(245 245 244 / 0.6)",
-              }}
+              style={{ background: isDark ? "rgb(120 113 108 / 0.35)" : "rgb(245 245 244 / 0.6)" }}
             >
               {isCenter && <span className="text-base leading-none">●</span>}
-              {!isCenter && kind === "leap" && <span className="block w-2 h-2 rounded-full bg-emerald-500" />}
-              {!isCenter && kind === "move-only" && <span className="block w-2 h-2 rounded-full border-2 border-emerald-500 bg-transparent" />}
-              {!isCenter && kind === "slide" && <span className="block w-2 h-2 rounded-full bg-sky-500" />}
-              {!isCenter && kind === "ranged" && <span className="block w-2 h-2 rounded-full bg-orange-500" />}
+              {!isCenter && dot(kind, isCond)}
             </div>
           );
         })}
@@ -78,9 +116,12 @@ export function PieceReachPreview({ steps, rangedSpec, size = 9 }: Props) {
         <p className="text-[11px] text-destructive">{error}</p>
       ) : (
         <p className="text-[11px] text-muted-foreground leading-snug">
-          ● piece · <span className="text-emerald-600">green</span> move/capture
-          {" · "}<span className="text-sky-600">blue</span> slide
-          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">orange</span> ranged</>)}
+          ● piece · <span className="text-emerald-600">●</span> move/cap ·{" "}
+          <span className="text-emerald-600">○</span> move only ·{" "}
+          <span className="text-red-600">●</span> capture only ·{" "}
+          <span className="text-sky-600">●</span> slide
+          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">●</span> ranged</>)}
+          {" · "}<span className="text-amber-600">ring</span> = conditional
         </p>
       )}
     </div>
