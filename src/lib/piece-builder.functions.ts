@@ -89,7 +89,7 @@ export const savePiece = createServerFn({ method: "POST" })
 
 // ---------- List queries ----------
 
-const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id";
+const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url";
 
 export const listMyPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
