@@ -275,14 +275,24 @@ export function PieceBuilderForm({ onSaved, initial }: Props) {
     if ("error" in def) { toast.error(def.error); return; }
     setSaving(true);
     try {
-      const row = await save({
-        data: {
-          name: name.trim(),
-          description: description.trim(),
-          def: def as unknown as Record<string, unknown>,
-          visibility,
-        },
-      });
+      const row = isEdit
+        ? await update({
+            data: {
+              pieceId: initial!.pieceId,
+              name: name.trim(),
+              description: description.trim(),
+              def: def as unknown as Record<string, unknown>,
+              visibility,
+            },
+          })
+        : await save({
+            data: {
+              name: name.trim(),
+              description: description.trim(),
+              def: def as unknown as Record<string, unknown>,
+              visibility,
+            },
+          });
 
       if (imageMode === "upload" && imageFile) {
         const fd = new FormData();
@@ -302,19 +312,23 @@ export function PieceBuilderForm({ onSaved, initial }: Props) {
       }
 
       toast.success(
-        visibility === "public"
-          ? `Published "${name.trim()}" to the community library`
-          : `Saved "${name.trim()}" to your library`,
+        isEdit
+          ? `Saved changes to "${name.trim()}"`
+          : visibility === "public"
+            ? `Published "${name.trim()}" to the community library`
+            : `Saved "${name.trim()}" to your library`,
       );
       onSaved?.(row.id, def);
-      // Reset
-      setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
-      setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
-      setOptions([defaultOption()]);
-      setRanged(defaultRangedAttack());
-      setOverrideEnabled(false);
-      setOverridePts(3);
-      setAbilityRequest("");
+      if (!isEdit) {
+        // Reset for the next piece (creation mode only).
+        setName(""); setDescription(""); setIconPrompt(""); setEmoji("");
+        setImageMode("emoji"); setImageFile(null); setImagePreview(null); setImageError(null);
+        setOptions([defaultOption()]);
+        setRanged(defaultRangedAttack());
+        setOverrideEnabled(false);
+        setOverridePts(3);
+        setAbilityRequest("");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the piece.");
     } finally {
