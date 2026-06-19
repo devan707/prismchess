@@ -6,7 +6,7 @@ import { getMyRole } from "@/lib/profile.functions";
 import { adminDeleteForumTopic, adminSetTopicFlags } from "@/lib/admin.functions";
 import { AdminMenu } from "@/components/admin/AdminMenu";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2, Play } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquare, PlusCircle, Lightbulb, Pin, Star, Gamepad2, Play, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
@@ -87,6 +87,11 @@ function ForumPage() {
                   <Link to="/forum/$topicId" params={{ topicId: t.id }} className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {t.is_pinned && <Pin className="h-3 w-3 text-muted-foreground" aria-label="Pinned" />}
+                      {t.is_announcement && (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">
+                          <Megaphone className="h-3 w-3" /> Announcement
+                        </span>
+                      )}
                       {t.is_featured && (
                         <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">
                           <Star className="h-3 w-3" /> Featured
