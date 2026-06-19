@@ -48,13 +48,21 @@ function signatureGlyphs(id: string): [string, string, string] {
   }
 }
 
+const SIG_PALETTE = ["#ef4444", "#f97316", "#eab308", "#10b981", "#06b6d4", "#3b82f6", "#a855f7", "#ec4899"];
+
+function colorForString(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return SIG_PALETTE[h % SIG_PALETTE.length];
+}
+
 function signatureTileGradient(id: string): string {
   switch (id) {
     case "classic-8": return "radial-gradient(circle at 50% 50%, #eab308 0%, #000000 100%)";
     case "mini-6": return "radial-gradient(circle at 50% 50%, #3b82f6 0%, #000000 100%)";
     case "menagerie-8": return "radial-gradient(circle at 50% 50%, #10b981 0%, #000000 100%)";
     case "grand-menagerie-12": return "radial-gradient(circle at 50% 50%, #a855f7 0%, #000000 100%)";
-    default: return "radial-gradient(circle at 50% 50%, #6b7280 0%, #000000 100%)";
+    default: return `radial-gradient(circle at 50% 50%, ${colorForString(id)} 0%, #000000 100%)`;
   }
 }
 
