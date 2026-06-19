@@ -12,7 +12,7 @@ import { analyzeGame, fmtMove } from "@/lib/api/analyze-game.functions";
 import { loadPlaybook, savePlaybook, resetPlaybook, type Playbook } from "@/game/ai/playbook";
 import { initialStateFromDesign, replayMoves } from "@/game/rules";
 import { loadCurrentMeta } from "@/game/design";
-import type { Color, Design, Difficulty, GameState, Square } from "@/game/types";
+import type { Color, Design, Difficulty, GameState, MoveTarget, Square } from "@/game/types";
 
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -141,7 +141,7 @@ export function PostGameAnalysis({ open, onOpenChange, state, design, aiColor, h
 
   const total = state.history.length;
   const noopMove = (_f: Square, _t: Square) => false;
-  const noLegal = (_sq: Square | null): Square[] => [];
+  const noLegal = (_sq: Square | null): MoveTarget[] => [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

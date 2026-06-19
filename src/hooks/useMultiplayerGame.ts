@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/game/rules";
-import { allLegalMoves, legalMovesFrom } from "@/game/moves";
-import type { Color, Design, GameState, Move, PieceId, Square } from "@/game/types";
+import { allLegalMoves, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
+import type { Color, Design, GameState, Move, MoveTarget, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 import { submitMove, markFinished, offerDraw, respondDraw } from "@/lib/multiplayer.functions";
 import { toast } from "sonner";
@@ -223,9 +223,9 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
   );
 
   const legalFor = useCallback(
-    (from: Square | null): Square[] => {
+    (from: Square | null): MoveTarget[] => {
       if (!from) return [];
-      return legalMovesFrom(state, from).map((m) => m.to);
+      return moveTargetsFrom(state, from);
     },
     [state],
   );
