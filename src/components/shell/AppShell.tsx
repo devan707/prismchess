@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { UserMenu } from "@/components/UserMenu";
 import { AdminBadge } from "@/components/admin/AdminBadge";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { BottomTabs } from "./BottomTabs";
 import logoUrl from "@/assets/logo.png";
 import type { ReactNode } from "react";
