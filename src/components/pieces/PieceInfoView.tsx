@@ -55,11 +55,7 @@ export function PieceInfoView({
 
       <div className="grid sm:grid-cols-[auto_1fr] gap-4 items-start">
         <div className="flex justify-center sm:block">
-          <PieceReachPreview
-            options={def.options ?? []}
-            rangedSpec={def.rangedCapture?.spec}
-            size={previewSize}
-          />
+          <PieceReachPreview def={def} size={previewSize} />
         </div>
         <div className="space-y-2">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
