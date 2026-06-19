@@ -311,7 +311,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { data: rows, error } = await context.supabase.rpc("admin_list_users", {
-      _q: data.q?.trim() || null,
+      _q: data.q?.trim() ? data.q.trim() : undefined,
     });
     if (error) throw new Error(error.message);
     const ids = (rows ?? []).map((r: any) => r.id);
