@@ -10,11 +10,7 @@ export const Route = createFileRoute("/_authenticated")({
 
     // Gate the rest of the app behind onboarding completion.
     if (location.pathname !== "/onboarding") {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarded")
-        .eq("id", data.user.id)
-        .maybeSingle();
+      const { data: profile } = await supabase.rpc("get_my_profile");
       if (profile && profile.onboarded === false) {
         throw redirect({ to: "/onboarding" });
       }
