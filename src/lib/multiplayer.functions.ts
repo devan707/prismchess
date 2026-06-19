@@ -231,25 +231,135 @@ export const joinMatch = createServerFn({ method: "POST" })
       .from("matches")
       .update({
         guest_id: context.userId,
-        status: "active",
+        status: "ready_check",
         started_at: now,
-        last_clock_update_at: now,
+        last_clock_update_at: null,
         expires_at: null,
-      })
+        ready_w: false,
+        ready_b: false,
+      } as never)
       .eq("id", match.id)
       .eq("status", "open");
     if (error) throw new Error(error.message);
 
-    // Notify the host that their challenge was accepted.
+    // Notify the host that their challenge was accepted — they need to tap Ready.
     const { sendPushBackground } = await import("./push.server");
     sendPushBackground(match.host_id, {
-      title: "Challenge accepted",
-      body: `Someone joined your "${match.design_name}" challenge — it's your move if you're white.`,
+      title: "Opponent joined",
+      body: `Someone joined your "${match.design_name}" challenge — tap to start.`,
       url: `/multiplayer/${match.id}`,
-      tag: `match:${match.id}:accept`,
+      tag: `match:${match.id}:joined`,
     });
 
     return { id: match.id };
+  });
+
+// ─── Mark ready (ready-check before clock starts) ──────────────────────────
+export const markReady = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ matchId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: match, error } = await context.supabase
+      .from("matches")
+      .select("host_id, guest_id, host_color, status, ready_w, ready_b, design_name")
+      .eq("id", data.matchId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!match) throw new Error("Match not found.");
+    if (match.status !== "ready_check") throw new Error("Match is not awaiting ready.");
+    if (context.userId !== match.host_id && context.userId !== match.guest_id) {
+      throw new Error("Not a player in this match.");
+    }
+    const meColor: Color =
+      context.userId === match.host_id ? (match.host_color as Color)
+      : (match.host_color === "w" ? "b" : "w");
+    const myFlag = meColor === "w" ? "ready_w" : "ready_b";
+    const otherFlag = meColor === "w" ? "ready_b" : "ready_w";
+    const otherReady = (match as Record<string, unknown>)[otherFlag] === true;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (otherReady) {
+      const startedAt = new Date().toISOString();
+      const { error: uErr } = await supabaseAdmin.from("matches").update({
+        [myFlag]: true,
+        status: "active",
+        last_clock_update_at: startedAt,
+      } as never).eq("id", data.matchId).eq("status", "ready_check");
+      if (uErr) throw new Error(uErr.message);
+
+      const { sendPushBackground } = await import("./push.server");
+      const firstMoverId =
+        match.host_color === "w" ? match.host_id : match.guest_id;
+      const otherId = firstMoverId === match.host_id ? match.guest_id : match.host_id;
+      if (firstMoverId) sendPushBackground(firstMoverId, {
+        title: "Game on",
+        body: `"${match.design_name}" has started — your move.`,
+        url: `/multiplayer/${data.matchId}`,
+        tag: `match:${data.matchId}:start`,
+      });
+      if (otherId) sendPushBackground(otherId, {
+        title: "Game on",
+        body: `"${match.design_name}" has started.`,
+        url: `/multiplayer/${data.matchId}`,
+        tag: `match:${data.matchId}:start`,
+      });
+      return { ok: true, started: true };
+    } else {
+      const { error: uErr } = await supabaseAdmin.from("matches").update({
+        [myFlag]: true,
+      } as never).eq("id", data.matchId).eq("status", "ready_check");
+      if (uErr) throw new Error(uErr.message);
+
+      const otherId = context.userId === match.host_id ? match.guest_id : match.host_id;
+      if (otherId) {
+        const { sendPushBackground } = await import("./push.server");
+        sendPushBackground(otherId, {
+          title: "Opponent is ready",
+          body: `Tap Ready to start "${match.design_name}".`,
+          url: `/multiplayer/${data.matchId}`,
+          tag: `match:${data.matchId}:ready`,
+        });
+      }
+      return { ok: true, started: false };
+    }
+  });
+
+// ─── Public challenge preview (no auth — for share-link landing page) ──────
+export const getChallengePreview = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ token: z.string().min(1).max(64) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Server not configured.");
+    const sb = createClient(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+    const { data: match, error } = await sb
+      .from("matches")
+      .select("id, host_id, design_name, time_control, host_color, status")
+      .eq("share_token", data.token)
+      .maybeSingle();
+    if (error || !match) return { match: null as null, host: null };
+    const { data: host } = await sb
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", match.host_id as string)
+      .maybeSingle();
+    return {
+      match: {
+        id: match.id as string,
+        design_name: match.design_name as string,
+        time_control: match.time_control as string,
+        host_color: match.host_color as Color,
+        status: match.status as string,
+      },
+      host: host ? { username: host.username as string, display_name: host.display_name as string | null } : null,
+    };
   });
 
 // ─── Cancel ────────────────────────────────────────────────────────────────
