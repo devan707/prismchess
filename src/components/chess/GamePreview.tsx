@@ -67,15 +67,17 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
               return (
                 <div
                   key={`${r}-${c}`}
-                  className={`flex items-center justify-center ${dark ? "bg-stone-400/40 dark:bg-stone-700/60" : "bg-stone-200/40 dark:bg-stone-800/40"}`}
+                  className={`relative overflow-hidden flex items-center justify-center ${dark ? "bg-stone-400/40 dark:bg-stone-700/60" : "bg-stone-200/40 dark:bg-stone-800/40"}`}
                 >
                   {cell && (
-                    <PieceById
-                      id={cell.pieceId}
-                      color={cell.color}
-                      def={registry[cell.pieceId]}
-                      className="text-[min(4.5vw,1.6rem)] leading-none"
-                    />
+                    <div className="absolute inset-[10%] flex items-center justify-center">
+                      <PieceById
+                        id={cell.pieceId}
+                        color={cell.color}
+                        def={registry[cell.pieceId]}
+                        className="w-full h-full text-[min(4.5vw,1.4rem)] leading-none [&_img]:max-w-full [&_img]:max-h-full [&_img]:!w-auto [&_img]:!h-auto"
+                      />
+                    </div>
                   )}
                 </div>
               );
