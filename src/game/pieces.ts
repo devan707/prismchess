@@ -110,7 +110,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "dragon",
     builtinCustom: true,
-    description: "Flight: move to any unoccupied square on the board, ignoring all intervening pieces (non-capturing). Strike: capture an enemy 1 or 2 squares away orthogonally or diagonally — knight-style jumps are NOT allowed. Distance-2 strikes are blocked by an intervening piece.",
+    description: "Flight: move to any unoccupied square on the board, ignoring all intervening pieces (non-capturing). Melee strike: capture an adjacent enemy (1 square orthogonally or diagonally) by moving onto its square — no flame. Breath attack: ranged capture of an enemy exactly 2 squares away orthogonally or diagonally; the dragon stays in place and breathes fire. Distance-2 strikes are blocked by an intervening piece. Knight-style jumps are NOT allowed.",
   },
   X: {
     id: "X",
