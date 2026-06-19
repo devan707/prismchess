@@ -18,6 +18,7 @@ import {
  * full realtime subscription.
  */
 export function NotificationsBell() {
+  const router = useRouter();
   const fetchList = useServerFn(listMyNotifications);
   const markOne = useServerFn(markNotificationRead);
   const markAll = useServerFn(markAllNotificationsRead);
