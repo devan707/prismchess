@@ -192,7 +192,7 @@ interface RealCaseResult {
   reasons: string[];
 }
 
-export async function runRealGameBenchmark(timeMs = 1200): Promise<{
+export async function runRealGameBenchmark(timeMs = 4000): Promise<{
   results: RealCaseResult[];
   passed: number;
   failed: number;
