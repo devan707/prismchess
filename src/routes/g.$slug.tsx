@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Home, Heart, MessageSquare, Play, Trash2, Pencil, Wand2 } from "lucide-react";
+import { Home, Heart, MessageSquare, Play, Trash2, Pencil, Wand2, Swords } from "lucide-react";
+import { CreateChallengeDialog } from "@/components/multiplayer/CreateChallengeDialog";
 import {
   getPublishedGame, listComments, addComment, deleteComment, toggleLike, getMyLikeState,
 } from "@/lib/social.functions";
@@ -48,6 +49,7 @@ function SharedGamePage() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [body, setBody] = useState("");
+  const [challengeOpen, setChallengeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -161,7 +163,10 @@ function SharedGamePage() {
           ) : null}
 
           <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Button size="sm" onClick={handlePlay}><Play className="h-3 w-3 mr-1" /> Play this game</Button>
+            <Button size="sm" onClick={handlePlay}><Play className="h-3 w-3 mr-1" /> Play vs AI</Button>
+            <Button size="sm" variant="outline" onClick={() => setChallengeOpen(true)}>
+              <Swords className="h-3 w-3 mr-1" /> Challenge a friend
+            </Button>
             <Button size="sm" variant={liked ? "default" : "outline"} onClick={handleLike}>
               <Heart className={`h-3 w-3 mr-1 ${liked ? "fill-current" : ""}`} /> {likeCount}
             </Button>
@@ -233,6 +238,11 @@ function SharedGamePage() {
           )}
         </section>
       </main>
+      <CreateChallengeDialog
+        open={challengeOpen}
+        onOpenChange={setChallengeOpen}
+        presetDesign={{ design: game.design as unknown as Design, name: game.name }}
+      />
     </div>
   );
 }
