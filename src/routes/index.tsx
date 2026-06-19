@@ -237,8 +237,11 @@ function Home() {
                     className="w-44 shrink-0 snap-start text-left block"
                   >
                     <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition overflow-hidden">
-                      <div className="prism-tile h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1">
-                        <span className="relative z-10 flex items-end gap-1 text-card-foreground/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
+                      <div
+                        className="h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1"
+                        style={{ background: signatureTileGradient(g.id) }}
+                      >
+                        <span className="relative z-10 flex items-end gap-1 text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
                           <span className="text-3xl opacity-80">{glyphs[0]}</span>
                           <span className="text-5xl">{glyphs[1]}</span>
                           <span className="text-3xl opacity-80">{glyphs[2]}</span>
