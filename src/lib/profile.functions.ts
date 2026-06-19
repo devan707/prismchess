@@ -120,7 +120,11 @@ export const updateNotificationPrefs = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, boolean> = {};
+    const patch: {
+      marketing_opt_in?: boolean;
+      community_updates_opt_in?: boolean;
+      gameplay_notify_opt_in?: boolean;
+    } = {};
     if (typeof data.marketing_opt_in === "boolean") patch.marketing_opt_in = data.marketing_opt_in;
     if (typeof data.community_updates_opt_in === "boolean") patch.community_updates_opt_in = data.community_updates_opt_in;
     if (typeof data.gameplay_notify_opt_in === "boolean") patch.gameplay_notify_opt_in = data.gameplay_notify_opt_in;
