@@ -59,6 +59,8 @@ function specsForSpecial(def?: PieceDef): {
         },
       };
     case "archer":
+      // Adjacent king-step squares can move OR capture; the 2-step orthogonal
+      // squares are move-only (no melee capture there).
       return {
         movement: {
           leaps: [
@@ -67,6 +69,7 @@ function specsForSpecial(def?: PieceDef): {
             { dr: 0, dc: -2 }, { dr: 0, dc: 2 },
           ],
         },
+        capture: { leaps: [...KING_OFFSETS] },
         ranged: {
           leaps: [
             { dr: -2, dc: -2 }, { dr: -2, dc: 2 }, { dr: 2, dc: -2 }, { dr: 2, dc: 2 },
