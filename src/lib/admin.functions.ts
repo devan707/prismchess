@@ -414,8 +414,8 @@ export const adminGetStats = createServerFn({ method: "GET" })
     const sb = context.supabase;
     const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const [users, signups7, activeMatches, finished7, topVariants, topPieces] = await Promise.all([
-      sb.from("profiles").select("*", { count: "exact", head: true }),
-      sb.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", since7),
+      sb.from("profiles").select("id", { count: "exact", head: true }),
+      sb.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", since7),
       sb.from("matches").select("*", { count: "exact", head: true }).eq("status", "active"),
       sb.from("matches").select("*", { count: "exact", head: true }).eq("status", "finished").gte("finished_at", since7),
       sb.from("variant_plays").select("variant_key, plays").order("plays", { ascending: false }).limit(10),
