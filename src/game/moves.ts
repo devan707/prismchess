@@ -682,18 +682,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       }
     }
     // DASH: jump exactly 2 squares orthogonally to an empty square. Not an
-    // attack — landing square must be empty. May leap over any piece in between.
-    // Restricted to the archer's first move (like a pawn's double-step):
-    // if no prior move records an archer of this color arriving on the
-    // current square, this archer hasn't moved yet.
-    const archerHasMoved = state.history.some(
-      (m) =>
-        m.piece.id === "A" &&
-        m.piece.color === piece.color &&
-        m.to.r === from.r &&
-        m.to.c === from.c,
-    );
-    if (!archerHasMoved) {
+    // attack — landing square must be empty. May leap over any piece in
+    // between. Available on every turn (not just the first move).
+    {
       const ORTHO_4: Offset[] = [
         { dr: 2, dc: 0 }, { dr: -2, dc: 0 }, { dr: 0, dc: 2 }, { dr: 0, dc: -2 },
       ];
