@@ -29,9 +29,22 @@ export function useGame(opts: UseGameOptions) {
   const gameOver = status.kind === "checkmate" || status.kind === "stalemate" || status.kind === "royal-loss";
 
   const promotionOptions = useMemo<PieceId[]>(() => {
+    const starting = state.startingPieceIds && state.startingPieceIds.length > 0
+      ? new Set(state.startingPieceIds)
+      : null;
     const out: PieceId[] = [];
     for (const id of Object.keys(state.registry)) {
-      if (state.registry[id].canBePromoted) out.push(id);
+      const def = state.registry[id];
+      if (!def) continue;
+      if (def.special === "pawn" || def.special === "shapeshifter") continue;
+      if (def.royal) continue;
+      if (def.immobile) continue;
+      if (def.special === "juggernaut") continue;
+      if (def.special === "portal") continue;
+      if (starting) {
+        if (!starting.has(id)) continue;
+      } else if (!def.canBePromoted) continue;
+      out.push(id);
     }
     const order = ["Q", "R", "B", "N"];
     out.sort((a, b) => {
@@ -41,7 +54,7 @@ export function useGame(opts: UseGameOptions) {
       return ai - bi;
     });
     return out;
-  }, [state.registry]);
+  }, [state.registry, state.startingPieceIds]);
 
   const reset = useCallback(() => {
     setState(initialStateFromDesign(opts.design));
