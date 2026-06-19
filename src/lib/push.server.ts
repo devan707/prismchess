@@ -33,6 +33,17 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     return;
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // Respect the recipient's opt-in: every push we send today is gameplay-related
+  // (your move, challenge accepted, draw/rematch offers, DMs, friend requests).
+  // If the user opted out of gameplay notifications, don't even fetch their subs.
+  const { data: prof } = await supabaseAdmin
+    .from("profiles")
+    .select("gameplay_notify_opt_in")
+    .eq("id", userId)
+    .maybeSingle();
+  if (prof && prof.gameplay_notify_opt_in === false) return;
+
   const { data: subs, error } = await supabaseAdmin
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
