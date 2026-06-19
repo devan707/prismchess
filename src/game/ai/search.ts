@@ -17,6 +17,7 @@ import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
 // Note: check-giving moves are treated as "loud" via per-call computation in
 // qsearch (see below) — we can't fold it into isLoud() without a state arg.
 import { evaluate, seeMove, valueFor } from "./evaluate";
+import { getActivePlaybook } from "./playbook";
 
 
 export interface SearchOptions {
