@@ -451,6 +451,9 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
                   <Switch checked={tipsOn} onCheckedChange={setTipsOn} />
                 </div>
                 <div className="border-t pt-3 space-y-2">
+                  <ChallengeFriendButton design={design} />
+                </div>
+                <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full" disabled={terminal}>
