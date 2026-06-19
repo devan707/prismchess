@@ -153,7 +153,9 @@ function HistoryRow({ entry, onDelete }: { entry: HistoryEntry; onDelete?: () =>
           {inner}
         </Link>
       ) : (
-        <div className="flex-1 min-w-0">{inner}</div>
+        <Link to="/history/$id" params={{ id: entry.id }} className="flex-1 min-w-0">
+          {inner}
+        </Link>
       )}
       {onDelete && (
         <Button
