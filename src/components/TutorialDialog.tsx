@@ -119,6 +119,11 @@ export function TutorialDialog({
                   </p>
                 )}
               </div>
+              {!builtinHasDiagram && slideDef.movementSummary && (
+                <p className="mt-3 text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">
+                  {slideDef.movementSummary}
+                </p>
+              )}
             </div>
           )}
           {slide.body && (
