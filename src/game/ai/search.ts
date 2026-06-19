@@ -540,23 +540,27 @@ function isRoyalShuffleAtRoot(state: GameState, m: Move): boolean {
   const h = state.history;
   let sameRoyalMoves = 0;
   let revisitsPriorSquare = false;
-  const lookback = 8;
+  const lookback = 24;
   for (let i = h.length - 1; i >= 0 && i >= h.length - lookback; i--) {
     const past = h[i];
     if (past.piece.color !== m.piece.color) continue;
     if (past.piece.id !== m.piece.id) continue;
     sameRoyalMoves++;
-    // Past move's FROM square = a square this royal stood on. If we now
-    // return to it, that's a shuffle.
     if (past.from && past.from.r === m.to.r && past.from.c === m.to.c) {
       revisitsPriorSquare = true;
     }
-    // Or destination == past destination (sitting on same square twice).
     if (past.to.r === m.to.r && past.to.c === m.to.c) {
       revisitsPriorSquare = true;
     }
   }
-  return revisitsPriorSquare && sameRoyalMoves >= 1;
+  // Two trigger conditions:
+  //   (a) the move literally returns to a square this royal stood on in
+  //       the recent lookback window — the classic 2-square bounce, or
+  //   (b) the royal has been a serial mover (≥2 prior steps in the window)
+  //       and this is yet another purposeless step. Catches "start a new
+  //       shuffle from a third square" patterns the bounce check misses.
+  return revisitsPriorSquare || sameRoyalMoves >= 2;
+
 }
 
 function applyRoyalShufflePenalty(state: GameState, scored: Array<{ move: Move; score: number }>): void {
