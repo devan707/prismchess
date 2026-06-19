@@ -278,35 +278,22 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggFoot = juggInfo?.footprint.has(`${r},${c}`) ?? false;
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
-          const isLegalRaw = legalTargets.some((t) => t.r === r && t.c === c);
-          void isLegalRaw;
-          const isLegalForJugg = isLegalRaw || juggFoot;
-          void isLegalForJugg;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
-          const isAttackPattern = attackSet.has(`${r},${c}`);
-          const isEnemyMoveOnly = isEnemyInspect && enemyMoveOnlyTargets.some((t) => t.r === r && t.c === c);
 
           // Three-color move indicator:
           //   RED  = piece can capture an enemy here (or juggernaut trample target).
           //   GREEN= legal/pseudo move to an empty square (no attack threatened).
           //   ORANGE= square is threatened (could capture if enemy were here),
           //           but no enemy currently stands there.
-          let markerKind: "capture" | "move" | "attack" | "ranged" | null = null;
-          const isRanged = rangedAttackSet.has(`${r},${c}`);
+          let markerKind: MoveTarget["kind"] | null = null;
           if (juggTrample) {
             markerKind = "capture";
           } else if (juggFoot) {
             markerKind = null; // juggernaut footprint paints its own overlay
-          } else if (isEnemyInspect) {
-            if (isAttackPattern && piece && piece.color === humanColor) markerKind = isRanged ? "ranged" : "capture";
-            else if (isAttackPattern && !piece) markerKind = isRanged ? "ranged" : "attack";
-            else if (isEnemyMoveOnly && !piece) markerKind = "move";
           } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
-            if (showHints) {
-              if (isLegalRaw && piece && piece.color !== humanColor) markerKind = isRanged ? "ranged" : "capture";
-              else if (isAttackPattern && !piece) markerKind = isRanged ? "ranged" : "attack";
-              else if (isLegalRaw && !piece) markerKind = "move";
-            }
+            if (showHints) markerKind = targetKindBySquare.get(`${r},${c}`) ?? null;
+          } else if (isEnemyInspect) {
+            markerKind = targetKindBySquare.get(`${r},${c}`) ?? null;
           }
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
