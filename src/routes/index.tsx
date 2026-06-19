@@ -261,7 +261,7 @@ function Home() {
                         className="relative h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1 overflow-hidden"
                         style={{ background: signatureTileGradient(g.id) }}
                       >
-                        <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE} />
+                        <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE_WIDE} />
                         <span className="relative z-10 flex items-end gap-1 text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
                           <span className="text-3xl opacity-80">{glyphs[0]}</span>
                           <span className="text-5xl">{glyphs[1]}</span>
