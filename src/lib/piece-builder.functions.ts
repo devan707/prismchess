@@ -262,7 +262,7 @@ export const listMyLikedPieces = createServerFn({ method: "GET" })
       id: string; slug: string; name: string; description: string;
       def: import("@/integrations/supabase/types").Json; visibility: string;
       like_count: number; created_at: string; author_id: string;
-      image_url: string | null; is_hidden: boolean;
+      image_url: string | null; is_hidden: boolean; movement_summary: string | null;
     };
     const visible = ((pieces ?? []) as unknown as Row[]).filter((p) => !p.is_hidden);
     const order = new Map(ids.map((id, i) => [id, i] as const));
@@ -279,6 +279,7 @@ export const listDiscoveryPieces = createServerFn({ method: "GET" })
       def: import("@/integrations/supabase/types").Json;
       visibility: string; like_count: number;
       created_at: string; author_id: string;
+      image_url: string | null; movement_summary: string | null;
     };
     if (!url || !key) return { newest: [] as Row[], popular: [] as Row[], archive: [] as Row[] };
     const sb = createClient(url, key, {
@@ -367,7 +368,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
       id: string; slug: string; name: string; description: string;
       def: import("@/integrations/supabase/types").Json; visibility: string; like_count: number;
       created_at: string; author_id: string; image_url: string | null; is_hidden: boolean;
-      remixed_from_id: string | null;
+      remixed_from_id: string | null; movement_summary: string | null;
     };
     const { data: prof } = await sb
       .from("profiles")
