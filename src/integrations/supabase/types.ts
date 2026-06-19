@@ -409,6 +409,7 @@ export type Database = {
         Row: {
           author_id: string
           body: string
+          category: string | null
           created_at: string
           id: string
           is_announcement: boolean
@@ -427,6 +428,7 @@ export type Database = {
         Insert: {
           author_id: string
           body: string
+          category?: string | null
           created_at?: string
           id?: string
           is_announcement?: boolean
@@ -445,6 +447,7 @@ export type Database = {
         Update: {
           author_id?: string
           body?: string
+          category?: string | null
           created_at?: string
           id?: string
           is_announcement?: boolean
@@ -754,6 +757,42 @@ export type Database = {
           updated_at?: string
           visibility?: string
           white_time_ms?: number
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          link: string | null
+          metadata: Json
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          link?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          link?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
