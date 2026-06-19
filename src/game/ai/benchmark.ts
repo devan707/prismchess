@@ -23,7 +23,8 @@
  */
 import type { Board, Color, GameState, PieceId } from "../types";
 import { buildRegistry } from "../pieces";
-import { chooseMove } from "./index";
+import { runSearch } from "./search";
+import { TT } from "./tt";
 
 // ── Tiny ASCII board format ─────────────────────────────────────────────
 // Uppercase = white, lowercase = black. '.' = empty square.
