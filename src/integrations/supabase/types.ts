@@ -228,6 +228,7 @@ export type Database = {
           is_featured: boolean
           is_hidden: boolean
           like_count: number
+          movement_summary: string | null
           name: string
           play_count: number
           remixed_from_id: string | null
@@ -246,6 +247,7 @@ export type Database = {
           is_featured?: boolean
           is_hidden?: boolean
           like_count?: number
+          movement_summary?: string | null
           name: string
           play_count?: number
           remixed_from_id?: string | null
@@ -264,6 +266,7 @@ export type Database = {
           is_featured?: boolean
           is_hidden?: boolean
           like_count?: number
+          movement_summary?: string | null
           name?: string
           play_count?: number
           remixed_from_id?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_pieces ADD COLUMN IF NOT EXISTS movement_summary text;
