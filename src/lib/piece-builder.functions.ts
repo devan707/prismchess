@@ -54,6 +54,38 @@ export const suggestPieceEmoji = createServerFn({ method: "POST" })
     }
   });
 
+// ---------- AI: generate technical movement/attack summary ----------
+
+async function generateMovementSummaryFromDef(opts: {
+  name: string;
+  def: unknown;
+}): Promise<string | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
+  try {
+    const gateway = createLovableAiGatewayProvider(key);
+    const { text } = await generateText({
+      model: gateway("google/gemini-3-flash-preview"),
+      system:
+        "You are a chess piece analyst. Given a custom chess piece definition (JSON), " +
+        "write a concise TECHNICAL summary of how the piece MOVES and ATTACKS. " +
+        "Cover: leaps vs slides, range, directions (forward / sideways / diagonal / backward), " +
+        "whether captures and quiet moves use the same pattern or differ, any ranged or special " +
+        "captures, and any conditional moves (e.g. first-move only, only when adjacent to friend). " +
+        "Use chess vocabulary players know. 2-4 short sentences. No marketing language, no piece " +
+        "names from classical chess unless directly comparable, no markdown, no bullet points, no headings.",
+      prompt:
+        `Piece name: ${opts.name}\n` +
+        `Definition JSON:\n${JSON.stringify(opts.def, null, 2)}`,
+      maxOutputTokens: 400,
+    });
+    const cleaned = text.trim().replace(/^["']+|["']+$/g, "").slice(0, 1200);
+    return cleaned || null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------- Save / publish a custom piece ----------
 
 const SaveInput = z.object({
