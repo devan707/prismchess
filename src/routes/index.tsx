@@ -86,13 +86,19 @@ function Home() {
     listDiscoveryGames()
       .then((d) => { if (!cancelled) setDiscovery(d); })
       .catch(() => { /* best-effort */ });
-    listMyMatches()
-      .then((ms) => {
+    // Only fetch matches when the user is signed in — otherwise the
+    // protected server fn 401s and surfaces as a runtime error.
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.auth.getSession();
+      if (cancelled || !data.session) return;
+      try {
+        const ms = await listMyMatches();
         if (cancelled) return;
         const ongoing = ms.find((m) => m.status === "active" || m.status === "pending");
         setActiveMatch(ongoing ?? null);
-      })
-      .catch(() => { /* signed-out: ignore */ });
+      } catch { /* ignore */ }
+    })();
     return () => { cancelled = true; };
   }, []);
 
