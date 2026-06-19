@@ -1,83 +1,69 @@
-## Announcements System
+## Admin Curation for Pieces & Variants
 
-### Database (1 migration)
+Good news: most of the backend already exists. `custom_pieces` and `published_games` both have `is_featured` and `is_hidden`, with admin server functions `adminSetCustomPieceFlags`, `adminSetPublishedGameFlags`, `adminDeleteCustomPiece`, `adminDeletePublishedGame`. RLS already lets admins/mods update + delete both tables. So this is mostly UI plus two small server-function tweaks to let admins edit content they don't own.
 
-**`public.announcements`**
-- `id uuid pk`, `title text`, `body text`, `cta_label text?`, `cta_href text?`
-- `kind text` — `welcome | update | feature | variant | spotlight | challenge | general`
-- `pinned bool default false`, `active bool default true`
-- `forum_topic_id uuid?` — links to the auto-created forum thread
-- `published_at timestamptz default now()`, `created_by uuid`, `created_at`, `updated_at`
-- RLS: any signed-in user can `SELECT` where `active = true`; admins/moderators full CRUD (`has_role`)
-- GRANTs to `authenticated` + `service_role`
+### Terminology mapping
+- **Promote to signature** = set `is_featured = true`
+- **Demote** = set `is_featured = false`
+- **Archive** (soft hide) = set `is_hidden = true` (stays in DB; removed from public discovery, palette, and play)
+- **Delete** = hard delete row
+- **Default palette / library** = piece library filters by `is_featured` to show "signature" pieces alongside the user's own creations
 
-**`public.announcement_reads`**
-- `user_id`, `announcement_id`, `read_at`, pk(user_id, announcement_id)
-- RLS: user manages own rows only
+### 1. Admin curation menus on existing pages
 
-**`public.profiles.welcomed_at timestamptz?`** — set when the first-time Welcome modal is dismissed.
+Add an `AdminMenu` (the existing red admin dropdown) to:
+- **`/pieces/$slug`** (piece detail) — actions: Promote/Demote signature, Archive/Unarchive, Edit, Delete
+- **`/g/$slug`** (variant detail) — actions: Promote/Demote signature, Archive/Unarchive, Edit, Delete
+- **Each row of `PieceLibraryPanel`** and the variant cards in `discover` / `create` — same actions, compact
 
-### Forum integration
+The menu is rendered through `useIsAdmin` so non-admins see nothing. After each action we `router.invalidate()` and toast.
 
-Every announcement has a paired forum topic in an **"Announcements"** category, so the forum becomes the news archive.
+### 2. New admin dashboard: `/admin/content`
 
-- On `createAnnouncement`: server fn also inserts a `forum_topics` row (category `announcements`, authored by the admin, body = announcement body + small "📣 Official announcement" header), stores the new topic id in `announcements.forum_topic_id`.
-- On `updateAnnouncement`: optionally syncs the topic's title/body (admin can untick "also update forum thread" if they only want to fix a typo silently — default on).
-- On `deleteAnnouncement`: leaves the forum thread in place (history) but clears the link; admin can delete the topic separately if they want.
-- Announcement modal CTA: if `forum_topic_id` is set, show a **"Discuss in forum"** link to `/forum/$topicId` alongside the existing optional `cta_label/cta_href` and Dismiss buttons.
-- Forum list (`forum.index.tsx`): announcement-linked topics get a small "Announcement" badge and sort pinned-first within the announcements category.
+A single page with two tabs (Pieces / Variants). Each tab is a sortable/searchable table showing: name, author, created, status badges (Signature, Hidden), like count. Row actions: Promote, Demote, Archive, Unarchive, Edit, Delete. Filter chips: All / Signature / Hidden / Public. This is the central "spring cleaning" surface; the inline menus on detail pages are the in-context shortcuts.
 
-If `announcements` isn't already a recognized forum category, add it to whatever category enum/list the forum uses (will confirm during implementation by reading `forum_topics` schema + forum index).
+Add a link to it from the existing red `AdminBadge` popover ("Content library").
 
-### Server functions (`src/lib/announcements.functions.ts`)
+### 3. Admin edit for any piece or variant
 
-- `listActiveAnnouncements()` — auth, ordered pinned desc, published_at desc, joined with reads for current user
-- `getUnseenAnnouncement()` — next 1 unseen active announcement (pinned first) for modal
-- `markAnnouncementRead({ id })`
-- `markWelcomed()`
-- Admin-only (verified via `has_role`): `createAnnouncement` (also creates forum topic), `updateAnnouncement` (syncs topic), `deleteAnnouncement`, `togglePinned`, `toggleActive`, `listAllAnnouncementsAdmin`
+Currently `getMyPieceBySlug` and the `publishGame` update path both require `author_id = userId`, so the "Edit" button on the admin menu would fail. Two minimal changes:
 
-### UI
+- **`getMyPieceBySlug`** → add an admin/mod bypass: if the caller has `admin`/`moderator` role, drop the `author_id` filter. Audit-log the load as `custom_piece.admin_edit_view`.
+- **`savePiece` / `updatePiece`** in `piece-builder.functions.ts` → when caller is admin/mod and not the author, allow the update; preserve original `author_id`; audit-log `custom_piece.admin_edit`.
+- **`publishGame`** → when caller is admin/mod and the target row belongs to another author, allow the in-place update; preserve `author_id`; audit-log `published_game.admin_edit`. Dedupe checks scope to the target row's author, not the caller.
+- New tiny server fn **`getPublishedGameForEdit`** (admin or owner) that returns full design/tutorial JSON for the editor to hydrate (the existing edit flow loads from `/g/$slug`; we just make sure admin can hit it).
 
-**`src/components/announcements/AnnouncementModal.tsx`** — title, body, Pinned badge, optional CTA, "Discuss in forum" link, Dismiss (calls `markAnnouncementRead`).
+The existing edit routes (`/pieces/$slug/edit` and the create page in edit mode) then "just work" for admins on anything.
 
-**`src/components/announcements/WelcomeModal.tsx`** — shown when `profiles.welcomed_at` is null. Copy:
+### 4. Auto-refresh of signature surfaces
 
-> **Welcome to Prism Chess**
->
-> You're one of the first people here — thanks for showing up early. Prism Chess is a brand new project, and the community is still finding its feet. That's the fun part: what this place becomes is going to be shaped by the people who jumped in at the start, including you.
->
-> Here you can play classic and experimental variants against the AI, design your own pieces with custom movement and abilities, build full variants around them, and challenge friends to matches with whatever wild rules you cook up.
->
-> If you make something interesting, share it. If you have an idea, post it in the community forum and introduce yourself — I read everything. We're early, and the best things this app does next will come from you.
->
-> — The Prism Chess team
+- `PieceLibraryPanel` and the variant discovery list already read from the DB. When promoted/demoted/hidden, a `router.invalidate()` + react-query invalidation on the relevant keys refreshes them. No schema changes needed.
+- The hardcoded "Quick Play featured" on `/` currently calls a local `pickFeatured()`. Out of scope: switching that to DB-driven. Note in a comment but don't change behavior in this turn.
 
-Buttons: **Play Now** (→ `/`), **Visit Community** (→ `/forum`), **Dismiss**. All call `markWelcomed`.
-
-**`AnnouncementGate`** mounted in `src/routes/_authenticated/route.tsx`:
-1. Welcome modal if `welcomed_at` is null
-2. Otherwise next unseen active announcement
-3. Skip on `/onboarding`
-4. Session `localStorage` snooze prevents re-pop after dismissing mid-session
-
-**Admin page `src/routes/_authenticated/admin.announcements.tsx`**
-- Table: title, kind, pinned, active, forum link, published_at
-- New / Edit dialog: title, body, kind, cta label/href, pinned, active, "Also post/update forum thread" checkbox (default on)
-- Row actions: Edit, Toggle pin, Toggle active, Delete, Open forum thread
-- Linked from `AdminMenu.tsx`
-
-### Seed
-
-Migration inserts one welcome announcement (`kind=welcome`, `pinned=true`) and its paired forum topic (authored by a system/admin user — will pick the first user with the `admin` role at migration time; if none exists, insert announcement only and create the topic on first admin login via a one-shot backfill on the admin page):
-
-> **We're live — and you're early.**
-> Prism Chess just opened its doors. Custom pieces, custom variants, AI play, and friend challenges are all here today. Jump into the forum, share what you build, and help steer where this goes next.
+### 5. Audit & safety
+- All admin actions go through the existing `log_admin_action` RPC (already wired in `admin.functions.ts`).
+- Destructive actions (Archive, Delete) prompt via `AdminMenu`'s built-in `confirm` field. Delete uses a stronger "type the name to confirm" dialog in `/admin/content` to prevent accidents.
 
 ### Files
 
-- New: migration; `src/lib/announcements.functions.ts`; `src/components/announcements/{AnnouncementModal,WelcomeModal,AnnouncementGate}.tsx`; `src/routes/_authenticated/admin.announcements.tsx`
-- Edit: `src/routes/_authenticated/route.tsx`, `src/components/admin/AdminMenu.tsx`, `src/routes/_authenticated/forum.index.tsx` (announcement badge), `src/integrations/supabase/types.ts` (regenerated)
+**New**
+- `src/routes/_authenticated/admin.content.tsx` — Pieces/Variants management dashboard
+- `src/components/admin/PieceAdminMenu.tsx`, `src/components/admin/VariantAdminMenu.tsx` — thin wrappers around `AdminMenu` with the right action set
 
-### Out of scope
-Push notifications, rich-text editor, scheduled publishing, per-user targeting.
+**Edited**
+- `src/lib/admin.functions.ts` — add `adminListAllPieces`, `adminListAllPublishedGames` (filterable), `adminGetPieceForEdit`, `adminGetPublishedGameForEdit`
+- `src/lib/piece-builder.functions.ts` — admin bypass in `getMyPieceBySlug`, `savePiece`, `updatePiece`
+- `src/lib/social.functions.ts` — admin bypass + author preservation in `publishGame` update branch
+- `src/routes/pieces.$slug.tsx`, `src/routes/g.$slug.tsx` — render admin menu
+- `src/routes/pieces.$slug.edit.tsx`, `src/routes/create.tsx` (edit-existing path) — use admin loader when caller is admin and not author
+- `src/components/pieces/PieceLibraryPanel.tsx` — admin row actions
+- `src/components/admin/AdminBadge.tsx` — link to `/admin/content`
+
+**No migration required.** All flags, RLS, and audit infrastructure already exist.
+
+### Out of scope (call out for later)
+- Migrating the homepage Quick Play to a DB-driven "signature of the week"
+- Bulk operations on the admin content page (multi-select)
+- Soft-deleted/trash bin with restore (we have archive via `is_hidden` which is reversible)
+
+Want me to proceed with this?
