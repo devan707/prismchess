@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { UserMenu } from "@/components/UserMenu";
 import { AdminBadge } from "@/components/admin/AdminBadge";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { BottomTabs } from "./BottomTabs";
 import logoUrl from "@/assets/logo.png";
 import type { ReactNode } from "react";
@@ -47,6 +48,7 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
               </span>
             </Link>
             <div className="flex items-center gap-2">
+              <NotificationsBell />
               <AdminBadge />
               <UserMenu />
             </div>

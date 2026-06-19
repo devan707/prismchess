@@ -30,15 +30,19 @@ function ForumPage() {
   const like = useServerFn(toggleLike);
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [category, setCategory] = useState<"all" | "featured-showcase">("all");
   const setFlags = useServerFn(adminSetTopicFlags);
   const delTopic = useServerFn(adminDeleteForumTopic);
 
-  const load = () => fetchTopics({}).then(setTopics).catch((e) => toast.error(e.message));
+  const load = (cat: "all" | "featured-showcase" = category) =>
+    fetchTopics({ data: cat === "all" ? undefined : { category: cat } })
+      .then(setTopics)
+      .catch((e) => toast.error(e.message));
   useEffect(() => {
-    load();
+    load(category);
     fetchRole({}).then((r) => setIsAdmin(r.isAdmin || r.isModerator)).catch(() => {});
     // eslint-disable-next-line
-  }, []);
+  }, [category]);
 
   const onLike = async (t: Topic) => {
     setTopics((prev) =>
@@ -68,7 +72,23 @@ function ForumPage() {
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
         <h1 className="font-display text-3xl font-bold">Community</h1>
-        <p className="text-muted-foreground text-sm mb-6">Strategy, variant designs, bug reports.</p>
+        <p className="text-muted-foreground text-sm mb-4">Strategy, variant designs, bug reports.</p>
+
+        <div className="inline-flex rounded-md border bg-card p-0.5 mb-4">
+          <button
+            onClick={() => setCategory("all")}
+            className={`px-3 py-1.5 text-xs rounded ${category === "all" ? "bg-primary text-primary-foreground" : ""}`}
+          >
+            All discussions
+          </button>
+          <button
+            onClick={() => setCategory("featured-showcase")}
+            className={`px-3 py-1.5 text-xs rounded inline-flex items-center gap-1 ${category === "featured-showcase" ? "bg-primary text-primary-foreground" : ""}`}
+          >
+            <Star className="h-3 w-3" /> Featured showcase
+          </button>
+        </div>
+
 
         {topics === null ? (
           <p className="text-sm text-muted-foreground">Loading…</p>

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Star, EyeOff, Trash2, Pencil, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { PromoteAnnouncementDialog, type PromotionTarget } from "@/components/admin/PromoteAnnouncementDialog";
 
 export const Route = createFileRoute("/_authenticated/admin/content")({
   head: () => ({ meta: [{ title: "Admin · Content library — Prism Chess" }, { name: "robots", content: "noindex" }] }),
@@ -43,6 +44,7 @@ function ContentPage() {
   const [pieces, setPieces] = useState<PieceRow[]>([]);
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [promoTarget, setPromoTarget] = useState<PromotionTarget | null>(null);
 
   useEffect(() => {
     fetchRole({}).then((r) => setAllowed(r.isAdmin || r.isModerator)).catch(() => setAllowed(false));
@@ -114,8 +116,9 @@ function ContentPage() {
           <PieceTable
             rows={pieces}
             onPromote={async (r) => {
-              await setPieceFlags({ data: { pieceId: r.id, isFeatured: !r.is_featured } });
+              const res = await setPieceFlags({ data: { pieceId: r.id, isFeatured: !r.is_featured } });
               toast.success(r.is_featured ? "Demoted" : "Promoted to signature piece");
+              if (res.promoted && res.target) setPromoTarget(res.target);
               reload();
             }}
             onArchive={async (r) => {
@@ -138,8 +141,9 @@ function ContentPage() {
           <VariantTable
             rows={games}
             onPromote={async (r) => {
-              await setGameFlags({ data: { gameId: r.id, isFeatured: !r.is_featured } });
+              const res = await setGameFlags({ data: { gameId: r.id, isFeatured: !r.is_featured } });
               toast.success(r.is_featured ? "Demoted" : "Promoted to signature variant");
+              if (res.promoted && res.target) setPromoTarget(res.target);
               reload();
             }}
             onArchive={async (r) => {
@@ -160,6 +164,7 @@ function ContentPage() {
           />
         )}
       </main>
+      <PromoteAnnouncementDialog target={promoTarget} onClose={() => setPromoTarget(null)} />
     </div>
   );
 }

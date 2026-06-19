@@ -21,6 +21,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
 import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
 import { useRouter } from "@tanstack/react-router";
+import { PromoteAnnouncementDialog, type PromotionTarget } from "@/components/admin/PromoteAnnouncementDialog";
 
 export const Route = createFileRoute("/pieces/$slug")({
   loader: async ({ params }) => {
@@ -129,6 +130,9 @@ function PieceDetail() {
   const adminDelPiece = useServerFn(adminDeleteCustomPiece);
   const router = useRouter();
   const pieceWithFlags = piece as typeof piece & { is_featured?: boolean; is_hidden?: boolean };
+  const [promoTarget, setPromoTarget] = useState<PromotionTarget | null>(null);
+
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -155,8 +159,9 @@ function PieceDetail() {
                 {
                   label: isFeat ? "Demote from signature" : "Promote to signature",
                   onClick: async () => {
-                    await adminFlagsPiece({ data: { pieceId: piece.id, isFeatured: !isFeat } });
+                    const res = await adminFlagsPiece({ data: { pieceId: piece.id, isFeatured: !isFeat } });
                     toast.success(isFeat ? "Demoted" : "Promoted to signature piece");
+                    if (res.promoted && res.target) setPromoTarget(res.target);
                     router.invalidate();
                   },
                 },
@@ -323,6 +328,7 @@ function PieceDetail() {
           )}
         </section>
       </main>
+      <PromoteAnnouncementDialog target={promoTarget} onClose={() => setPromoTarget(null)} />
     </div>
   );
 }

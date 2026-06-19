@@ -104,13 +104,52 @@ export const adminSetPublishedGameFlags = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertMod(context);
+    // Snapshot current flags so we can detect a true "promote" transition.
+    const { data: before } = await context.supabase
+      .from("published_games")
+      .select("id, slug, name, author_id, is_featured")
+      .eq("id", data.gameId)
+      .maybeSingle();
     const patch: Record<string, unknown> = {};
     if (data.isHidden !== undefined) patch.is_hidden = data.isHidden;
     if (data.isFeatured !== undefined) patch.is_featured = data.isFeatured;
     const { error } = await context.supabase.from("published_games").update(patch as never).eq("id", data.gameId);
     if (error) throw new Error(error.message);
     await log(context, "published_game.flags", "published_game", data.gameId, patch);
-    return { ok: true };
+
+    let promoted = false;
+    if (
+      before &&
+      data.isFeatured === true &&
+      !before.is_featured &&
+      before.author_id !== context.userId
+    ) {
+      const { notifyPromotionInline } = await import("@/lib/promotions.functions");
+      try {
+        await notifyPromotionInline(context, {
+          authorId: before.author_id as string,
+          targetType: "variant",
+          targetId: before.id as string,
+          targetName: before.name as string,
+          targetSlug: before.slug as string,
+        });
+      } catch {
+        // Non-fatal — promote already succeeded.
+      }
+      promoted = true;
+    }
+    return {
+      ok: true,
+      promoted,
+      target: promoted && before
+        ? {
+            type: "variant" as const,
+            id: before.id as string,
+            slug: before.slug as string,
+            name: before.name as string,
+          }
+        : null,
+    };
   });
 
 export const adminDeletePublishedGame = createServerFn({ method: "POST" })
@@ -136,13 +175,51 @@ export const adminSetCustomPieceFlags = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertMod(context);
+    const { data: before } = await context.supabase
+      .from("custom_pieces")
+      .select("id, slug, name, author_id, is_featured")
+      .eq("id", data.pieceId)
+      .maybeSingle();
     const patch: Record<string, unknown> = {};
     if (data.isHidden !== undefined) patch.is_hidden = data.isHidden;
     if (data.isFeatured !== undefined) patch.is_featured = data.isFeatured;
     const { error } = await context.supabase.from("custom_pieces").update(patch as never).eq("id", data.pieceId);
     if (error) throw new Error(error.message);
     await log(context, "custom_piece.flags", "custom_piece", data.pieceId, patch);
-    return { ok: true };
+
+    let promoted = false;
+    if (
+      before &&
+      data.isFeatured === true &&
+      !before.is_featured &&
+      before.author_id !== context.userId
+    ) {
+      const { notifyPromotionInline } = await import("@/lib/promotions.functions");
+      try {
+        await notifyPromotionInline(context, {
+          authorId: before.author_id as string,
+          targetType: "piece",
+          targetId: before.id as string,
+          targetName: before.name as string,
+          targetSlug: before.slug as string,
+        });
+      } catch {
+        // Non-fatal
+      }
+      promoted = true;
+    }
+    return {
+      ok: true,
+      promoted,
+      target: promoted && before
+        ? {
+            type: "piece" as const,
+            id: before.id as string,
+            slug: before.slug as string,
+            name: before.name as string,
+          }
+        : null,
+    };
   });
 
 export const adminDeleteCustomPiece = createServerFn({ method: "POST" })

@@ -12,6 +12,7 @@ import { ReportDialog } from "@/components/social/ReportDialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { adminDeleteGameComment, adminSetPublishedGameFlags, adminDeletePublishedGame } from "@/lib/admin.functions";
 import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
+import { PromoteAnnouncementDialog, type PromotionTarget } from "@/components/admin/PromoteAnnouncementDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
@@ -54,6 +55,7 @@ function SharedGamePage() {
   const [body, setBody] = useState("");
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [promoTarget, setPromoTarget] = useState<PromotionTarget | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -196,8 +198,9 @@ function SharedGamePage() {
                   {
                     label: isFeat ? "Demote from signature" : "Promote to signature",
                     onClick: async () => {
-                      await adminFlags({ data: { gameId: game.id, isFeatured: !isFeat } });
+                      const res = await adminFlags({ data: { gameId: game.id, isFeatured: !isFeat } });
                       toast.success(isFeat ? "Demoted" : "Promoted to signature variant");
+                      if (res.promoted && res.target) setPromoTarget(res.target);
                       const fresh = await fetchGame({ data: { slug } });
                       setData(fresh);
                     },
@@ -287,6 +290,7 @@ function SharedGamePage() {
         onOpenChange={setChallengeOpen}
         presetDesign={{ design: game.design as unknown as Design, name: game.name }}
       />
+      <PromoteAnnouncementDialog target={promoTarget} onClose={() => setPromoTarget(null)} />
     </div>
   );
 }
