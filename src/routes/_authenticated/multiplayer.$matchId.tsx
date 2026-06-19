@@ -180,9 +180,22 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
 
   const check = status.kind === "playing" ? status.check : false;
 
+  const myReady = myColor === "w" ? match.ready_w : match.ready_b;
+  const oppReady = myColor === "w" ? match.ready_b : match.ready_w;
+  const [readyBusy, setReadyBusy] = useState(false);
+
+  const handleReady = async () => {
+    setReadyBusy(true);
+    try { await readyFn({ data: { matchId } }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setReadyBusy(false); }
+  };
+
   let banner: string;
   if (match.status === "open") {
     banner = "Waiting for opponent…";
+  } else if (match.status === "ready_check") {
+    banner = myReady ? (oppReady ? "Starting…" : "Waiting for opponent to ready up") : "Tap Ready to start";
   } else if (match.status === "finished") {
     const winnerLabel = match.result === "draw" ? "Draw" :
       match.result === myColor ? "You won" : "You lost";
