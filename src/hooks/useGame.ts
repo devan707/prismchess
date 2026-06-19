@@ -277,9 +277,18 @@ export function useGame(opts: UseGameOptions) {
     recordedRef.current = true;
     const meta = typeof window !== "undefined" ? loadCurrentMeta() : null;
     if (!meta?.id) return;
-    recordVariantPlay({ data: { variantKey: meta.id } }).catch(() => {
-      // Best-effort; not signed in is fine, just skip.
-    });
+    // Only record plays for signed-in users — the server fn requires auth.
+    // Skip silently for anon visitors instead of firing a guaranteed 401.
+    (async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) return;
+        await recordVariantPlay({ data: { variantKey: meta.id } });
+      } catch {
+        // Best-effort telemetry.
+      }
+    })();
   }, []);
 
   const legalFor = useCallback(
