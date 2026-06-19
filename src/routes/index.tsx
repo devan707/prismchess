@@ -72,8 +72,8 @@ function readLastVariant(): LastVariant | null {
 }
 
 function pickFeatured(): GameType {
-  // Always feature Grand Menagerie on the main menu.
-  return BUILTIN_GAMES.find((g) => g.id === "grand-menagerie-12") ?? BUILTIN_GAMES[0];
+  // Always feature Menagerie on the main menu.
+  return BUILTIN_GAMES.find((g) => g.id === "menagerie-8") ?? BUILTIN_GAMES[0];
 }
 
 function Home() {
