@@ -366,13 +366,62 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
         </div>
 
         {match.status === "finished" && (
-          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card p-4 text-center">
-            <div className="font-display font-semibold mb-2">{banner}</div>
-            <div className="flex gap-2 justify-center">
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card p-4 text-center space-y-3">
+            <div className="font-display font-semibold">{banner}</div>
+            {amPlayer && incomingRematchOffer && (
+              <div className="rounded-md border bg-background p-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm text-left">
+                  <RefreshCw className="h-4 w-4 text-primary" />
+                  <span>Opponent wants a rematch</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={rematchBusy}
+                    onClick={async () => { setRematchBusy(true); try { await respondToRematch(false); } finally { setRematchBusy(false); } }}
+                  >Decline</Button>
+                  <Button
+                    size="sm"
+                    disabled={rematchBusy}
+                    onClick={async () => {
+                      setRematchBusy(true);
+                      try {
+                        const id = await respondToRematch(true);
+                        if (id) navigate({ to: "/multiplayer/$matchId", params: { matchId: id } });
+                      } finally { setRematchBusy(false); }
+                    }}
+                  >Accept</Button>
+                </div>
+              </div>
+            )}
+            {amPlayer && myPendingRematchOffer && !incomingRematchOffer && (
+              <div className="text-xs text-muted-foreground">Rematch offer sent — waiting for opponent…</div>
+            )}
+            {amPlayer && rematchDeclined && !myPendingRematchOffer && !incomingRematchOffer && (
+              <div className="text-xs text-muted-foreground">Rematch declined.</div>
+            )}
+            <div className="flex gap-2 justify-center flex-wrap">
               <Link to="/multiplayer">
-                <Button size="sm" variant="outline"><RefreshCw className="h-3 w-3 mr-1" /> Back to lobby</Button>
+                <Button size="sm" variant="outline"><Home className="h-3 w-3 mr-1" /> Lobby</Button>
               </Link>
-              <Button size="sm" onClick={() => navigate({ to: "/multiplayer" })}>New game</Button>
+              {amPlayer && !incomingRematchOffer && (
+                <Button
+                  size="sm"
+                  disabled={rematchBusy || !!myPendingRematchOffer}
+                  onClick={async () => {
+                    setRematchBusy(true);
+                    try {
+                      const id = await sendRematchOffer();
+                      if (id) navigate({ to: "/multiplayer/$matchId", params: { matchId: id } });
+                    } finally { setRematchBusy(false); }
+                  }}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  {myPendingRematchOffer ? "Rematch offered" : "Rematch"}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => navigate({ to: "/multiplayer" })}>New game</Button>
             </div>
           </div>
         )}
