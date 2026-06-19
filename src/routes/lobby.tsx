@@ -153,6 +153,7 @@ function Lobby() {
           </>
         )}
       </div>
+      <CreateChallengeDialog open={challengeOpen} onOpenChange={setChallengeOpen} defaultVisibility="link" />
     </AppShell>
   );
 }
