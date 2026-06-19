@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import type { GameState, PieceId, Square } from "@/game/types";
+import type { GameState, MoveTarget, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
-import { inCheck, pseudoMovesFrom, legalMovesFrom, attackSquaresFrom } from "@/game/moves";
+import { inCheck, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
 
 interface BoardProps {
   state: GameState;
   humanColor: "w" | "b";
   flipped: boolean;
-  legalFor: (sq: Square | null) => Square[];
+  legalFor: (sq: Square | null) => MoveTarget[];
   onMove: (from: Square, to: Square) => boolean;
   /** Currently-selected drop piece (renders legal-drop indicators). */
   dropPiece?: PieceId | null;
@@ -41,46 +41,12 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
 
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
-  const legalTargets = legalFor(selected ?? dragFrom);
   const selectedPieceForInspect = selected ? state.board[selected.r][selected.c] : null;
   const isEnemyInspect = !!selectedPieceForInspect && selectedPieceForInspect.color !== humanColor;
-
-  // Attack pattern of the selected piece (any owner) — squares the piece
-  // threatens, i.e. could capture if an enemy stood there. Used to paint
-  // orange "attack-only" indicators (e.g. dragon strike on empty squares,
-  // pawn diagonals without a target).
-  const attackSquares: Square[] = (() => {
-    if (!selected || !selectedPieceForInspect) return [];
-    return attackSquaresFrom(state, selected);
-  })();
-  const attackSet = new Set(attackSquares.map((s) => `${s.r},${s.c}`));
-
-  // Ranged attacks (archer shoot, dragon strike) get crosshair markers;
-  // melee threats stay as orange dots.
-  const rangedAttackSet: Set<string> = (() => {
-    const out = new Set<string>();
-    if (!selected || !selectedPieceForInspect) return out;
-    for (const m of pseudoMovesFrom(state, selected)) {
-      if (m.kind === "archerShoot" || m.kind === "dragonAttack") {
-        out.add(`${m.to.r},${m.to.c}`);
-      }
-    }
-    return out;
-  })();
-
-  // For enemy inspection we don't have legalFor — derive pseudo non-capture
-  // move squares directly so we can still paint green move-only dots.
-  const enemyMoveOnlyTargets: Square[] = (() => {
-    if (!isEnemyInspect || !selected) return [];
-    const out: Square[] = [];
-    for (const m of pseudoMovesFrom(state, selected)) {
-      if (m.captured) continue;
-      if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") continue;
-      if (m.kind === "juggExit") continue;
-      out.push(m.to);
-    }
-    return out;
-  })();
+  const selectedTargets = isEnemyInspect && selected
+    ? moveTargetsFrom(state, selected, false)
+    : legalFor(selected ?? dragFrom);
+  const targetKindBySquare = new Map(selectedTargets.map((t) => [`${t.square.r},${t.square.c}`, t.kind]));
   const last = state.history[state.history.length - 1];
   const moveCount = state.history.length;
 
