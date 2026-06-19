@@ -664,6 +664,10 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
         since={aiThinkingSince}
         onNudge={nudgeAi}
       />
+
+      {isAiDebugEnabled() && (
+        <AiDebugPanel stats={aiStats} thinking={aiThinking} />
+      )}
     </div>
   );
 }
