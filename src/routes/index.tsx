@@ -254,24 +254,26 @@ function Home() {
             <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
               <div className="flex gap-3 pb-2 snap-x">
                 {discovery.newest.slice(0, 10).map((g) => (
-                  <Card key={g.id} className="p-3 w-56 shrink-0 snap-start flex flex-col">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <div className="font-semibold truncate text-sm">{g.name}</div>
-                      {g.rows && g.cols && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                          {g.rows}×{g.cols}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2lh]">{g.description}</p>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
-                      <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {g.like_count}</span>
-                      <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {g.comment_count}</span>
-                    </div>
-                    <Button size="sm" className="w-full" onClick={() => playPublished(g)}>
-                      <Play className="h-3 w-3 mr-1" /> Play
-                    </Button>
-                  </Card>
+                  <Link key={g.id} to="/g/$slug" params={{ slug: g.slug }} className="w-56 shrink-0 snap-start block">
+                    <Card className="p-3 h-full flex flex-col hover:border-primary transition">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="font-semibold truncate text-sm">{g.name}</div>
+                        {g.rows && g.cols && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                            {g.rows}×{g.cols}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2lh]">{g.description}</p>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+                        <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {g.like_count}</span>
+                        <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {g.comment_count}</span>
+                      </div>
+                      <Button size="sm" className="w-full" onClick={(e) => { e.preventDefault(); e.stopPropagation(); playPublished(g); }}>
+                        <Play className="h-3 w-3 mr-1" /> Play
+                      </Button>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -290,24 +292,26 @@ function Home() {
             <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
               <div className="flex gap-3 pb-2 snap-x">
                 {discovery.popular.slice(0, 10).map((g) => (
-                  <Card key={g.id} className="p-3 w-56 shrink-0 snap-start flex flex-col">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <div className="font-semibold truncate text-sm">{g.name}</div>
-                      {g.rows && g.cols && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                          {g.rows}×{g.cols}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2lh]">{g.description}</p>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
-                      <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {g.like_count}</span>
-                      <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {g.comment_count}</span>
-                    </div>
-                    <Button size="sm" className="w-full" onClick={() => playPublished(g)}>
-                      <Play className="h-3 w-3 mr-1" /> Play
-                    </Button>
-                  </Card>
+                  <Link key={g.id} to="/g/$slug" params={{ slug: g.slug }} className="w-56 shrink-0 snap-start block">
+                    <Card className="p-3 h-full flex flex-col hover:border-primary transition">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="font-semibold truncate text-sm">{g.name}</div>
+                        {g.rows && g.cols && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                            {g.rows}×{g.cols}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2lh]">{g.description}</p>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+                        <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {g.like_count}</span>
+                        <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {g.comment_count}</span>
+                      </div>
+                      <Button size="sm" className="w-full" onClick={(e) => { e.preventDefault(); e.stopPropagation(); playPublished(g); }}>
+                        <Play className="h-3 w-3 mr-1" /> Play
+                      </Button>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
