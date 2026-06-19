@@ -108,12 +108,24 @@ function UsersPage() {
                   <td className="p-2 text-xs">{suspended ? <span className="text-red-600">suspended until {new Date(u.suspended_until!).toLocaleDateString()}</span> : "active"}</td>
                   <td className="p-2">
                     <div className="flex flex-wrap gap-1">
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        try {
+                          const { threadId } = await startDm({ data: { userId: u.id } });
+                          navigate({ to: "/messages/$threadId", params: { threadId } });
+                        } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                      }}>Message</Button>
                       <Button size="sm" variant="outline" onClick={() => toggleRole(u, "moderator")}>{u.roles.includes("moderator") ? "Revoke mod" : "Make mod"}</Button>
                       <Button size="sm" variant="outline" onClick={() => toggleRole(u, "admin")}>{u.roles.includes("admin") ? "Revoke admin" : "Make admin"}</Button>
                       <Button size="sm" variant="outline" onClick={() => toggleSuspend(u)}>{suspended ? "Unsuspend" : "Suspend"}</Button>
                       <Button size="sm" variant="outline" onClick={() => doRename(u)}>Rename</Button>
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        if (!window.confirm(`Set @${u.username} as the community founder? New signups will receive an automatic welcome DM from this user.`)) return;
+                        try { await setFounder({ data: { userId: u.id } }); toast.success("Founder set"); reload(); }
+                        catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                      }}>Make founder</Button>
                     </div>
                   </td>
+
                 </tr>
               );
             })}
