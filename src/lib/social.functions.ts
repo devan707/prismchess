@@ -516,23 +516,26 @@ export const listDiscoveryGames = createServerFn({ method: "GET" })
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
     });
     const cols = "id, slug, name, description, like_count, comment_count, created_at, author_id, design";
-    const [newestRes, popularRes, archiveRes] = await Promise.all([
+    const [newestRes, popularRes, archiveRes, featuredRes] = await Promise.all([
       supa.from("published_games").select(cols).eq("is_hidden", false).order("created_at", { ascending: false }).limit(10),
       supa.from("published_games").select(cols).eq("is_hidden", false).order("like_count", { ascending: false }).order("created_at", { ascending: false }).limit(10),
       supa.from("published_games").select(cols).eq("is_hidden", false).order("created_at", { ascending: false }).range(10, 109),
+      supa.from("published_games").select(cols).eq("is_hidden", false).eq("is_featured", true).order("created_at", { ascending: false }).limit(20),
     ]);
     if (newestRes.error) throw new Error(newestRes.error.message);
     if (popularRes.error) throw new Error(popularRes.error.message);
     if (archiveRes.error) throw new Error(archiveRes.error.message);
+    if (featuredRes.error) throw new Error(featuredRes.error.message);
     const newest = newestRes.data ?? [];
     const popularAll = popularRes.data ?? [];
     const archiveAll = archiveRes.data ?? [];
+    const featuredPub = featuredRes.data ?? [];
     const newestIds = new Set(newest.map((g) => g.id));
     const popular = popularAll.filter((g) => !newestIds.has(g.id)).slice(0, 10);
     const featuredIds = new Set([...newestIds, ...popular.map((g) => g.id)]);
     const archive = archiveAll.filter((g) => !featuredIds.has(g.id));
 
-    const all = [...newest, ...popular, ...archive];
+    const all = [...newest, ...popular, ...archive, ...featuredPub];
     const authorIds = Array.from(new Set(all.map((r) => r.author_id)));
     const profiles = authorIds.length
       ? (await supa.from("profiles").select("id, username, display_name, avatar").in("id", authorIds)).data ?? []
@@ -548,6 +551,7 @@ export const listDiscoveryGames = createServerFn({ method: "GET" })
       newest: newest.map(decorate),
       popular: popular.map(decorate),
       archive: archive.map(decorate),
+      featured: featuredPub.map(decorate),
     };
   });
 
