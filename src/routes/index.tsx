@@ -255,6 +255,34 @@ function Home() {
           </div>
           <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
             <div className="flex gap-3 pb-2 snap-x">
+              {(discovery?.featured ?? []).map((g) => {
+                const initial = (g.name ?? "?").charAt(0).toUpperCase();
+                return (
+                  <Link
+                    key={`feat-${g.id}`}
+                    to="/g/$slug"
+                    params={{ slug: g.slug }}
+                    className="w-44 shrink-0 snap-start text-left block"
+                  >
+                    <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition overflow-hidden">
+                      <div
+                        className="relative h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center overflow-hidden"
+                        style={{ background: signatureTileGradient(`pub:${g.id}`) }}
+                      >
+                        <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE_WIDE} />
+                        <span className="relative z-10 font-display font-black text-5xl text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
+                          {initial}
+                        </span>
+                      </div>
+                      <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
+                      <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
+                      <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
+                        View
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
               {BUILTIN_GAMES.map((g) => {
                 const glyphs = signatureGlyphs(g.id);
                 return (
@@ -288,6 +316,7 @@ function Home() {
             </div>
           </div>
         </section>
+
 
         {/* NEW FROM COMMUNITY */}
 
