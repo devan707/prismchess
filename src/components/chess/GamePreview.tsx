@@ -68,13 +68,18 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
             Array.from({ length: cols }, (_, c) => {
               const cell = byCell.get(`${r},${c}`);
               const dark = (r + c) % 2 === 1;
+              const clickable = !!cell && !!registry[cell.pieceId];
               return (
-                <div
+                <button
+                  type="button"
                   key={`${r}-${c}`}
-                  className={`relative flex items-center justify-center ${dark ? "bg-stone-400/40 dark:bg-stone-700/60" : "bg-stone-200/40 dark:bg-stone-800/40"}`}
+                  onClick={clickable ? () => setActivePieceId(cell!.pieceId) : undefined}
+                  disabled={!clickable}
+                  title={clickable ? `View ${registry[cell!.pieceId]?.name ?? cell!.pieceId}` : undefined}
+                  className={`relative flex items-center justify-center ${dark ? "bg-stone-400/40 dark:bg-stone-700/60" : "bg-stone-200/40 dark:bg-stone-800/40"} ${clickable ? "cursor-pointer hover:ring-2 hover:ring-primary/60 hover:ring-inset transition-shadow" : "cursor-default"} disabled:cursor-default`}
                 >
                   {cell && (
-                    <div className="absolute inset-[10%] flex items-center justify-center">
+                    <div className="absolute inset-[10%] flex items-center justify-center pointer-events-none">
                       <PieceById
                         id={cell.pieceId}
                         color={cell.color}
@@ -83,7 +88,7 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
                       />
                     </div>
                   )}
-                </div>
+                </button>
               );
             }),
           )}
