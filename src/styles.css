@@ -142,30 +142,6 @@
   }
 }
 
-/* Muted rainbow tile background for signature game cards (blurred + gray overlay). */
-@utility prism-tile {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  background:
-    linear-gradient(135deg,
-      oklch(0.70 0.15 25),
-      oklch(0.75 0.14 70),
-      oklch(0.78 0.13 150),
-      oklch(0.72 0.14 230),
-      oklch(0.70 0.15 320)
-    );
-  filter: blur(0.5px) saturate(0.75);
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: oklch(0.82 0.005 280 / 0.30);
-    backdrop-filter: blur(6px);
-    z-index: 0;
-  }
-}
 
 /* Muted prism gradient TEXT (for headings/labels on dark surfaces). */
 @utility prism-text {
