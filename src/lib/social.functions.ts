@@ -594,19 +594,27 @@ export const listMyPublishedGames = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-/** Owner-only fetch of a single published game (used by the sandbox edit flow). */
+/** Owner or admin/mod fetch of a single published game (used by the sandbox edit flow). */
 export const getMyPublishedGame = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ gameId: UuidSchema }).parse(i))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const ownerQ = await context.supabase
       .from("published_games")
-      .select("id, slug, name, description, design, tutorial")
+      .select("id, slug, name, description, design, tutorial, author_id")
       .eq("id", data.gameId)
       .eq("author_id", context.userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    return row;
+    if (ownerQ.error) throw new Error(ownerQ.error.message);
+    if (ownerQ.data) return ownerQ.data;
+    if (!(await _callerIsModOrAdmin(context))) return null;
+    const adminQ = await context.supabase
+      .from("published_games")
+      .select("id, slug, name, description, design, tutorial, author_id")
+      .eq("id", data.gameId)
+      .maybeSingle();
+    if (adminQ.error) throw new Error(adminQ.error.message);
+    return adminQ.data;
   });
 
 /** Games this user has liked — joined with the published_games row. */
