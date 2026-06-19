@@ -344,7 +344,7 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
           const midC = from.c + dc / 2;
           if (board[midR][midC]) continue; // blocked by intervening piece
         }
-        moves.push({ from, to, piece, captured: t, kind: "normal" });
+        moves.push({ from, to, piece, captured: t, kind: "dragonAttack" });
       }
     }
     return moves;
