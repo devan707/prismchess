@@ -507,11 +507,18 @@ export function evaluate(state: GameState, toMove: Color): number {
       const centerDist = Math.abs(r - cr) + Math.abs(c - cc);
       v += Math.max(0, ((rows + cols) / 2 - centerDist)) * 2;
       if (def?.special === "pawn" || def?.special === "shapeshifter") {
-        if (cols > rows) {
-          v += p.color === "w" ? c * 6 : (cols - 1 - c) * 6;
-        } else {
-          v += p.color === "w" ? r * 6 : (rows - 1 - r) * 6;
-        }
+        // Linear advancement reward + extra ramp on the last two ranks so
+        // the AI actively chases promotion (it's the biggest single
+        // material swing available to a pawn).
+        const wide = cols > rows;
+        const axis = wide ? c : r;
+        const len = wide ? cols : rows;
+        const fromBack = p.color === "w" ? axis : (len - 1 - axis);
+        v += fromBack * 6;
+        const distToPromo = (len - 1) - fromBack;
+        if (distToPromo === 1) v += 90; // one step from promoting
+        else if (distToPromo === 2) v += 35;
+        else if (distToPromo === 3) v += 12;
       }
       score += p.color === toMove ? v : -v;
     }
