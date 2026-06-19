@@ -25,6 +25,7 @@ export function useGame(opts: UseGameOptions) {
   const [aiThinking, setAiThinking] = useState(false);
   const [aiThinkingSince, setAiThinkingSince] = useState<number | null>(null);
   const [aiNudge, setAiNudge] = useState(0);
+  const [aiStats, setAiStats] = useState<AiSearchStats | null>(null);
 
   const status = gameStatus(state);
   const gameOver = status.kind === "checkmate" || status.kind === "stalemate" || status.kind === "royal-loss";
