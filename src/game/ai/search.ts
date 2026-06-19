@@ -366,6 +366,29 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
       if (safest) chosen = safest.move;
     }
   }
+  // Opportunist guard: if some root move would win material outright (positive
+  // SEE — a free or favorable capture), don't let the search wander off into a
+  // positional move that scores only marginally better. Forces the AI to
+  // actually grab hanging pieces rather than "improving" elsewhere.
+  if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
+    const chosenSee = Math.max(0, seeMove(state, chosen));
+    let bestGrab: { move: Move; score: number; gain: number } | null = null;
+    for (const r of searcher.rootScores) {
+      if (!r.move.captured && !r.move.juggTrampled?.length) continue;
+      const gain = seeMove(state, r.move);
+      if (gain <= chosenSee + 50) continue; // not meaningfully more material
+      // Don't override a clearly tactical pick (mate threat, big eval edge).
+      // Allow swap when the capture's deep score is within ~ the material it
+      // would win — so a free Queen always beats a +100 cp positional move.
+      const tolerance = Math.max(150, gain * 0.9);
+      if (r.score < searcher.bestScoreAtRoot - tolerance) continue;
+      if (!bestGrab || gain > bestGrab.gain ||
+          (gain === bestGrab.gain && r.score > bestGrab.score)) {
+        bestGrab = { move: r.move, score: r.score, gain };
+      }
+    }
+    if (bestGrab) chosen = bestGrab.move;
+  }
   return {
     move: chosen,
     depthReached,
