@@ -12,10 +12,17 @@ export type GameStatus =
 export function initialStateFromDesign(design: Design): GameState {
   const registry = buildRegistry(design.customPieces);
   const board = emptyBoard(design.rows, design.cols);
+  const startingSet = new Set<string>();
   for (const pl of design.placements) {
     if (pl.r < 0 || pl.r >= design.rows || pl.c < 0 || pl.c >= design.cols) continue;
     if (!registry[pl.pieceId]) continue;
     board[pl.r][pl.c] = { id: pl.pieceId, color: pl.color };
+    startingSet.add(pl.pieceId);
+  }
+  for (const color of ["w", "b"] as const) {
+    for (const [id, count] of Object.entries(design.reserves[color] ?? {})) {
+      if (count && registry[id]) startingSet.add(id);
+    }
   }
   return {
     board,
@@ -29,6 +36,7 @@ export function initialStateFromDesign(design: Design): GameState {
     rows: design.rows,
     cols: design.cols,
     pendingHand: null,
+    startingPieceIds: Array.from(startingSet),
   };
 }
 

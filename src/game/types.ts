@@ -163,6 +163,11 @@ export interface GameState {
    *  King-step with that same piece (or pass if no legal step exists)
    *  before the turn flips. */
   pendingHand?: Square | null;
+  /** Piece ids that appeared on the board OR in either side's starting
+   *  reserves when the game began. Pawn promotion is restricted to this
+   *  set, so you can only promote into pieces actually present in the
+   *  starting game. */
+  startingPieceIds?: PieceId[];
 }
 
 export type Difficulty = "easy" | "medium" | "hard";

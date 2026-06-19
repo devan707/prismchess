@@ -99,6 +99,9 @@ class Searcher {
   bestMoveAtRoot: Move | null = null;
   bestScoreAtRoot = -Infinity;
   tiesAtRoot: Move[] = [];
+  /** Every root move and the score the deepest completed iteration assigned
+   *  to it. Used by the blunder guard at the end of runSearch. */
+  rootScores: Array<{ move: Move; score: number }> = [];
   /** killers[depth] = [primary, secondary] non-capture moves that caused a cutoff. */
   killers: Array<[Move | null, Move | null]> = [];
   /** history[moveKey] cumulative cutoff bonus. */
@@ -214,11 +217,13 @@ class Searcher {
     let bestScore = -Infinity;
     let bestMove: Move | null = null;
     const ties: Move[] = [];
+    const scored: Array<{ move: Move; score: number }> = [];
     for (const m of moves) {
       const next = applyMoveToState(state, m);
       const gaveCheck = inCheck(next, next.turn);
       const ext = gaveCheck ? 1 : 0;
       const score = -this.search(next, depth - 1 + ext, -beta, -alpha, null);
+      scored.push({ move: m, score });
       if (score > bestScore + 0.5) {
         bestScore = score;
         bestMove = m;
@@ -233,6 +238,7 @@ class Searcher {
       this.bestMoveAtRoot = bestMove;
       this.bestScoreAtRoot = bestScore;
       this.tiesAtRoot = ties;
+      this.rootScores = scored;
     }
   }
 }
@@ -338,6 +344,27 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   if (opts.difficulty === "easy" && chosen && Math.random() < 0.25) {
     const all = allLegalMoves(state);
     if (all.length > 1) chosen = pickRandom(all);
+  }
+  // Blunder guard: if the chosen move immediately hangs significant material
+  // (negative SEE on the move itself, not counted in deep search because
+  // hangingTerm can be smoothed away by other positional terms), look for an
+  // alternative whose search score is within ~150 cp and whose SEE is safe.
+  if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
+    const chosenSee = seeMove(state, chosen);
+    if (chosenSee <= -150) {
+      const tolerance = Math.min(220, -chosenSee + 60);
+      let safest: { move: Move; score: number; see: number } | null = null;
+      for (const r of searcher.rootScores) {
+        if (sameMove(r.move, chosen)) continue;
+        if (r.score < searcher.bestScoreAtRoot - tolerance) continue;
+        const see = seeMove(state, r.move);
+        if (see < -25) continue; // still a sac, keep looking
+        if (!safest || see > safest.see || (see === safest.see && r.score > safest.score)) {
+          safest = { move: r.move, score: r.score, see };
+        }
+      }
+      if (safest) chosen = safest.move;
+    }
   }
   return {
     move: chosen,

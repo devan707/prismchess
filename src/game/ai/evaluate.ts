@@ -507,11 +507,18 @@ export function evaluate(state: GameState, toMove: Color): number {
       const centerDist = Math.abs(r - cr) + Math.abs(c - cc);
       v += Math.max(0, ((rows + cols) / 2 - centerDist)) * 2;
       if (def?.special === "pawn" || def?.special === "shapeshifter") {
-        if (cols > rows) {
-          v += p.color === "w" ? c * 6 : (cols - 1 - c) * 6;
-        } else {
-          v += p.color === "w" ? r * 6 : (rows - 1 - r) * 6;
-        }
+        // Linear advancement reward + extra ramp on the last two ranks so
+        // the AI actively chases promotion (it's the biggest single
+        // material swing available to a pawn).
+        const wide = cols > rows;
+        const axis = wide ? c : r;
+        const len = wide ? cols : rows;
+        const fromBack = p.color === "w" ? axis : (len - 1 - axis);
+        v += fromBack * 6;
+        const distToPromo = (len - 1) - fromBack;
+        if (distToPromo === 1) v += 90; // one step from promoting
+        else if (distToPromo === 2) v += 35;
+        else if (distToPromo === 3) v += 12;
       }
       score += p.color === toMove ? v : -v;
     }
@@ -776,9 +783,11 @@ function hangingTerm(state: GameState, color: Color): number {
       const loss = expectedLossAt(state, { r, c }, color);
       if (loss <= 0) continue;
       // Heavier weighting on big pieces so the AI never casually hangs a
-      // Queen / Dragon / Wizard / Necromancer / royal.
+      // Queen / Dragon / Wizard / Necromancer / royal. Bumped so that
+      // putting a Dragon in front of a pawn is unambiguously worse than
+      // almost any positional gain the search can find.
       const v = valueFor(p.id, def);
-      const heavy = v >= 700 ? 1.15 : v >= 400 ? 1.0 : 0.9;
+      const heavy = v >= 900 ? 1.6 : v >= 600 ? 1.3 : v >= 400 ? 1.1 : 0.95;
       penalty -= loss * heavy;
     }
   }

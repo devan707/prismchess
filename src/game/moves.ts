@@ -205,12 +205,30 @@ function findLinkPartner(
 }
 
 function promotionOptionsFor(state: GameState): PieceId[] {
+  // Only allow promotion into pieces that were actually in the starting
+  // game (placed on the board or in either side's reserves). Falls back to
+  // canBePromoted pieces if the starting set is unknown (legacy states).
+  const starting = state.startingPieceIds && state.startingPieceIds.length > 0
+    ? new Set(state.startingPieceIds)
+    : null;
   const out: PieceId[] = [];
   for (const id of Object.keys(state.registry)) {
     const def = state.registry[id];
-    if (def.canBePromoted) out.push(id);
+    if (!def) continue;
+    // Never promote into the pawn itself, royals, fixtures, or specials
+    // whose mechanics don't translate as a promoted piece.
+    if (def.special === "pawn" || def.special === "shapeshifter") continue;
+    if (def.royal) continue;
+    if (def.immobile) continue;
+    if (def.special === "juggernaut") continue;
+    if (def.special === "portal") continue;
+    if (starting) {
+      if (!starting.has(id)) continue;
+    } else {
+      if (!def.canBePromoted) continue;
+    }
+    out.push(id);
   }
-  // Prefer Q,R,B,N order
   const order = ["Q", "R", "B", "N"];
   out.sort((a, b) => {
     const ai = order.indexOf(a); const bi = order.indexOf(b);
@@ -218,6 +236,14 @@ function promotionOptionsFor(state: GameState): PieceId[] {
     if (ai === -1) return 1; if (bi === -1) return -1;
     return ai - bi;
   });
+  // Safety fallback: if the starting set was so minimal there's literally
+  // nothing legal to promote into, fall back to every canBePromoted piece in
+  // the registry so a pawn on the back rank isn't stuck with no move.
+  if (out.length === 0) {
+    for (const id of Object.keys(state.registry)) {
+      if (state.registry[id]?.canBePromoted) out.push(id);
+    }
+  }
   return out;
 }
 
