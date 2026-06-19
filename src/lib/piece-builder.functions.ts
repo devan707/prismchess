@@ -104,6 +104,9 @@ export const savePiece = createServerFn({ method: "POST" })
       name: data.name,
       def: data.def,
     });
+    const defWithSummary = movementSummary
+      ? { ...data.def, movementSummary }
+      : data.def;
     for (let attempt = 0; attempt < 5; attempt++) {
       const slug = slugify(data.name);
       const { data: row, error } = await context.supabase
@@ -113,7 +116,7 @@ export const savePiece = createServerFn({ method: "POST" })
           slug,
           name: data.name,
           description: data.description,
-          def: data.def as never,
+          def: defWithSummary as never,
           visibility: data.visibility,
           remixed_from_id: data.remixedFromId ?? null,
           movement_summary: movementSummary,
