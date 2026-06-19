@@ -127,6 +127,7 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
   const resignFn = useServerFn(resign);
   const claimFn = useServerFn(claimTimeout);
   const addFriendFn = useServerFn(sendFriendRequest);
+  const readyFn = useServerFn(markReady);
 
   const [flipped] = useState(false);
   const [now, setNow] = useState(Date.now());
