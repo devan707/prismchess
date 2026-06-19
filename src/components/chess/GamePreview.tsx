@@ -22,6 +22,8 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
     () => buildRegistry(design.customPieces ?? []),
     [design.customPieces],
   );
+  const [activePieceId, setActivePieceId] = useState<string | null>(null);
+  const activeDef: PieceDef | undefined = activePieceId ? registry[activePieceId] : undefined;
 
   // Map placements by `${r},${c}` for O(1) lookup.
   const byCell = useMemo(() => {
