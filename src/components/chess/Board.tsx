@@ -322,6 +322,10 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           } else if (isEnemyInspect) {
             markerKind = targetKindBySquare.get(`${r},${c}`) ?? null;
           }
+          // The pending-hand square shows a dedicated "↺ stay" badge below,
+          // so suppress the generic green move dot the pass move would add
+          // on top of the piece itself.
+          if (isPendingHandSquare && markerKind === "move") markerKind = null;
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
           const isCheck = checkSquares.some((k) => k.r === r && k.c === c);
