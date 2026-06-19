@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Design, PieceDef } from "@/game/types";
 import { buildRegistry } from "@/game/pieces";
 import { PieceById } from "./PieceGlyph";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PieceInfoView } from "@/components/pieces/PieceInfoView";
 
 interface Props {
   design: Design;
