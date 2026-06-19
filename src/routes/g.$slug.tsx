@@ -12,6 +12,7 @@ import { ReportDialog } from "@/components/social/ReportDialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { adminDeleteGameComment, adminSetPublishedGameFlags, adminDeletePublishedGame } from "@/lib/admin.functions";
 import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
+import { PromoteAnnouncementDialog, type PromotionTarget } from "@/components/admin/PromoteAnnouncementDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
