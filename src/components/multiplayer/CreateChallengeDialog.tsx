@@ -6,11 +6,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Copy } from "lucide-react";
+import { Bell, Copy, X } from "lucide-react";
 import { toast } from "sonner";
 import { createChallenge } from "@/lib/multiplayer.functions";
 import { BUILTIN_GAMES, loadSavedGames, type SavedGame } from "@/game/library";
 import type { Color, Design } from "@/game/types";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export interface CreateChallengeDialogProps {
   open: boolean;
