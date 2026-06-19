@@ -164,6 +164,7 @@ function ContentPage() {
           />
         )}
       </main>
+      <PromoteAnnouncementDialog target={promoTarget} onClose={() => setPromoTarget(null)} />
     </div>
   );
 }
