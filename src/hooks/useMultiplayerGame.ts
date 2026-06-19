@@ -173,6 +173,59 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
     }
   }, [respondDrawFn, matchId]);
 
+  // Rematch state derived from match_events. The latest of these wins,
+  // and an "accept" carries the new match id in payload so both sides can navigate.
+  const rematchState = useMemo(() => {
+    let latestOffer: MatchEvent | null = null;
+    let latestResolution: MatchEvent | null = null;
+    for (const e of events) {
+      if (e.kind === "rematch_offer") {
+        latestOffer = e;
+        latestResolution = null;
+      } else if (e.kind === "rematch_accept" || e.kind === "rematch_decline") {
+        latestResolution = e;
+      }
+    }
+    if (latestResolution?.kind === "rematch_accept") {
+      const p = latestResolution.payload as { newMatchId?: string } | null;
+      return { incoming: null as MatchEvent | null, mine: null as MatchEvent | null, newMatchId: p?.newMatchId ?? null, declined: false };
+    }
+    if (latestResolution?.kind === "rematch_decline") {
+      return { incoming: null, mine: null, newMatchId: null, declined: true };
+    }
+    if (!latestOffer) return { incoming: null, mine: null, newMatchId: null, declined: false };
+    return {
+      incoming: latestOffer.actor_id !== meId ? latestOffer : null,
+      mine: latestOffer.actor_id === meId ? latestOffer : null,
+      newMatchId: null,
+      declined: false,
+    };
+  }, [events, meId]);
+
+  const sendRematchOffer = useCallback(async () => {
+    try {
+      const res = await offerRematchFn({ data: { matchId } });
+      if (res?.newMatchId) return res.newMatchId;
+      toast.success("Rematch offer sent");
+      return null;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send rematch");
+      return null;
+    }
+  }, [offerRematchFn, matchId]);
+
+  const respondToRematch = useCallback(async (accept: boolean) => {
+    try {
+      const res = await respondRematchFn({ data: { matchId, accept } });
+      return res?.newMatchId ?? null;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to respond");
+      return null;
+    }
+  }, [respondRematchFn, matchId]);
+
+
+
   const playMoveOptimistic = useCallback(
     (m: Move) => {
       const expectedPly = moves.length;
