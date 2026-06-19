@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { AppShell } from "@/components/shell/AppShell";
 import { BUILTIN_GAMES, loadSavedGames, tutorialForBuiltin, tutorialForSaved, type GameType, type SavedGame } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
-import { Swords, Bot, Users, Trophy, Play, ChevronRight } from "lucide-react";
+import { Swords, Bot, Users, Trophy, Play, ChevronRight, UserPlus } from "lucide-react";
+import { CreateChallengeDialog } from "@/components/multiplayer/CreateChallengeDialog";
 
 export const Route = createFileRoute("/lobby")({
   head: () => ({

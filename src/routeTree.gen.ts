@@ -34,6 +34,7 @@ import { Route as AuthenticatedMultiplayerIndexRouteImport } from './routes/_aut
 import { Route as AuthenticatedMessagesIndexRouteImport } from './routes/_authenticated/messages.index'
 import { Route as AuthenticatedForumIndexRouteImport } from './routes/_authenticated/forum.index'
 import { Route as PiecesSlugEditRouteImport } from './routes/pieces.$slug.edit'
+import { Route as MultiplayerJoinTokenRouteImport } from './routes/multiplayer.join.$token'
 import { Route as AuthenticatedUUsernameRouteImport } from './routes/_authenticated/u.$username'
 import { Route as AuthenticatedMultiplayerMatchIdRouteImport } from './routes/_authenticated/multiplayer.$matchId'
 import { Route as AuthenticatedMessagesThreadIdRouteImport } from './routes/_authenticated/messages.$threadId'
@@ -174,6 +175,11 @@ const PiecesSlugEditRoute = PiecesSlugEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => PiecesSlugRoute,
 } as any)
+const MultiplayerJoinTokenRoute = MultiplayerJoinTokenRouteImport.update({
+  id: '/multiplayer/join/$token',
+  path: '/multiplayer/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedUUsernameRoute = AuthenticatedUUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/u/$username': typeof AuthenticatedUUsernameRoute
+  '/multiplayer/join/$token': typeof MultiplayerJoinTokenRoute
   '/pieces/$slug/edit': typeof PiecesSlugEditRoute
   '/forum/': typeof AuthenticatedForumIndexRoute
   '/messages/': typeof AuthenticatedMessagesIndexRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByTo {
   '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/u/$username': typeof AuthenticatedUUsernameRoute
+  '/multiplayer/join/$token': typeof MultiplayerJoinTokenRoute
   '/pieces/$slug/edit': typeof PiecesSlugEditRoute
   '/forum': typeof AuthenticatedForumIndexRoute
   '/messages': typeof AuthenticatedMessagesIndexRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/_authenticated/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/_authenticated/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/_authenticated/u/$username': typeof AuthenticatedUUsernameRoute
+  '/multiplayer/join/$token': typeof MultiplayerJoinTokenRoute
   '/pieces/$slug/edit': typeof PiecesSlugEditRoute
   '/_authenticated/forum/': typeof AuthenticatedForumIndexRoute
   '/_authenticated/messages/': typeof AuthenticatedMessagesIndexRoute
@@ -387,6 +396,7 @@ export interface FileRouteTypes {
     | '/messages/$threadId'
     | '/multiplayer/$matchId'
     | '/u/$username'
+    | '/multiplayer/join/$token'
     | '/pieces/$slug/edit'
     | '/forum/'
     | '/messages/'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/messages/$threadId'
     | '/multiplayer/$matchId'
     | '/u/$username'
+    | '/multiplayer/join/$token'
     | '/pieces/$slug/edit'
     | '/forum'
     | '/messages'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/_authenticated/messages/$threadId'
     | '/_authenticated/multiplayer/$matchId'
     | '/_authenticated/u/$username'
+    | '/multiplayer/join/$token'
     | '/pieces/$slug/edit'
     | '/_authenticated/forum/'
     | '/_authenticated/messages/'
@@ -484,6 +496,7 @@ export interface RootRouteChildren {
   PiecesSlugRoute: typeof PiecesSlugRouteWithChildren
   PiecesNewRoute: typeof PiecesNewRoute
   PiecesIndexRoute: typeof PiecesIndexRoute
+  MultiplayerJoinTokenRoute: typeof MultiplayerJoinTokenRoute
   ApiPublicHooksCleanupStaleChallengesRoute: typeof ApiPublicHooksCleanupStaleChallengesRoute
   ApiPublicPieceImgSplatRoute: typeof ApiPublicPieceImgSplatRoute
 }
@@ -664,6 +677,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/pieces/$slug/edit'
       preLoaderRoute: typeof PiecesSlugEditRouteImport
       parentRoute: typeof PiecesSlugRoute
+    }
+    '/multiplayer/join/$token': {
+      id: '/multiplayer/join/$token'
+      path: '/multiplayer/join/$token'
+      fullPath: '/multiplayer/join/$token'
+      preLoaderRoute: typeof MultiplayerJoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/u/$username': {
       id: '/_authenticated/u/$username'
@@ -860,6 +880,7 @@ const rootRouteChildren: RootRouteChildren = {
   PiecesSlugRoute: PiecesSlugRouteWithChildren,
   PiecesNewRoute: PiecesNewRoute,
   PiecesIndexRoute: PiecesIndexRoute,
+  MultiplayerJoinTokenRoute: MultiplayerJoinTokenRoute,
   ApiPublicHooksCleanupStaleChallengesRoute:
     ApiPublicHooksCleanupStaleChallengesRoute,
   ApiPublicPieceImgSplatRoute: ApiPublicPieceImgSplatRoute,
