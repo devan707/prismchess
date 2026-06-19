@@ -159,8 +159,9 @@ function PieceDetail() {
                 {
                   label: isFeat ? "Demote from signature" : "Promote to signature",
                   onClick: async () => {
-                    await adminFlagsPiece({ data: { pieceId: piece.id, isFeatured: !isFeat } });
+                    const res = await adminFlagsPiece({ data: { pieceId: piece.id, isFeatured: !isFeat } });
                     toast.success(isFeat ? "Demoted" : "Promoted to signature piece");
+                    if (res.promoted && res.target) setPromoTarget(res.target);
                     router.invalidate();
                   },
                 },
