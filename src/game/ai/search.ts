@@ -99,6 +99,9 @@ class Searcher {
   bestMoveAtRoot: Move | null = null;
   bestScoreAtRoot = -Infinity;
   tiesAtRoot: Move[] = [];
+  /** Every root move and the score the deepest completed iteration assigned
+   *  to it. Used by the blunder guard at the end of runSearch. */
+  rootScores: Array<{ move: Move; score: number }> = [];
   /** killers[depth] = [primary, secondary] non-capture moves that caused a cutoff. */
   killers: Array<[Move | null, Move | null]> = [];
   /** history[moveKey] cumulative cutoff bonus. */
