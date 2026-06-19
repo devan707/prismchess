@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/game/rules";
-import { allLegalMoves, moveTargetsFrom } from "@/game/moves";
+import { allLegalMoves, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
 import { requestMove as engineRequestMove, cancel as engineCancel } from "@/game/ai/engine";
 import { loadPlaybook, mergeCloudPlaybook, difficultyCloudScale, type Playbook } from "@/game/ai/playbook";

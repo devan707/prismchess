@@ -370,19 +370,27 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <div className="absolute rounded-full pointer-events-none"
                   style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
               )}
-              {markerKind === "ranged" && (
+              {(markerKind === "ranged" || markerKind === "rangedCapture") && (
                 <div
                   className="absolute rounded-full pointer-events-none flex items-center justify-center"
                   style={{
                     width: "42%",
                     height: "42%",
-                    border: "3px solid var(--color-board-attack)",
+                    border: `3px solid var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})`,
                     background: "transparent",
                   }}
                 >
                   <div
+                    className="absolute"
+                    style={{ width: "78%", height: "3px", background: `var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})` }}
+                  />
+                  <div
+                    className="absolute"
+                    style={{ width: "3px", height: "78%", background: `var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})` }}
+                  />
+                  <div
                     className="rounded-full"
-                    style={{ width: "28%", height: "28%", background: "var(--color-board-attack)" }}
+                    style={{ width: "20%", height: "20%", background: `var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})` }}
                   />
                 </div>
               )}
