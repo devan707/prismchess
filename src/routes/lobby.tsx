@@ -22,6 +22,7 @@ function Lobby() {
   const navigate = useNavigate();
   const [pickAi, setPickAi] = useState(false);
   const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [challengeOpen, setChallengeOpen] = useState(false);
   useEffect(() => { setSaved(loadSavedGames()); }, []);
 
   const playBuiltin = (g: GameType) => {
