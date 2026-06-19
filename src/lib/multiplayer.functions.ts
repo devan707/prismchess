@@ -852,12 +852,12 @@ export const respondRematch = createServerFn({ method: "POST" })
     if (cErr) throw new Error(cErr.message);
     const newMatchId = newRow.id as string;
 
-    await context.supabase.from("match_events").insert({
+    await supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "rematch_accept",
       actor_id: context.userId,
       payload: { newMatchId },
-    });
+    } as never);
 
     const offererId = lastOffer.actor_id;
     if (offererId) {
