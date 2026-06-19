@@ -145,6 +145,14 @@ const UpdateInput = z.object({
   visibility: z.enum(["private", "public"]),
 });
 
+// Admin/mod helper. Returns true if the caller has either role.
+async function callerIsModOrAdmin(ctx: { supabase: any; userId: string }): Promise<boolean> {
+  const { data } = await ctx.supabase
+    .from("user_roles").select("role").eq("user_id", ctx.userId);
+  const roles = (data ?? []).map((r: any) => r.role as string);
+  return roles.includes("admin") || roles.includes("moderator");
+}
+
 export const updatePiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => UpdateInput.parse(i))
@@ -156,7 +164,9 @@ export const updatePiece = createServerFn({ method: "POST" })
       .maybeSingle();
     if (ownErr) throw new Error(ownErr.message);
     if (!existing) throw new Error("Piece not found.");
-    if (existing.author_id !== context.userId) throw new Error("You can only edit your own pieces.");
+    const isOwner = existing.author_id === context.userId;
+    const isAdminEdit = !isOwner && (await callerIsModOrAdmin(context));
+    if (!isOwner && !isAdminEdit) throw new Error("You can only edit your own pieces.");
 
     const defWithImage = existing.image_url
       ? { ...data.def, imageUrl: existing.image_url }
@@ -184,16 +194,18 @@ export const updatePiece = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Pull the engine-facing piece id out of the def (e.g. "u:abc123"). That is
-    // what's stored in design.customPieces[*].id — not the row UUID.
+    // Refresh embedded copies in published games owned by the piece's author
+    // (not the caller). For admin edits, that's the original author; for owner
+    // edits, that's the same person.
+    const refreshAuthorId = existing.author_id;
     const enginePieceId = (defWithSummary as { id?: unknown }).id;
     let refreshedGames = 0;
     if (typeof enginePieceId === "string" && enginePieceId.length > 0) {
-      const { data: myGames } = await context.supabase
+      const { data: theirGames } = await context.supabase
         .from("published_games")
         .select("id, design")
-        .eq("author_id", context.userId);
-      for (const g of myGames ?? []) {
+        .eq("author_id", refreshAuthorId);
+      for (const g of theirGames ?? []) {
         const design = g.design as { customPieces?: Array<{ id?: string }> } | null;
         if (!design || !Array.isArray(design.customPieces)) continue;
         let touched = false;
@@ -206,28 +218,46 @@ export const updatePiece = createServerFn({ method: "POST" })
         const { error: upErr } = await context.supabase
           .from("published_games")
           .update({ design: nextDesign as never, updated_at: new Date().toISOString() })
-          .eq("id", g.id)
-          .eq("author_id", context.userId);
+          .eq("id", g.id);
         if (!upErr) refreshedGames += 1;
       }
+    }
+
+    if (isAdminEdit) {
+      await context.supabase.rpc("log_admin_action", {
+        _action: "custom_piece.admin_edit",
+        _target_type: "custom_piece",
+        _target_id: data.pieceId,
+        _details: { name: data.name } as never,
+      });
     }
     return { ...row, refreshedGames };
   });
 
-// ---------- Get one of my pieces (by slug) for duplication/forking or editing ----------
+// ---------- Get one piece (by slug) for editing — owner OR admin/mod ----------
 
 export const getMyPieceBySlug = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ slug: z.string().trim().min(1).max(60) }).parse(i))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    // First try as owner.
+    const ownerQ = await context.supabase
       .from("custom_pieces")
       .select("id, slug, name, description, def, visibility, image_url, author_id, movement_summary")
       .eq("slug", data.slug)
       .eq("author_id", context.userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    return row;
+    if (ownerQ.error) throw new Error(ownerQ.error.message);
+    if (ownerQ.data) return ownerQ.data;
+    // Otherwise allow admins/mods to load any piece for editing.
+    if (!(await callerIsModOrAdmin(context))) return null;
+    const adminQ = await context.supabase
+      .from("custom_pieces")
+      .select("id, slug, name, description, def, visibility, image_url, author_id, movement_summary")
+      .eq("slug", data.slug)
+      .maybeSingle();
+    if (adminQ.error) throw new Error(adminQ.error.message);
+    return adminQ.data;
   });
 
 // ---------- List queries ----------
