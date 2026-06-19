@@ -446,13 +446,14 @@ export const submitMove = createServerFn({ method: "POST" })
     const { error: uErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update(update as never).eq("id", data.matchId);
     if (uErr) throw new Error(uErr.message);
 
-    const { error: iErr } = await context.supabase.from("match_moves").insert({
+    const { supabaseAdmin: _sbA1 } = await import("@/integrations/supabase/client.server");
+    const { error: iErr } = await _sbA1.from("match_moves").insert({
       match_id: data.matchId,
       ply: data.ply,
       move: data.move as never,
       actor_id: context.userId,
       time_left_ms: moverNewTime,
-    });
+    } as never);
     if (iErr) throw new Error(iErr.message);
 
     // Notify the opponent that it's their turn.
@@ -498,12 +499,12 @@ export const resign = createServerFn({ method: "POST" })
       finished_at: new Date().toISOString(),
     }).eq("id", data.matchId);
     if (uErr) throw new Error(uErr.message);
-    await context.supabase.from("match_events").insert({
+    await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "resign",
       actor_id: context.userId,
       payload: {},
-    });
+    } as never);
     return { ok: true };
   });
 
@@ -599,12 +600,12 @@ export const offerDraw = createServerFn({ method: "POST" })
       .select("ply", { count: "exact", head: true })
       .eq("match_id", data.matchId);
 
-    const { error } = await context.supabase.from("match_events").insert({
+    const { error } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "draw_offer",
       actor_id: context.userId,
       payload: { ply: movesCount ?? 0 },
-    });
+    } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -649,12 +650,12 @@ export const respondDraw = createServerFn({ method: "POST" })
       .maybeSingle();
     if (laterResp) throw new Error("That draw offer was already answered.");
 
-    await context.supabase.from("match_events").insert({
+    await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: data.accept ? "draw_accept" : "draw_decline",
       actor_id: context.userId,
       payload: {},
-    });
+    } as never);
     if (data.accept) {
       await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
         status: "finished",
@@ -744,12 +745,12 @@ export const offerRematch = createServerFn({ method: "POST" })
       throw new Error("Your opponent already offered a rematch — respond to it.");
     }
 
-    const { error: iErr } = await context.supabase.from("match_events").insert({
+    const { error: iErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "rematch_offer",
       actor_id: context.userId,
       payload: {},
-    });
+    } as never);
     if (iErr) throw new Error(iErr.message);
 
     const otherId = context.userId === match.host_id ? match.guest_id : match.host_id;
@@ -813,12 +814,12 @@ export const respondRematch = createServerFn({ method: "POST" })
     }
 
     if (!data.accept) {
-      await context.supabase.from("match_events").insert({
+      await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
         match_id: data.matchId,
         kind: "rematch_decline",
         actor_id: context.userId,
         payload: {},
-      });
+      } as never);
       return { ok: true, newMatchId: null };
     }
 
@@ -851,12 +852,12 @@ export const respondRematch = createServerFn({ method: "POST" })
     if (cErr) throw new Error(cErr.message);
     const newMatchId = newRow.id as string;
 
-    await context.supabase.from("match_events").insert({
+    await supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "rematch_accept",
       actor_id: context.userId,
       payload: { newMatchId },
-    });
+    } as never);
 
     const offererId = lastOffer.actor_id;
     if (offererId) {
