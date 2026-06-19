@@ -1737,6 +1737,7 @@ export function moveTargetsFrom(state: GameState, from: Square, legal = true): M
   const attacks = attackSquaresFrom(state, from);
   for (const sq of attacks) {
     const occ = state.board[sq.r]?.[sq.c];
+    if (occ && occ.color === piece.color) continue;
     const probe = state.board.map((row, ri) =>
       ri === sq.r
         ? row.map((cell, ci) => (ci === sq.c ? ({ id: "P", color: piece.color === "w" ? "b" : "w" } as Piece) : cell))
