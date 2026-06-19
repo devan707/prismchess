@@ -701,3 +701,172 @@ export const claimTimeout = createServerFn({ method: "POST" })
     }).eq("id", data.matchId);
     return { ok: true };
   });
+
+// ─── Rematch: offer ────────────────────────────────────────────────────────
+export const offerRematch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ matchId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: match, error } = await context.supabase
+      .from("matches")
+      .select("host_id, guest_id, status, design_name")
+      .eq("id", data.matchId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!match) throw new Error("Match not found.");
+    if (match.status !== "finished") throw new Error("Match is not finished.");
+    if (context.userId !== match.host_id && context.userId !== match.guest_id) {
+      throw new Error("Not a player in this match.");
+    }
+
+    // Block if there's already a pending offer / accept / decline from this side.
+    const { data: events } = await context.supabase
+      .from("match_events")
+      .select("id, kind, actor_id, payload, created_at")
+      .eq("match_id", data.matchId)
+      .in("kind", ["rematch_offer", "rematch_accept", "rematch_decline"])
+      .order("created_at", { ascending: false })
+      .limit(5);
+    const latestAccept = (events ?? []).find((e) => e.kind === "rematch_accept");
+    if (latestAccept) {
+      const p = latestAccept.payload as { newMatchId?: string } | null;
+      return { ok: true, newMatchId: p?.newMatchId ?? null };
+    }
+    const latestOffer = (events ?? []).find((e) => e.kind === "rematch_offer");
+    const latestDecline = (events ?? []).find((e) => e.kind === "rematch_decline");
+    const declineNewer = latestDecline && latestOffer && latestDecline.created_at > latestOffer.created_at;
+    if (latestOffer && !declineNewer) {
+      if (latestOffer.actor_id === context.userId) {
+        throw new Error("You already offered a rematch.");
+      }
+      throw new Error("Your opponent already offered a rematch — respond to it.");
+    }
+
+    const { error: iErr } = await context.supabase.from("match_events").insert({
+      match_id: data.matchId,
+      kind: "rematch_offer",
+      actor_id: context.userId,
+      payload: {},
+    });
+    if (iErr) throw new Error(iErr.message);
+
+    const otherId = context.userId === match.host_id ? match.guest_id : match.host_id;
+    if (otherId) {
+      const { sendPushBackground } = await import("./push.server");
+      sendPushBackground(otherId, {
+        title: "Rematch?",
+        body: `Your opponent wants a rematch of "${match.design_name}".`,
+        url: `/multiplayer/${data.matchId}`,
+        tag: `match:${data.matchId}:rematch`,
+      });
+    }
+    return { ok: true, newMatchId: null };
+  });
+
+// ─── Rematch: respond ──────────────────────────────────────────────────────
+export const respondRematch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ matchId: z.string().uuid(), accept: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: match, error } = await context.supabase
+      .from("matches")
+      .select("host_id, guest_id, host_color, status, design, design_name, time_control, rated, visibility")
+      .eq("id", data.matchId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!match) throw new Error("Match not found.");
+    if (match.status !== "finished") throw new Error("Match is not finished.");
+    if (context.userId !== match.host_id && context.userId !== match.guest_id) {
+      throw new Error("Not a player in this match.");
+    }
+
+    const { data: lastOffer } = await context.supabase
+      .from("match_events")
+      .select("id, actor_id, created_at")
+      .eq("match_id", data.matchId)
+      .eq("kind", "rematch_offer")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!lastOffer) throw new Error("No rematch offer to respond to.");
+    if (lastOffer.actor_id === context.userId) {
+      throw new Error("You can't respond to your own rematch offer.");
+    }
+    const { data: laterResp } = await context.supabase
+      .from("match_events")
+      .select("id, kind, payload")
+      .eq("match_id", data.matchId)
+      .in("kind", ["rematch_accept", "rematch_decline"])
+      .gt("created_at", lastOffer.created_at)
+      .limit(1)
+      .maybeSingle();
+    if (laterResp) {
+      if (laterResp.kind === "rematch_accept") {
+        const p = laterResp.payload as { newMatchId?: string } | null;
+        return { ok: true, newMatchId: p?.newMatchId ?? null };
+      }
+      throw new Error("That rematch offer was already answered.");
+    }
+
+    if (!data.accept) {
+      await context.supabase.from("match_events").insert({
+        match_id: data.matchId,
+        kind: "rematch_decline",
+        actor_id: context.userId,
+        payload: {},
+      });
+      return { ok: true, newMatchId: null };
+    }
+
+    // Create the new match: swap colors, same design + time control, immediate ready_check.
+    const budget = budgetMsFor(match.time_control as string);
+    const newHostColor: Color = (match.host_color as Color) === "w" ? "b" : "w";
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const startedAt = new Date().toISOString();
+    const { data: newRow, error: cErr } = await supabaseAdmin
+      .from("matches")
+      .insert({
+        host_id: match.host_id,
+        guest_id: match.guest_id,
+        design: match.design as never,
+        design_name: match.design_name,
+        time_control: match.time_control,
+        host_color: newHostColor,
+        visibility: match.visibility,
+        rated: match.rated ?? false,
+        white_time_ms: budget,
+        black_time_ms: budget,
+        turn: "w",
+        status: "ready_check",
+        started_at: startedAt,
+        ready_w: false,
+        ready_b: false,
+      } as never)
+      .select("id")
+      .single();
+    if (cErr) throw new Error(cErr.message);
+    const newMatchId = newRow.id as string;
+
+    await context.supabase.from("match_events").insert({
+      match_id: data.matchId,
+      kind: "rematch_accept",
+      actor_id: context.userId,
+      payload: { newMatchId },
+    });
+
+    const offererId = lastOffer.actor_id;
+    if (offererId) {
+      const { sendPushBackground } = await import("./push.server");
+      sendPushBackground(offererId, {
+        title: "Rematch accepted",
+        body: `Your rematch of "${match.design_name}" is starting.`,
+        url: `/multiplayer/${newMatchId}`,
+        tag: `match:${newMatchId}:start`,
+      });
+    }
+    return { ok: true, newMatchId };
+  });

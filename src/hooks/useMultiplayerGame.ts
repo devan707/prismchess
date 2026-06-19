@@ -5,7 +5,7 @@ import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/ga
 import { allLegalMoves, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
 import type { Color, Design, GameState, Move, MoveTarget, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
-import { submitMove, markFinished, offerDraw, respondDraw } from "@/lib/multiplayer.functions";
+import { submitMove, markFinished, offerDraw, respondDraw, offerRematch, respondRematch } from "@/lib/multiplayer.functions";
 import { toast } from "sonner";
 
 export interface MatchEvent {
@@ -54,6 +54,8 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
   const markFinishedFn = useServerFn(markFinished);
   const offerDrawFn = useServerFn(offerDraw);
   const respondDrawFn = useServerFn(respondDraw);
+  const offerRematchFn = useServerFn(offerRematch);
+  const respondRematchFn = useServerFn(respondRematch);
   const lastTerminalReportedRef = useRef<string | null>(null);
 
   const myColor: Color =
@@ -127,6 +129,8 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
             if (row.kind === "draw_offer") toast.message("Opponent offered a draw");
             else if (row.kind === "draw_accept") toast.success("Draw accepted");
             else if (row.kind === "draw_decline") toast.message("Draw declined");
+            else if (row.kind === "rematch_offer") toast.message("Opponent wants a rematch");
+            else if (row.kind === "rematch_decline") toast.message("Rematch declined");
           }
         },
       )
@@ -168,6 +172,59 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
       toast.error(e instanceof Error ? e.message : "Failed to respond");
     }
   }, [respondDrawFn, matchId]);
+
+  // Rematch state derived from match_events. The latest of these wins,
+  // and an "accept" carries the new match id in payload so both sides can navigate.
+  const rematchState = useMemo(() => {
+    let latestOffer: MatchEvent | null = null;
+    let latestResolution: MatchEvent | null = null;
+    for (const e of events) {
+      if (e.kind === "rematch_offer") {
+        latestOffer = e;
+        latestResolution = null;
+      } else if (e.kind === "rematch_accept" || e.kind === "rematch_decline") {
+        latestResolution = e;
+      }
+    }
+    if (latestResolution?.kind === "rematch_accept") {
+      const p = latestResolution.payload as { newMatchId?: string } | null;
+      return { incoming: null as MatchEvent | null, mine: null as MatchEvent | null, newMatchId: p?.newMatchId ?? null, declined: false };
+    }
+    if (latestResolution?.kind === "rematch_decline") {
+      return { incoming: null, mine: null, newMatchId: null, declined: true };
+    }
+    if (!latestOffer) return { incoming: null, mine: null, newMatchId: null, declined: false };
+    return {
+      incoming: latestOffer.actor_id !== meId ? latestOffer : null,
+      mine: latestOffer.actor_id === meId ? latestOffer : null,
+      newMatchId: null,
+      declined: false,
+    };
+  }, [events, meId]);
+
+  const sendRematchOffer = useCallback(async () => {
+    try {
+      const res = await offerRematchFn({ data: { matchId } });
+      if (res?.newMatchId) return res.newMatchId;
+      toast.success("Rematch offer sent");
+      return null;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send rematch");
+      return null;
+    }
+  }, [offerRematchFn, matchId]);
+
+  const respondToRematch = useCallback(async (accept: boolean) => {
+    try {
+      const res = await respondRematchFn({ data: { matchId, accept } });
+      return res?.newMatchId ?? null;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to respond");
+      return null;
+    }
+  }, [respondRematchFn, matchId]);
+
+
 
   const playMoveOptimistic = useCallback(
     (m: Move) => {
@@ -289,6 +346,12 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
     myPendingDrawOffer,
     sendDrawOffer,
     respondToDraw,
+    incomingRematchOffer: rematchState.incoming,
+    myPendingRematchOffer: rematchState.mine,
+    rematchNewMatchId: rematchState.newMatchId,
+    rematchDeclined: rematchState.declined,
+    sendRematchOffer,
+    respondToRematch,
     pendingPromotion,
     promotionOptions,
     cancelPromotion: () => setPendingPromotion(null),
