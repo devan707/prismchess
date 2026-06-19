@@ -11,7 +11,9 @@ import {
   deletePiece,
   likePiece,
 } from "@/lib/piece-builder.functions";
-import { Heart, PackageOpen, Plus, Trash2 } from "lucide-react";
+import { Heart, Info, PackageOpen, Plus, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PieceInfoView } from "@/components/pieces/PieceInfoView";
 import { toast } from "sonner";
 
 interface Props {
@@ -32,6 +34,7 @@ type Row = {
   like_count: number;
   created_at: string;
   author_id: string;
+  movement_summary: string | null;
 };
 
 type Tab = "mine" | "new" | "popular";
@@ -43,6 +46,7 @@ export function PieceLibraryPanel({ onAdd, alreadyInDesign, onRemoveFromDesign }
   const [newest, setNewest] = useState<Row[]>([]);
   const [popular, setPopular] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [infoRow, setInfoRow] = useState<Row | null>(null);
   const fetchMine = useServerFn(listMyPieces);
   const fetchDiscovery = useServerFn(listDiscoveryPieces);
   const like = useServerFn(likePiece);
@@ -163,6 +167,13 @@ export function PieceLibraryPanel({ onAdd, alreadyInDesign, onRemoveFromDesign }
                       <p className="text-[10px] text-muted-foreground truncate">{row.description || "—"}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setInfoRow(row)}
+                        className="text-muted-foreground hover:text-foreground p-1"
+                        title="View movement & attacks"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
                       {tab !== "mine" && (
                         <button
                           onClick={() => handleLike(row)}
