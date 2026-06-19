@@ -339,12 +339,16 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
         const t = board[to.r][to.c];
         if (!t || t.color === piece.color || isBarricade(t, state.registry) || isFixture(t, state.registry)) continue;
         const dist = Math.max(Math.abs(dr), Math.abs(dc));
-        if (dist === 2) {
+        if (dist === 1) {
+          // Melee: dragon moves to the captured square.
+          moves.push({ from, to, piece, captured: t, kind: "normal" });
+        } else {
           const midR = from.r + dr / 2;
           const midC = from.c + dc / 2;
           if (board[midR][midC]) continue; // blocked by intervening piece
+          // Ranged breath attack: dragon stays in place.
+          moves.push({ from, to, piece, captured: t, kind: "dragonAttack" });
         }
-        moves.push({ from, to, piece, captured: t, kind: "dragonAttack" });
       }
     }
     return moves;
