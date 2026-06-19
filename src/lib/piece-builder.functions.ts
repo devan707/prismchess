@@ -393,7 +393,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
     });
     const { data: row, error } = await sb
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, remixed_from_id, movement_summary")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, is_featured, remixed_from_id, movement_summary")
       .eq("slug", data.slug)
       .eq("visibility", "public")
       .eq("is_hidden", false)
@@ -404,7 +404,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
       id: string; slug: string; name: string; description: string;
       def: import("@/integrations/supabase/types").Json; visibility: string; like_count: number;
       created_at: string; author_id: string; image_url: string | null; is_hidden: boolean;
-      remixed_from_id: string | null; movement_summary: string | null;
+      is_featured: boolean; remixed_from_id: string | null; movement_summary: string | null;
     };
     const { data: prof } = await sb
       .from("profiles")
