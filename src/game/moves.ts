@@ -1683,7 +1683,20 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     const isFirstHand = !state.pendingHand && m.piece.id === "H" && m.kind !== "handDouble";
     if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
-    return !inCheck({ ...state, board: preFlipBoard }, state.turn);
+    if (inCheck({ ...state, board: preFlipBoard }, state.turn)) return false;
+    // Royal hand-pieces (Regent/Lich King) using the 2-square combo must
+    // also not pass through an attacked intermediate square (classic
+    // can't-move-through-check rule).
+    if (m.kind === "handDouble" && m.from && (m.piece.id === "G" || m.piece.id === "L")) {
+      const midR = (m.from.r + m.to.r) >> 1;
+      const midC = (m.from.c + m.to.c) >> 1;
+      // Simulate royal at the intermediate square (origin emptied).
+      const midBoard = cloneBoard(state.board);
+      midBoard[m.from.r][m.from.c] = null;
+      midBoard[midR][midC] = m.piece;
+      if (inCheck({ ...state, board: midBoard }, state.turn)) return false;
+    }
+    return true;
   });
 }
 
