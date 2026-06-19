@@ -224,3 +224,10 @@
   85% { opacity: 1; }
   100% { transform: translate(var(--arrow-dx, 0), var(--arrow-dy, 0)) rotate(var(--arrow-rot, 0deg)) scale(1); opacity: 0; }
 }
+
+@keyframes dragon-flame {
+  0% { transform: translate(0, 0) rotate(var(--arrow-rot, 0deg)) scale(0.4); opacity: 0; }
+  20% { transform: translate(calc(var(--arrow-dx, 0) * 0.2), calc(var(--arrow-dy, 0) * 0.2)) rotate(var(--arrow-rot, 0deg)) scale(1); opacity: 1; }
+  70% { transform: translate(calc(var(--arrow-dx, 0) * 0.85), calc(var(--arrow-dy, 0) * 0.85)) rotate(var(--arrow-rot, 0deg)) scale(1.4); opacity: 1; }
+  100% { transform: translate(var(--arrow-dx, 0), var(--arrow-dy, 0)) rotate(var(--arrow-rot, 0deg)) scale(1.8); opacity: 0; }
+}
