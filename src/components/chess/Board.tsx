@@ -305,6 +305,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
+          const isPendingHandSquare = !!pendingHand && pendingHand.r === r && pendingHand.c === c;
 
           // Three-color move indicator:
           //   RED  = piece can capture an enemy here (or juggernaut trample target).
