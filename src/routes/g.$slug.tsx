@@ -238,6 +238,11 @@ function SharedGamePage() {
           )}
         </section>
       </main>
+      <CreateChallengeDialog
+        open={challengeOpen}
+        onOpenChange={setChallengeOpen}
+        presetDesign={{ design: game.design as unknown as Design, name: game.name }}
+      />
     </div>
   );
 }
