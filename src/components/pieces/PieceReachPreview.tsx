@@ -1,9 +1,13 @@
 import { useMemo } from "react";
 import { compileOption, type MoveOption } from "@/game/customMovement";
-import type { MovementSpec } from "@/game/types";
+import type { MovementSpec, PieceDef } from "@/game/types";
 
 interface Props {
-  options: MoveOption[];
+  /** Preferred: pass the full def so legacy built-ins (movement/capture
+   *  MovementSpec) and v2 options-based pieces both render. */
+  def?: PieceDef;
+  /** Back-compat: explicit options (v2 movement). */
+  options?: MoveOption[];
   /** Optional ranged-attack squares (relative offsets from center). */
   rangedSpec?: MovementSpec;
   size?: number; // grid dimension
@@ -14,58 +18,103 @@ type Marker =
   | "move-only"
   | "capture-only"
   | "slide"
+  | "slide-move-only"
+  | "slide-capture-only"
   | "ranged";
 
 /** Mini board that highlights every square the compiled piece can reach
  *  from a center cell. */
-export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
+export function PieceReachPreview({ def, options, rangedSpec, size = 9 }: Props) {
   const center = Math.floor(size / 2);
+
+  // Resolve the effective options / specs from either source.
+  const effOptions: MoveOption[] = options ?? def?.options ?? [];
+  const effRanged: MovementSpec | undefined = rangedSpec ?? def?.rangedCapture?.spec;
+  // Legacy specs only apply when no v2 options are provided.
+  const legacyMovement: MovementSpec | undefined =
+    effOptions.length === 0 ? def?.movement : undefined;
+  const legacyCapture: MovementSpec | undefined =
+    effOptions.length === 0 ? def?.capture : undefined;
 
   const { map, conditional, error } = useMemo(() => {
     const m = new Map<string, Marker>();
-    const cond = new Set<string>(); // squares only reachable conditionally
+    const cond = new Set<string>();
     let firstError: string | undefined;
 
     const put = (key: string, marker: Marker, isCond: boolean) => {
-      // Promote rules: move-capture > move-only / capture-only ; slide stays slide.
       const prev = m.get(key);
       if (!prev) m.set(key, marker);
       else if (prev === "move-only" && marker === "capture-only") m.set(key, "move-capture");
       else if (prev === "capture-only" && marker === "move-only") m.set(key, "move-capture");
+      else if (prev === "slide-move-only" && marker === "slide-capture-only") m.set(key, "slide");
+      else if (prev === "slide-capture-only" && marker === "slide-move-only") m.set(key, "slide");
       else if (marker === "move-capture") m.set(key, "move-capture");
+      else if (marker === "slide") m.set(key, "slide");
       if (isCond) cond.add(key);
       else cond.delete(key);
     };
 
-    for (const opt of options) {
+    // v2 options path
+    for (const opt of effOptions) {
       const c = compileOption(opt);
       if (c.error) { firstError ??= c.error; continue; }
       const isCond = opt.condition !== "none";
-      const baseMarker: Marker =
+      const leapMarker: Marker =
         opt.kind === "move-only" ? "move-only"
         : opt.kind === "capture-only" ? "capture-only"
         : "move-capture";
+      const slideMarker: Marker =
+        opt.kind === "move-only" ? "slide-move-only"
+        : opt.kind === "capture-only" ? "slide-capture-only"
+        : "slide";
       for (const o of c.spec.leaps ?? []) {
         const r = center + o.dr, cc = center + o.dc;
         if (r < 0 || r >= size || cc < 0 || cc >= size) continue;
-        put(`${r},${cc}`, baseMarker, isCond);
+        put(`${r},${cc}`, leapMarker, isCond);
       }
       for (const d of c.spec.slides ?? []) {
         const max = d.max && d.max > 0 ? d.max : size;
         let r = center + d.dr, cc = center + d.dc, n = 0;
         while (r >= 0 && r < size && cc >= 0 && cc < size && n < max) {
-          put(`${r},${cc}`, "slide", isCond);
+          put(`${r},${cc}`, slideMarker, isCond);
           r += d.dr; cc += d.dc; n++;
         }
       }
     }
-    for (const o of rangedSpec?.leaps ?? []) {
+
+    // Legacy MovementSpec path (built-in pieces: rook, queen, knight, etc.)
+    const renderLegacySpec = (spec: MovementSpec, leapMarker: Marker, slideMarker: Marker) => {
+      for (const o of spec.leaps ?? []) {
+        const r = center + o.dr, cc = center + o.dc;
+        if (r < 0 || r >= size || cc < 0 || cc >= size) continue;
+        put(`${r},${cc}`, leapMarker, false);
+      }
+      for (const d of spec.slides ?? []) {
+        const max = d.max && d.max > 0 ? d.max : size;
+        let r = center + d.dr, cc = center + d.dc, n = 0;
+        while (r >= 0 && r < size && cc >= 0 && cc < size && n < max) {
+          put(`${r},${cc}`, slideMarker, false);
+          r += d.dr; cc += d.dc; n++;
+        }
+      }
+    };
+    if (legacyMovement && legacyCapture) {
+      // Distinct move-only + capture-only patterns (e.g. pawn).
+      renderLegacySpec(legacyMovement, "move-only", "slide-move-only");
+      renderLegacySpec(legacyCapture, "capture-only", "slide-capture-only");
+    } else if (legacyMovement) {
+      // Combined move + capture pattern (most pieces).
+      renderLegacySpec(legacyMovement, "move-capture", "slide");
+    }
+
+    // Ranged attacks
+    for (const o of effRanged?.leaps ?? []) {
       const r = center + o.dr, cc = center + o.dc;
       if (r < 0 || r >= size || cc < 0 || cc >= size) continue;
       m.set(`${r},${cc}`, "ranged");
     }
     return { map: m, conditional: cond, error: firstError };
-  }, [options, rangedSpec, center, size]);
+  }, [effOptions, effRanged, legacyMovement, legacyCapture, center, size]);
 
   const dot = (marker: Marker | undefined, isCond: boolean) => {
     if (!marker) return null;
@@ -79,8 +128,11 @@ export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
         return <span className={`block w-2 h-2 rounded-full bg-red-500 ${ring}`} />;
       case "slide":
         return <span className={`block w-2 h-2 rounded-full bg-sky-500 ${ring}`} />;
+      case "slide-move-only":
+        return <span className={`block w-2 h-2 rounded-full border-2 border-sky-500 bg-transparent ${ring}`} />;
+      case "slide-capture-only":
+        return <span className={`block w-2 h-2 rounded-full bg-red-500/80 border border-sky-500 ${ring}`} />;
       case "ranged":
-        // Crosshair: outer ring + center dot, distinct from solid move/capture dots.
         return (
           <span className="relative block w-3 h-3 rounded-full border-2 border-orange-500">
             <span className="absolute inset-0 m-auto w-[3px] h-[3px] rounded-full bg-orange-500" />
@@ -125,7 +177,7 @@ export function PieceReachPreview({ options, rangedSpec, size = 9 }: Props) {
           <span className="text-emerald-600">○</span> move only ·{" "}
           <span className="text-red-600">●</span> capture only ·{" "}
           <span className="text-sky-600">●</span> slide
-          {rangedSpec && (rangedSpec.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">◎</span> ranged</>)}
+          {effRanged && (effRanged.leaps?.length ?? 0) > 0 && (<> · <span className="text-orange-600">◎</span> ranged</>)}
           {" · "}<span className="text-amber-600">ring</span> = conditional
         </p>
       )}
