@@ -268,6 +268,32 @@ function purposeBonus(state: GameState, m: Move): number {
       b -= 120;
     }
   }
+  // Cloud opening-book bias: if we're still in the book for this variant,
+  // reward moves that extend a line with a good aggregate win rate.
+  const pb = getActivePlaybook();
+  const book = pb.openingBook;
+  const scale = pb.cloudScale ?? 0;
+  if (book && scale > 0 && m.to) {
+    // Build the AI side's prior opening sequence (max 12 plies) from history.
+    const aiColor = m.piece.color;
+    const seq: string[] = [];
+    for (const h of state.history) {
+      if (h.piece.color !== aiColor) continue;
+      seq.push(`${h.piece.id}@${h.to.r * 100 + h.to.c}`);
+      if (seq.length >= 12) break;
+    }
+    if (seq.length < 12) {
+      seq.push(`${m.piece.id}@${m.to.r * 100 + m.to.c}`);
+      const key = seq.join("|");
+      const entry = book[key];
+      if (entry && entry.plays >= 3) {
+        const winrate = entry.wins / entry.plays;
+        // Up to ~100 cp bias at full scale for a sharp winning line; minus
+        // for sharply losing lines. Scaled by difficulty.
+        b += Math.round((winrate - 0.5) * 200 * scale);
+      }
+    }
+  }
   return b;
 }
 
