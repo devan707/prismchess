@@ -512,6 +512,14 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     if (!(err instanceof TimeUp)) throw err;
   }
   let chosen = searcher.bestMoveAtRoot;
+  // Absolute last-resort fallback: depth 1 should always commit a move
+  // thanks to the starvation guard in Searcher.checkTime, but if anything
+  // upstream (e.g. an exception in evaluate/qsearch) bypasses that path,
+  // make sure we never hand the worker a null move.
+  if (!chosen) {
+    const legal = allLegalMoves(state);
+    if (legal.length > 0) chosen = legal[0];
+  }
   if (searcher.tiesAtRoot.length > 1) {
     if (opts.difficulty === "easy") {
       chosen = pickRandom(searcher.tiesAtRoot);
