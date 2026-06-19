@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   BUILTIN_GAMES,
@@ -57,6 +57,14 @@ function signatureTileGradient(id: string): string {
     default: return "radial-gradient(circle at 50% 50%, #6b7280 0%, #000000 100%)";
   }
 }
+
+// 8x8 checkerboard overlay: white squares at 50% opacity, black squares fully transparent.
+// Two 2x2 tiles repeated 4 times each axis = 8x8 cells.
+const CHESSBOARD_OVERLAY_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "conic-gradient(rgba(255,255,255,0.5) 25%, transparent 0 50%, rgba(255,255,255,0.5) 0 75%, transparent 0)",
+  backgroundSize: "25% 25%",
+};
 
 function readLastVariant(): LastVariant | null {
   if (typeof window === "undefined") return null;
@@ -189,8 +197,12 @@ function Home() {
           <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/70 px-1">Featured variant</h2>
           <Card className="p-4 rounded-sm">
             <div className="flex items-start gap-3">
-              <div className="h-14 w-14 rounded-sm bg-gradient-to-br from-emerald-400/40 via-emerald-300/30 to-emerald-600/40 flex items-center justify-center text-card-foreground shrink-0 font-display font-black text-2xl">
-                {featured.name.charAt(0)}
+              <div
+                className="relative h-14 w-14 rounded-sm flex items-center justify-center text-white shrink-0 font-display font-black text-2xl overflow-hidden"
+                style={{ background: signatureTileGradient(featured.id) }}
+              >
+                <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE} />
+                <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">{featured.name.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-display font-semibold text-base">{featured.name}</div>
@@ -238,9 +250,10 @@ function Home() {
                   >
                     <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition overflow-hidden">
                       <div
-                        className="h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1"
+                        className="relative h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1 overflow-hidden"
                         style={{ background: signatureTileGradient(g.id) }}
                       >
+                        <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE} />
                         <span className="relative z-10 flex items-end gap-1 text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
                           <span className="text-3xl opacity-80">{glyphs[0]}</span>
                           <span className="text-5xl">{glyphs[1]}</span>
