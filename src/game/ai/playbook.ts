@@ -8,6 +8,7 @@
  * v1 → v2 migration runs once per browser; the legacy global blob is
  * dropped into whatever variant is loaded the first time the page boots.
  */
+export interface OpeningBookEntry { plays: number; wins: number }
 export interface Playbook {
   lessons: string[];
   pieceValueMultipliers: Record<string, number>;
@@ -15,6 +16,11 @@ export interface Playbook {
   aggressionBonus: number;
   squareDefenseBonuses: Record<string, number>;
   gamesReviewed: number;
+  /** Cloud-synced opening lines (per variant). Key = "pid@toRC|pid@toRC|...".
+   *  Used to bias the AI toward openings that have won across all players. */
+  openingBook?: Record<string, OpeningBookEntry>;
+  /** How aggressively to apply cloud adjustments (0..1). Easy < Med < Hard. */
+  cloudScale?: number;
 }
 
 const V1_KEY = "menagerie.ai.playbook.v1";
