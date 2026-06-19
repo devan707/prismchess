@@ -814,12 +814,12 @@ export const respondRematch = createServerFn({ method: "POST" })
     }
 
     if (!data.accept) {
-      await context.supabase.from("match_events").insert({
+      await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
         match_id: data.matchId,
         kind: "rematch_decline",
         actor_id: context.userId,
         payload: {},
-      });
+      } as never);
       return { ok: true, newMatchId: null };
     }
 
