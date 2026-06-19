@@ -10,7 +10,8 @@ import {
 } from "@/lib/social.functions";
 import { ReportDialog } from "@/components/social/ReportDialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { adminDeleteGameComment } from "@/lib/admin.functions";
+import { adminDeleteGameComment, adminSetPublishedGameFlags, adminDeletePublishedGame } from "@/lib/admin.functions";
+import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
