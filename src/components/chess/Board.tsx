@@ -56,7 +56,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   const dispC = (c: number) => ((humanColor === "w") !== flipped ? c : (cols - 1 - c));
   const slideAnim = (() => {
     if (!last || !last.from) return null;
-    if (last.kind === "archerShoot") return null; // archer stays — no slide
+    if (last.kind === "archerShoot" || last.kind === "dragonAttack") return null; // ranged — attacker stays
     const fromDispR = dispR(last.from.r);
     const toDispR = dispR(last.to.r);
     const fromDispC = dispC(last.from.c);
@@ -80,6 +80,20 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     const dx = (toDispC - fromDispC) * 100; // % of cell, rightward+
     const dy = (toDispR - fromDispR) * 100; // % of cell, downward+
     const rot = (Math.atan2(dy, dx) * 180) / Math.PI; // arrow glyph points right
+    return { from: last.from, dx, dy, rot, key: moveCount };
+  })();
+
+  // Dragon flame-breath animation: a flame streaks from the dragon (from) to
+  // the captured piece (to). The dragon itself does not move on the board.
+  const flameAnim = (() => {
+    if (!last || !last.from || last.kind !== "dragonAttack") return null;
+    const fromDispR = dispR(last.from.r);
+    const toDispR = dispR(last.to.r);
+    const fromDispC = dispC(last.from.c);
+    const toDispC = dispC(last.to.c);
+    const dx = (toDispC - fromDispC) * 100;
+    const dy = (toDispR - fromDispR) * 100;
+    const rot = (Math.atan2(dy, dx) * 180) / Math.PI;
     return { from: last.from, dx, dy, rot, key: moveCount };
   })();
 
