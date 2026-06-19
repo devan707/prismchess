@@ -61,6 +61,8 @@ export interface SearchResult {
   zobristFailed?: boolean;
   /** Principal variation (rough — walks TT from root, may terminate early). */
   pv: Move[];
+  /** Per-candidate breakdown from the root safety gate (debug-only). */
+  candidates: CandidateAnalysis[];
 }
 
 class TimeUp extends Error {}
