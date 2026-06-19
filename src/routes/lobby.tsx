@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { AppShell } from "@/components/shell/AppShell";
 import { BUILTIN_GAMES, loadSavedGames, tutorialForBuiltin, tutorialForSaved, type GameType, type SavedGame } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
+import { listDiscoveryGames, getPublishedGame } from "@/lib/social.functions";
 import { Swords, Bot, Users, Trophy, Play, ChevronRight, UserPlus } from "lucide-react";
 import { CreateChallengeDialog } from "@/components/multiplayer/CreateChallengeDialog";
 
@@ -18,12 +19,18 @@ export const Route = createFileRoute("/lobby")({
   component: Lobby,
 });
 
+type FeaturedPub = Awaited<ReturnType<typeof listDiscoveryGames>>["featured"][number];
+
 function Lobby() {
   const navigate = useNavigate();
   const [pickAi, setPickAi] = useState(false);
   const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [featured, setFeatured] = useState<FeaturedPub[]>([]);
   const [challengeOpen, setChallengeOpen] = useState(false);
-  useEffect(() => { setSaved(loadSavedGames()); }, []);
+  useEffect(() => {
+    setSaved(loadSavedGames());
+    listDiscoveryGames().then((d) => setFeatured(d.featured ?? [])).catch(() => { /* best-effort */ });
+  }, []);
 
   const playBuiltin = (g: GameType) => {
     saveDesign(g.build());
@@ -33,6 +40,18 @@ function Lobby() {
   const playSaved = (g: SavedGame) => {
     saveDesign(g.design);
     saveCurrentMeta({ id: `saved:${g.id}`, name: g.name, description: g.description, tutorial: tutorialForSaved(g) });
+    navigate({ to: "/play" });
+  };
+  const playFeatured = async (g: FeaturedPub) => {
+    const res = await getPublishedGame({ data: { slug: g.slug } });
+    if (!res) return;
+    saveDesign(res.game.design as never);
+    saveCurrentMeta({
+      id: `published:${res.game.id}`,
+      name: res.game.name,
+      description: res.game.description,
+      tutorial: (res.game.tutorial as never) ?? undefined,
+    });
     navigate({ to: "/play" });
   };
 
@@ -120,6 +139,25 @@ function Lobby() {
                     <div className="font-semibold text-sm flex items-center gap-2">
                       {g.name}
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-normal">{g.rows}×{g.cols}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-1">{g.description}</div>
+                  </div>
+                  <Play className="h-4 w-4 text-primary" />
+                </button>
+              ))}
+              {featured.map((g) => (
+                <button
+                  key={`feat-${g.id}`}
+                  onClick={() => playFeatured(g)}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm flex items-center gap-2">
+                      {g.name}
+                      {g.rows && g.cols && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-normal">{g.rows}×{g.cols}</span>
+                      )}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">Signature</span>
                     </div>
                     <div className="text-xs text-muted-foreground line-clamp-1">{g.description}</div>
                   </div>
