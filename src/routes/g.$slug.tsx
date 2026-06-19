@@ -55,6 +55,7 @@ function SharedGamePage() {
   const [body, setBody] = useState("");
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [promoTarget, setPromoTarget] = useState<PromotionTarget | null>(null);
 
   useEffect(() => {
     (async () => {
