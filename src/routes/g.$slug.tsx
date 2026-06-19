@@ -170,7 +170,7 @@ function SharedGamePage() {
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button size="sm" onClick={handlePlay}><Play className="h-3 w-3 mr-1" /> Play vs AI</Button>
             <Button size="sm" variant="outline" onClick={() => setChallengeOpen(true)}>
-              <Swords className="h-3 w-3 mr-1" /> Challenge a friend
+              <Swords className="h-3 w-3 mr-1" /> Create a challenge
             </Button>
             <Button size="sm" variant={liked ? "default" : "outline"} onClick={handleLike}>
               <Heart className={`h-3 w-3 mr-1 ${liked ? "fill-current" : ""}`} /> {likeCount}
