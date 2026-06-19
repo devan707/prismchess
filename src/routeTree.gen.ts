@@ -46,7 +46,6 @@ import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicPieceImgSplatRouteImport } from './routes/api/public/piece-img/$'
 import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
-import { Route as AuthenticatedMultiplayerJoinTokenRouteImport } from './routes/_authenticated/multiplayer.join.$token'
 
 const SandboxRoute = SandboxRouteImport.update({
   id: '/sandbox',
@@ -241,12 +240,6 @@ const ApiPublicHooksCleanupStaleChallengesRoute =
     path: '/api/public/hooks/cleanup-stale-challenges',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedMultiplayerJoinTokenRoute =
-  AuthenticatedMultiplayerJoinTokenRouteImport.update({
-    id: '/join/$token',
-    path: '/join/$token',
-    getParentRoute: () => AuthenticatedMultiplayerRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -283,7 +276,6 @@ export interface FileRoutesByFullPath {
   '/forum/': typeof AuthenticatedForumIndexRoute
   '/messages/': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
-  '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
   '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
@@ -319,7 +311,6 @@ export interface FileRoutesByTo {
   '/forum': typeof AuthenticatedForumIndexRoute
   '/messages': typeof AuthenticatedMessagesIndexRoute
   '/multiplayer': typeof AuthenticatedMultiplayerIndexRoute
-  '/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
   '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
@@ -360,7 +351,6 @@ export interface FileRoutesById {
   '/_authenticated/forum/': typeof AuthenticatedForumIndexRoute
   '/_authenticated/messages/': typeof AuthenticatedMessagesIndexRoute
   '/_authenticated/multiplayer/': typeof AuthenticatedMultiplayerIndexRoute
-  '/_authenticated/multiplayer/join/$token': typeof AuthenticatedMultiplayerJoinTokenRoute
   '/api/public/hooks/cleanup-stale-challenges': typeof ApiPublicHooksCleanupStaleChallengesRoute
   '/api/public/piece-img/$': typeof ApiPublicPieceImgSplatRoute
 }
@@ -401,7 +391,6 @@ export interface FileRouteTypes {
     | '/forum/'
     | '/messages/'
     | '/multiplayer/'
-    | '/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
     | '/api/public/piece-img/$'
   fileRoutesByTo: FileRoutesByTo
@@ -437,7 +426,6 @@ export interface FileRouteTypes {
     | '/forum'
     | '/messages'
     | '/multiplayer'
-    | '/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
     | '/api/public/piece-img/$'
   id:
@@ -477,7 +465,6 @@ export interface FileRouteTypes {
     | '/_authenticated/forum/'
     | '/_authenticated/messages/'
     | '/_authenticated/multiplayer/'
-    | '/_authenticated/multiplayer/join/$token'
     | '/api/public/hooks/cleanup-stale-challenges'
     | '/api/public/piece-img/$'
   fileRoutesById: FileRoutesById
@@ -762,13 +749,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCleanupStaleChallengesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/multiplayer/join/$token': {
-      id: '/_authenticated/multiplayer/join/$token'
-      path: '/join/$token'
-      fullPath: '/multiplayer/join/$token'
-      preLoaderRoute: typeof AuthenticatedMultiplayerJoinTokenRouteImport
-      parentRoute: typeof AuthenticatedMultiplayerRoute
-    }
   }
 }
 
@@ -807,15 +787,12 @@ const AuthenticatedMessagesRouteWithChildren =
 interface AuthenticatedMultiplayerRouteChildren {
   AuthenticatedMultiplayerMatchIdRoute: typeof AuthenticatedMultiplayerMatchIdRoute
   AuthenticatedMultiplayerIndexRoute: typeof AuthenticatedMultiplayerIndexRoute
-  AuthenticatedMultiplayerJoinTokenRoute: typeof AuthenticatedMultiplayerJoinTokenRoute
 }
 
 const AuthenticatedMultiplayerRouteChildren: AuthenticatedMultiplayerRouteChildren =
   {
     AuthenticatedMultiplayerMatchIdRoute: AuthenticatedMultiplayerMatchIdRoute,
     AuthenticatedMultiplayerIndexRoute: AuthenticatedMultiplayerIndexRoute,
-    AuthenticatedMultiplayerJoinTokenRoute:
-      AuthenticatedMultiplayerJoinTokenRoute,
   }
 
 const AuthenticatedMultiplayerRouteWithChildren =
