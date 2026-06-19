@@ -136,6 +136,13 @@ export interface Move {
   partnerCaptured?: Piece | null;
 }
 
+export type MoveTargetKind = "move" | "attack" | "capture" | "ranged" | "rangedCapture";
+
+export interface MoveTarget {
+  square: Square;
+  kind: MoveTargetKind;
+}
+
 export type Reserves = Record<PieceId, number>;
 
 export interface GameState {
