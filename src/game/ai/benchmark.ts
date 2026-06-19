@@ -222,16 +222,30 @@ export async function runBenchmark(timeMs = 800): Promise<BenchmarkResult> {
 // ── CLI entry ──────────────────────────────────────────────────────────
 declare const Bun: { argv: string[] } | undefined;
 if (typeof Bun !== "undefined" && Bun.argv[1]?.endsWith("benchmark.ts")) {
-  runBenchmark().then((res) => {
-    console.log("\nAI Tactical Benchmark");
-    console.log("─".repeat(60));
-    for (const d of res.details) {
-      const mark = d.pass ? "✓" : "✗";
-      console.log(`${mark} ${d.name}`);
+  (async () => {
+    const synth = await runBenchmark();
+    console.log("\nAI Tactical Benchmark (synthetic)");
+    console.log("─".repeat(72));
+    for (const d of synth.details) {
+      console.log(`${d.pass ? "✓" : "✗"} ${d.name}`);
       console.log(`   chose: ${d.chose}  (${d.reason})`);
     }
-    console.log("─".repeat(60));
-    console.log(`${res.passed}/${res.total} passed`);
-    process.exit(res.failed > 0 ? 1 : 0);
-  });
+    console.log("─".repeat(72));
+    console.log(`${synth.passed}/${synth.total} synthetic passed`);
+
+    const { runRealGameBenchmark } = await import("./realGameBenchmark");
+    const real = await runRealGameBenchmark();
+    console.log("\nReal-Game Regression Benchmark");
+    console.log("─".repeat(72));
+    for (const r of real.results) {
+      console.log(`${r.pass ? "✓" : "✗"} ${r.name}`);
+      console.log(`   chose: ${r.chose}`);
+      for (const reason of r.reasons) console.log(`   ↳ ${reason}`);
+    }
+    console.log("─".repeat(72));
+    console.log(`${real.passed}/${real.total} real-game passed`);
+    console.log(`\nTOTAL: ${synth.passed + real.passed}/${synth.total + real.total}`);
+    process.exit(synth.failed + real.failed > 0 ? 1 : 0);
+  })();
 }
+
