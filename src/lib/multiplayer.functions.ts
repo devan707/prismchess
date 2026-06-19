@@ -600,12 +600,12 @@ export const offerDraw = createServerFn({ method: "POST" })
       .select("ply", { count: "exact", head: true })
       .eq("match_id", data.matchId);
 
-    const { error } = await context.supabase.from("match_events").insert({
+    const { error } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "draw_offer",
       actor_id: context.userId,
       payload: { ply: movesCount ?? 0 },
-    });
+    } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
