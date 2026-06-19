@@ -13,7 +13,7 @@ export type Notification = {
   title: string;
   body: string | null;
   link: string | null;
-  metadata: Record<string, unknown>;
+  metadata: unknown;
   read_at: string | null;
   created_at: string;
 };
