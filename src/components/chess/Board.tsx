@@ -377,6 +377,31 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               {isSelected && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-highlight)" }} />
               )}
+              {isPendingHandSquare && (
+                <>
+                  <div
+                    className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed animate-pulse"
+                    style={{
+                      borderColor: "var(--color-board-legal)",
+                      boxShadow: "inset 0 0 0 2px var(--color-board-legal)",
+                    }}
+                    aria-hidden
+                  />
+                  <span
+                    className="absolute top-0.5 left-1/2 -translate-x-1/2 px-1.5 py-px rounded-full text-[9px] font-bold pointer-events-none uppercase tracking-wide"
+                    style={{
+                      background: "var(--color-board-legal)",
+                      color: "oklch(0.18 0.04 145)",
+                      lineHeight: 1,
+                      letterSpacing: "0.04em",
+                    }}
+                    aria-label="Click this piece to stay (skip 2nd step)"
+                    title="Click to stay — 2nd king-step is optional"
+                  >
+                    ↺ stay
+                  </span>
+                </>
+              )}
               {isCheck && (
                 <div className="absolute inset-0 pointer-events-none animate-pulse"
                   style={{ background: "radial-gradient(circle, var(--color-board-check), transparent 70%)" }} />
