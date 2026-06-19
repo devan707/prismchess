@@ -424,3 +424,63 @@ export const adminResolveAbilityRequest = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+// ─── Content library (pieces & variants) ───────────────────────────────────
+
+const ContentFilter = z.enum(["all", "signature", "hidden", "public"]).optional();
+
+export const adminListAllPieces = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ q: z.string().max(60).optional(), filter: ContentFilter }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertMod(context);
+    let q = context.supabase
+      .from("custom_pieces")
+      .select("id, slug, name, description, author_id, like_count, is_featured, is_hidden, visibility, created_at")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (data.filter === "signature") q = q.eq("is_featured", true);
+    else if (data.filter === "hidden") q = q.eq("is_hidden", true);
+    else if (data.filter === "public") q = q.eq("visibility", "public").eq("is_hidden", false);
+    if (data.q && data.q.trim()) q = q.ilike("name", `%${data.q.trim()}%`);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const ids = Array.from(new Set((rows ?? []).map((r: any) => r.author_id as string)));
+    let authors: Record<string, { username: string; display_name: string | null }> = {};
+    if (ids.length) {
+      const { data: profs } = await context.supabase
+        .from("profiles").select("id, username, display_name").in("id", ids);
+      for (const p of profs ?? []) authors[(p as any).id] = { username: (p as any).username, display_name: (p as any).display_name };
+    }
+    return (rows ?? []).map((r: any) => ({ ...r, author: authors[r.author_id] ?? null }));
+  });
+
+export const adminListAllPublishedGames = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ q: z.string().max(60).optional(), filter: ContentFilter }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertMod(context);
+    let q = context.supabase
+      .from("published_games")
+      .select("id, slug, name, description, author_id, like_count, comment_count, is_featured, is_hidden, created_at")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (data.filter === "signature") q = q.eq("is_featured", true);
+    else if (data.filter === "hidden") q = q.eq("is_hidden", true);
+    else if (data.filter === "public") q = q.eq("is_hidden", false);
+    if (data.q && data.q.trim()) q = q.ilike("name", `%${data.q.trim()}%`);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const ids = Array.from(new Set((rows ?? []).map((r: any) => r.author_id as string)));
+    let authors: Record<string, { username: string; display_name: string | null }> = {};
+    if (ids.length) {
+      const { data: profs } = await context.supabase
+        .from("profiles").select("id, username, display_name").in("id", ids);
+      for (const p of profs ?? []) authors[(p as any).id] = { username: (p as any).username, display_name: (p as any).display_name };
+    }
+    return (rows ?? []).map((r: any) => ({ ...r, author: authors[r.author_id] ?? null }));
+  });
