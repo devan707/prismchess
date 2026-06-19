@@ -29,6 +29,10 @@ export function NotificationsBell() {
 
   const load = useCallback(async () => {
     try {
+      // Skip when signed-out so the protected server fn doesn't 401.
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) { setItems([]); setUnread(0); return; }
       const res = await fetchList({});
       setItems(res.items);
       setUnread(res.unread);
