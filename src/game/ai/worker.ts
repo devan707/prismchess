@@ -16,6 +16,7 @@ import type { Difficulty, GameState, Move } from "../types";
 import { setActivePlaybookSnapshot, type Playbook } from "./playbook";
 import { TT, type TTStats } from "./tt";
 import { computeVariantSalt, resetZobristKeyCache } from "./zobrist";
+import type { CandidateAnalysis } from "./safety";
 
 export type WorkerRequest = {
   type: "search";
@@ -36,6 +37,7 @@ export interface SearchStatsPayload {
   tt: TTStats;
   zobristFailed: boolean;
   pv: Move[];
+  candidates: CandidateAnalysis[];
 }
 
 export type WorkerResponse =
@@ -85,6 +87,7 @@ ctx.addEventListener("message", (ev: MessageEvent<WorkerRequest>) => {
         tt: result.tt,
         zobristFailed: !!result.zobristFailed,
         pv: result.pv,
+        candidates: result.candidates,
       },
     };
     ctx.postMessage(out);
