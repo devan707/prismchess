@@ -38,6 +38,23 @@ export function CreateChallengeDialog({
   const [busy, setBusy] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
 
+  // One-off nudge: if push is available but the user hasn't enabled it yet,
+  // offer to turn it on so they get notified when someone joins. Dismissals
+  // persist per browser so we don't nag.
+  const push = usePushNotifications();
+  const NUDGE_KEY = "pc:push-nudge-challenge:dismissed";
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setNudgeDismissed(window.localStorage.getItem(NUDGE_KEY) === "1");
+  }, []);
+  const showPushNudge =
+    !nudgeDismissed &&
+    push.supported &&
+    !push.isPreview &&
+    !push.subscribed &&
+    push.permission !== "denied";
+
   useEffect(() => { if (open) setSaved(loadSavedGames()); }, [open]);
   useEffect(() => { if (open) { setShareUrl(null); setVisibility(defaultVisibility); } }, [open, defaultVisibility]);
 
