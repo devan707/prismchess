@@ -499,12 +499,12 @@ export const resign = createServerFn({ method: "POST" })
       finished_at: new Date().toISOString(),
     }).eq("id", data.matchId);
     if (uErr) throw new Error(uErr.message);
-    await context.supabase.from("match_events").insert({
+    await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "resign",
       actor_id: context.userId,
       payload: {},
-    });
+    } as never);
     return { ok: true };
   });
 
