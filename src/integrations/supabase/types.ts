@@ -744,32 +744,56 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age_confirmed: boolean
           avatar: string | null
+          avatar_url: string | null
+          community_updates_opt_in: boolean
           created_at: string
           display_name: string | null
+          gameplay_notify_opt_in: boolean
           id: string
+          marketing_opt_in: boolean
           onboarded: boolean
+          privacy_version: string | null
           suspended_until: string | null
+          tos_accepted_at: string | null
+          tos_version: string | null
           updated_at: string
           username: string
         }
         Insert: {
+          age_confirmed?: boolean
           avatar?: string | null
+          avatar_url?: string | null
+          community_updates_opt_in?: boolean
           created_at?: string
           display_name?: string | null
+          gameplay_notify_opt_in?: boolean
           id: string
+          marketing_opt_in?: boolean
           onboarded?: boolean
+          privacy_version?: string | null
           suspended_until?: string | null
+          tos_accepted_at?: string | null
+          tos_version?: string | null
           updated_at?: string
           username: string
         }
         Update: {
+          age_confirmed?: boolean
           avatar?: string | null
+          avatar_url?: string | null
+          community_updates_opt_in?: boolean
           created_at?: string
           display_name?: string | null
+          gameplay_notify_opt_in?: boolean
           id?: string
+          marketing_opt_in?: boolean
           onboarded?: boolean
+          privacy_version?: string | null
           suspended_until?: string | null
+          tos_accepted_at?: string | null
+          tos_version?: string | null
           updated_at?: string
           username?: string
         }
