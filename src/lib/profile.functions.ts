@@ -13,15 +13,9 @@ const UsernameSchema = z
 export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("profiles")
-      .select(
-        "id, username, display_name, created_at, onboarded, avatar, avatar_url, tos_version, privacy_version, tos_accepted_at, age_confirmed, marketing_opt_in, community_updates_opt_in, gameplay_notify_opt_in",
-      )
-      .eq("id", context.userId)
-      .maybeSingle();
+    const { data, error } = await context.supabase.rpc("get_my_profile");
     if (error) throw new Error(error.message);
-    return data;
+    return (data as any) ?? null;
   });
 
 export const getMyRole = createServerFn({ method: "GET" })

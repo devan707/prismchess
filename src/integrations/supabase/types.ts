@@ -1228,7 +1228,46 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_users: {
+        Args: { _q?: string }
+        Returns: {
+          created_at: string
+          display_name: string
+          id: string
+          suspended_until: string
+          username: string
+        }[]
+      }
       are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          age_confirmed: boolean
+          avatar: string | null
+          avatar_url: string | null
+          community_updates_opt_in: boolean
+          created_at: string
+          display_name: string | null
+          gameplay_notify_opt_in: boolean
+          id: string
+          is_founder: boolean
+          marketing_opt_in: boolean
+          onboarded: boolean
+          privacy_version: string | null
+          suspended_until: string | null
+          tos_accepted_at: string | null
+          tos_version: string | null
+          updated_at: string
+          username: string
+          welcomed_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

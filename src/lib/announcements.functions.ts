@@ -45,7 +45,7 @@ export const getNextUnseenAnnouncement = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const [{ data: profile }, { data: anns }, { data: reads }] = await Promise.all([
-      context.supabase.from("profiles").select("welcomed_at").eq("id", context.userId).maybeSingle(),
+      context.supabase.rpc("get_my_profile") as unknown as Promise<{ data: { welcomed_at: string | null } | null }>,
       context.supabase
         .from("announcements")
         .select("id, title, body, cta_label, cta_href, kind, pinned, forum_topic_id, published_at")

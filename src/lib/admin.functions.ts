@@ -310,16 +310,9 @@ export const adminListUsers = createServerFn({ method: "GET" })
   .inputValidator((i: unknown) => z.object({ q: z.string().max(60).optional() }).parse(i))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    let q = context.supabase
-      .from("profiles")
-      .select("id, username, display_name, created_at, suspended_until")
-      .order("created_at", { ascending: false })
-      .limit(100);
-    if (data.q && data.q.trim()) {
-      const term = `%${data.q.trim()}%`;
-      q = q.or(`username.ilike.${term},display_name.ilike.${term}`);
-    }
-    const { data: rows, error } = await q;
+    const { data: rows, error } = await context.supabase.rpc("admin_list_users", {
+      _q: data.q?.trim() ? data.q.trim() : undefined,
+    });
     if (error) throw new Error(error.message);
     const ids = (rows ?? []).map((r: any) => r.id);
     let rolesByUser: Record<string, string[]> = {};
