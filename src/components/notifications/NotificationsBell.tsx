@@ -112,23 +112,16 @@ export function NotificationsBell() {
                 );
                 return (
                   <li key={n.id}>
-                    {n.link ? (
-                      <Link
-                        to={n.link}
-                        onClick={() => void onItemClick(n)}
-                        className="block hover:bg-accent/50 transition-colors"
-                      >
-                        {inner}
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void onItemClick(n)}
-                        className="block w-full text-left hover:bg-accent/50 transition-colors"
-                      >
-                        {inner}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void onItemClick(n);
+                        if (n.link) router.navigate({ to: n.link as never });
+                      }}
+                      className="block w-full text-left hover:bg-accent/50 transition-colors"
+                    >
+                      {inner}
+                    </button>
                   </li>
                 );
               })}
