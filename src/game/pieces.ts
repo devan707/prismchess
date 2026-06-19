@@ -101,7 +101,7 @@ export const PIECE_LIBRARY: Record<PieceId, PieceDef> = {
     emoji: true,
     special: "archer",
     builtinCustom: true,
-    description: "Fragile ranged specialist. MOVES exactly one square in any of the 8 directions to an empty square. DASH (first move only): on its very first move, may instead leap exactly 2 squares orthogonally (↑ ↓ ← →) to an empty square, jumping over any intervening pieces — movement only, not an attack. MELEE: may capture any adjacent enemy (any of the 8 directions), moving onto the captured square — a dagger strike at close quarters. RANGED: instead of moving, fires an arrow exactly 2 or 3 squares along a diagonal (↖ ↗ ↙ ↘). Arrows arc over every intervening piece (friend or foe) — only the target square matters. The Archer stays in place when firing. Cannot perform ranged attacks orthogonally or against adjacent squares.",
+    description: "Fragile ranged specialist. MOVES exactly one square in any of the 8 directions to an empty square. DASH: may instead leap exactly 2 squares orthogonally (↑ ↓ ← →) to an empty square, jumping over any intervening pieces — movement only, not an attack. Available every turn. MELEE: may capture any adjacent enemy (any of the 8 directions), moving onto the captured square — a dagger strike at close quarters. RANGED: instead of moving, fires an arrow exactly 2 or 3 squares along a diagonal (↖ ↗ ↙ ↘). Arrows arc over every intervening piece (friend or foe) — only the target square matters. The Archer stays in place when firing. Cannot perform ranged attacks orthogonally or against adjacent squares.",
   },
   D: {
     id: "D",
