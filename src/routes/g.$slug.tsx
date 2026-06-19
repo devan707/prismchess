@@ -49,6 +49,7 @@ function SharedGamePage() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [body, setBody] = useState("");
+  const [challengeOpen, setChallengeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
