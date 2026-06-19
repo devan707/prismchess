@@ -71,6 +71,12 @@ export function normalizePlaybook(p: Partial<Playbook> | null | undefined): Play
   if (typeof p.gamesReviewed === "number" && p.gamesReviewed >= 0) {
     base.gamesReviewed = Math.floor(p.gamesReviewed);
   }
+  if (p.openingBook && typeof p.openingBook === "object") {
+    base.openingBook = p.openingBook as Record<string, OpeningBookEntry>;
+  }
+  if (typeof p.cloudScale === "number") {
+    base.cloudScale = Math.max(0, Math.min(1, p.cloudScale));
+  }
   return base;
 }
 
