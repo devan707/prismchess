@@ -30,15 +30,19 @@ function ForumPage() {
   const like = useServerFn(toggleLike);
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [category, setCategory] = useState<"all" | "featured-showcase">("all");
   const setFlags = useServerFn(adminSetTopicFlags);
   const delTopic = useServerFn(adminDeleteForumTopic);
 
-  const load = () => fetchTopics({}).then(setTopics).catch((e) => toast.error(e.message));
+  const load = (cat: "all" | "featured-showcase" = category) =>
+    fetchTopics({ data: cat === "all" ? undefined : { category: cat } })
+      .then(setTopics)
+      .catch((e) => toast.error(e.message));
   useEffect(() => {
-    load();
+    load(category);
     fetchRole({}).then((r) => setIsAdmin(r.isAdmin || r.isModerator)).catch(() => {});
     // eslint-disable-next-line
-  }, []);
+  }, [category]);
 
   const onLike = async (t: Topic) => {
     setTopics((prev) =>
