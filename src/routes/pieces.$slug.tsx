@@ -130,6 +130,9 @@ function PieceDetail() {
   const adminDelPiece = useServerFn(adminDeleteCustomPiece);
   const router = useRouter();
   const pieceWithFlags = piece as typeof piece & { is_featured?: boolean; is_hidden?: boolean };
+  const [promoTarget, setPromoTarget] = useState<PromotionTarget | null>(null);
+
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
