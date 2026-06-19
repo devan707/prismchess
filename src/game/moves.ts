@@ -1655,7 +1655,7 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     if (p.id !== "H" && p.id !== "G" && p.id !== "L") return [];
   }
   const wide = state.cols > state.rows;
-  return pseudoMovesFrom(state, from).filter((m) => {
+  const filtered = pseudoMovesFrom(state, from).filter((m) => {
     // Knights leap onto their target and treat juggernauts like ordinary
     // capturable pieces. Trebuchets also crack front armor.
     const knightBypass = m.piece.id === "N";
@@ -1715,6 +1715,18 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     }
     return true;
   });
+
+  // King's Hand 2nd step is OPTIONAL: always offer a "stay put" pass move
+  // so the player (and AI) can end the turn here without making another
+  // king-step. Royals (G/L) skip this if it would leave them in check —
+  // standing in check is illegal even for a pass.
+  if (state.pendingHand && (p.id === "H" || p.id === "G" || p.id === "L")) {
+    const passOk = (p.id === "H") || !inCheck(state, state.turn);
+    if (passOk) {
+      filtered.push({ from, to: { r: from.r, c: from.c }, piece: p, kind: "handPass" });
+    }
+  }
+  return filtered;
 }
 
 const rangedMoveKinds = new Set<Move["kind"]>(["archerShoot", "dragonAttack"]);
