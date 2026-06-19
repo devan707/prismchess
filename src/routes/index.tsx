@@ -256,6 +256,8 @@ function Home() {
           <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 overflow-x-auto">
             <div className="flex gap-3 pb-2 snap-x">
               {(discovery?.featured ?? []).map((g) => {
+                const nameLower = (g.name ?? "").toLowerCase();
+                const customGlyph = nameLower.includes("castle siege") ? "♜" : null;
                 const initial = (g.name ?? "?").charAt(0).toUpperCase();
                 return (
                   <Link
@@ -271,9 +273,10 @@ function Home() {
                       >
                         <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE_WIDE} />
                         <span className="relative z-10 font-display font-black text-5xl text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
-                          {initial}
+                          {customGlyph ?? initial}
                         </span>
                       </div>
+
                       <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
                       <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
                       <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
