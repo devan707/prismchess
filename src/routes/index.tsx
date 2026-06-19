@@ -258,7 +258,7 @@ function Home() {
             <div className="flex gap-3 pb-2 snap-x">
               {(discovery?.featured ?? []).map((g) => {
                 const nameLower = (g.name ?? "").toLowerCase();
-                const customGlyph = nameLower.includes("castle siege") ? "♜" : null;
+                const isCastleSiege = nameLower.includes("castle siege");
                 const initial = (g.name ?? "?").charAt(0).toUpperCase();
                 return (
                   <Link
@@ -273,9 +273,18 @@ function Home() {
                         style={{ background: signatureTileGradient(`pub:${g.id}`) }}
                       >
                         <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE_WIDE} />
-                        <span className="relative z-10 font-display font-black text-5xl text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
-                          {customGlyph ?? initial}
-                        </span>
+                        {isCastleSiege ? (
+                          <img
+                            src={juggernautArt}
+                            alt=""
+                            aria-hidden
+                            className="relative z-10 h-20 w-20 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.55)]"
+                          />
+                        ) : (
+                          <span className="relative z-10 font-display font-black text-5xl text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">
+                            {initial}
+                          </span>
+                        )}
                       </div>
 
                       <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
