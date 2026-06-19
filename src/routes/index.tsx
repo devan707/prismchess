@@ -189,8 +189,12 @@ function Home() {
           <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/70 px-1">Featured variant</h2>
           <Card className="p-4 rounded-sm">
             <div className="flex items-start gap-3">
-              <div className="h-14 w-14 rounded-sm bg-gradient-to-br from-emerald-400/40 via-emerald-300/30 to-emerald-600/40 flex items-center justify-center text-card-foreground shrink-0 font-display font-black text-2xl">
-                {featured.name.charAt(0)}
+              <div
+                className="relative h-14 w-14 rounded-sm flex items-center justify-center text-white shrink-0 font-display font-black text-2xl overflow-hidden"
+                style={{ background: signatureTileGradient(featured.id) }}
+              >
+                <div aria-hidden className="absolute inset-0 pointer-events-none" style={CHESSBOARD_OVERLAY_STYLE} />
+                <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">{featured.name.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-display font-semibold text-base">{featured.name}</div>
