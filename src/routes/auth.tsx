@@ -5,6 +5,7 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import logoUrl from "@/assets/logo.png";
@@ -28,12 +29,11 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [redirectTo] = useState<string | null>(() => safeRedirectFromSearch());
 
   const goAfterSignIn = () => {
     if (redirectTo) {
-      // Use a hard navigation so the destination route mounts fresh with
-      // the new session cookie available to its loader.
       window.location.assign(redirectTo);
       return;
     }
@@ -62,6 +62,10 @@ function AuthPage() {
 
   const signUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreed) {
+      toast.error("Please accept the Terms and Privacy Policy to continue.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -70,11 +74,15 @@ function AuthPage() {
     });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created! Let's pick a name.");
+    toast.success("Account created! Let's finish setting up.");
     goAfterSignUp();
   };
 
   const google = async () => {
+    if (tab === "signup" && !agreed) {
+      toast.error("Please accept the Terms and Privacy Policy to continue.");
+      return;
+    }
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin + (redirectTo ?? "/"),
@@ -88,6 +96,23 @@ function AuthPage() {
     goAfterSignIn();
   };
 
+  const consentRow = (idSuffix: string) => (
+    <label htmlFor={`agree-${idSuffix}`} className="flex items-start gap-2 text-xs leading-relaxed">
+      <Checkbox
+        id={`agree-${idSuffix}`}
+        checked={agreed}
+        onCheckedChange={(v) => setAgreed(v === true)}
+        className="mt-0.5"
+      />
+      <span className="text-muted-foreground">
+        I&rsquo;m 13 or older and agree to the{" "}
+        <Link to="/terms" className="underline text-foreground">Terms</Link>
+        {" "}and{" "}
+        <Link to="/privacy" className="underline text-foreground">Privacy Policy</Link>.
+      </span>
+    </label>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <header className="max-w-md w-full mx-auto px-4 pt-6">
@@ -99,7 +124,7 @@ function AuthPage() {
         <div className="text-center mb-6">
           <img src={logoUrl} alt="Prism Chess" width={96} height={96} className="mx-auto h-24 w-24" />
           <h1 className="font-display text-3xl font-bold mt-3">Prism Chess</h1>
-          <p className="text-sm text-muted-foreground mt-1">Join the community to post in the forum.</p>
+          <p className="text-sm text-muted-foreground mt-1">Join the community to play, create, and share.</p>
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
@@ -133,7 +158,8 @@ function AuthPage() {
                 <Input id="pw-u" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
                 <p className="text-xs text-muted-foreground mt-1">At least 8 characters. We check against leaked-password lists.</p>
               </div>
-              <Button type="submit" className="w-full" disabled={busy}>Create account</Button>
+              {consentRow("u")}
+              <Button type="submit" className="w-full" disabled={busy || !agreed}>Create account</Button>
             </form>
           </TabsContent>
         </Tabs>
@@ -142,9 +168,23 @@ function AuthPage() {
           <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
         </div>
 
-        <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
+        <Button variant="outline" className="w-full" onClick={google} disabled={busy || (tab === "signup" && !agreed)}>
           Continue with Google
         </Button>
+
+        {tab === "signup" && (
+          <p className="mt-3 text-[11px] text-center text-muted-foreground">
+            By continuing with Google you also agree to our{" "}
+            <Link to="/terms" className="underline">Terms</Link> and{" "}
+            <Link to="/privacy" className="underline">Privacy Policy</Link>.
+          </p>
+        )}
+
+        <p className="mt-6 text-center text-[11px] text-muted-foreground">
+          <Link to="/terms" className="underline">Terms</Link>
+          {" · "}
+          <Link to="/privacy" className="underline">Privacy</Link>
+        </p>
       </main>
     </div>
   );
