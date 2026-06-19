@@ -81,7 +81,7 @@ function VariantPage() {
             <Button size="sm" variant="outline" onClick={() => setChallengeOpen(true)}>
               <Swords className="h-3 w-3 mr-1" /> Challenge a friend
             </Button>
-            <ShareGameButton slug={`../v/${game.id}` as never} name={game.name} description={game.description} />
+            <ShareGameButton path={`/v/${game.id}`} name={game.name} description={game.description} />
             <Link to="/forum">
               <Button size="sm" variant="ghost"><MessagesSquare className="h-3 w-3 mr-1" /> Discuss</Button>
             </Link>
