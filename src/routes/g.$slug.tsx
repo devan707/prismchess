@@ -153,11 +153,19 @@ function SharedGamePage() {
             <ReportDialog targetType="game" targetId={game.id} size="icon" label="" />
           </div>
           <p className="text-sm whitespace-pre-wrap">{game.description}</p>
+
+          {game.design ? (
+            <div className="mt-4">
+              <GamePreview design={game.design as unknown as Design} />
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button size="sm" onClick={handlePlay}><Play className="h-3 w-3 mr-1" /> Play this game</Button>
             <Button size="sm" variant={liked ? "default" : "outline"} onClick={handleLike}>
               <Heart className={`h-3 w-3 mr-1 ${liked ? "fill-current" : ""}`} /> {likeCount}
             </Button>
+            <ShareGameButton slug={game.slug} name={game.name} description={game.description} />
             {meId === game.author_id ? (
               <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sandbox", search: { edit: game.id } as never })}>
                 <Pencil className="h-3 w-3 mr-1" /> Edit
