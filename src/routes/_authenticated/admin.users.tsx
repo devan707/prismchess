@@ -23,9 +23,13 @@ function UsersPage() {
   const setRole = useServerFn(adminSetRole);
   const suspend = useServerFn(adminSuspendUser);
   const rename = useServerFn(adminRenameUser);
+  const setFounder = useServerFn(adminSetFounder);
+  const startDm = useServerFn(adminStartDm);
+  const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<User[]>([]);
+
 
   useEffect(() => {
     fetchRole({}).then((r) => setAllowed(r.isAdmin)).catch(() => setAllowed(false));
