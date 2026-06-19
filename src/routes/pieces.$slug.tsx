@@ -15,8 +15,12 @@ import {
   createPieceShowcase,
 } from "@/lib/piece-builder.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Heart, MessageSquarePlus, Share2, Twitter, Facebook, Link as LinkIcon, Wand2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquarePlus, Share2, Twitter, Facebook, Link as LinkIcon, Wand2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
+import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
+import { useRouter } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/pieces/$slug")({
   loader: async ({ params }) => {
@@ -120,17 +124,65 @@ function PieceDetail() {
     }
   };
 
+  const { isModOrAdmin } = useIsAdmin();
+  const adminFlagsPiece = useServerFn(adminSetCustomPieceFlags);
+  const adminDelPiece = useServerFn(adminDeleteCustomPiece);
+  const router = useRouter();
+  const pieceWithFlags = piece as typeof piece & { is_featured?: boolean; is_hidden?: boolean };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="max-w-3xl mx-auto px-4 pt-6 pb-4 flex items-center justify-between gap-3">
         <Link to="/pieces"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Library</Button></Link>
         <div className="flex items-center gap-2">
+          {isModOrAdmin && (
+            <Link to="/pieces/$slug/edit" params={{ slug: piece.slug }}>
+              <Button size="sm" variant="outline"><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
+            </Link>
+          )}
           <Link to="/pieces/new" search={{ from: piece.slug }}>
             <Button size="sm" variant="default" title="Save as a new piece based on this one (the original is untouched)">
               <Wand2 className="h-4 w-4 mr-1" /> Remix
             </Button>
           </Link>
           <Button size="sm" variant="outline" onClick={nativeShare}><Share2 className="h-4 w-4 mr-1" /> Share</Button>
+          <AdminMenu
+            show={isModOrAdmin}
+            actions={(() => {
+              const isFeat = !!pieceWithFlags.is_featured;
+              const isHidden = !!pieceWithFlags.is_hidden;
+              const acts: AdminAction[] = [
+                {
+                  label: isFeat ? "Demote from signature" : "Promote to signature",
+                  onClick: async () => {
+                    await adminFlagsPiece({ data: { pieceId: piece.id, isFeatured: !isFeat } });
+                    toast.success(isFeat ? "Demoted" : "Promoted to signature piece");
+                    router.invalidate();
+                  },
+                },
+                {
+                  label: isHidden ? "Unarchive" : "Archive (hide)",
+                  confirm: isHidden ? undefined : "Archive this piece? It will be hidden from the library.",
+                  onClick: async () => {
+                    await adminFlagsPiece({ data: { pieceId: piece.id, isHidden: !isHidden } });
+                    toast.success(isHidden ? "Unarchived" : "Archived");
+                    router.invalidate();
+                  },
+                },
+                {
+                  label: "Delete permanently",
+                  destructive: true,
+                  confirm: `Permanently delete "${piece.name}"? This cannot be undone.`,
+                  onClick: async () => {
+                    await adminDelPiece({ data: { pieceId: piece.id } });
+                    toast.success("Deleted");
+                    navigate({ to: "/pieces" });
+                  },
+                },
+              ];
+              return acts;
+            })()}
+          />
         </div>
       </header>
 

@@ -28,7 +28,7 @@ export const Route = createFileRoute("/pieces/$slug/edit")({
   notFoundComponent: () => (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-3 text-center">
       <h1 className="font-display text-xl font-bold">Piece not found</h1>
-      <p className="text-sm text-muted-foreground">You can only edit pieces you created.</p>
+      <p className="text-sm text-muted-foreground">Only the author or an admin can edit this piece.</p>
       <Link to="/create"><Button>Back to My Creations</Button></Link>
     </div>
   ),

@@ -36,6 +36,7 @@ export function AdminBadge() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-1">
         <Link to="/admin/reports" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">Reports inbox</Link>
+        <Link to="/admin/content" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">Content library</Link>
         <Link to="/admin/announcements" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">Announcements</Link>
         <Link to="/admin/audit" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">Audit log</Link>
         <Link to="/admin/stats" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">Stats</Link>

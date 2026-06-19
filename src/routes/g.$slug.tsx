@@ -10,7 +10,8 @@ import {
 } from "@/lib/social.functions";
 import { ReportDialog } from "@/components/social/ReportDialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { adminDeleteGameComment } from "@/lib/admin.functions";
+import { adminDeleteGameComment, adminSetPublishedGameFlags, adminDeletePublishedGame } from "@/lib/admin.functions";
+import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
@@ -40,6 +41,8 @@ function SharedGamePage() {
   const fetchLike = useServerFn(getMyLikeState);
   const { isModOrAdmin } = useIsAdmin();
   const adminDelCmt = useServerFn(adminDeleteGameComment);
+  const adminFlags = useServerFn(adminSetPublishedGameFlags);
+  const adminDelGame = useServerFn(adminDeletePublishedGame);
 
   type GameRes = Awaited<ReturnType<typeof getPublishedGame>>;
   type Comment = Awaited<ReturnType<typeof listComments>>[number];
@@ -171,7 +174,7 @@ function SharedGamePage() {
               <Heart className={`h-3 w-3 mr-1 ${liked ? "fill-current" : ""}`} /> {likeCount}
             </Button>
             <ShareGameButton slug={game.slug} name={game.name} description={game.description} />
-            {meId === game.author_id ? (
+            {(meId === game.author_id || isModOrAdmin) ? (
               <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sandbox", search: { edit: game.id } as never })}>
                 <Pencil className="h-3 w-3 mr-1" /> Edit
               </Button>
@@ -183,6 +186,47 @@ function SharedGamePage() {
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <MessageSquare className="h-3 w-3" /> {comments.length}
             </span>
+            <AdminMenu
+              show={isModOrAdmin}
+              actions={(() => {
+                const g = game as typeof game & { is_featured?: boolean; is_hidden?: boolean };
+                const isFeat = !!g.is_featured;
+                const isHidden = !!g.is_hidden;
+                const acts: AdminAction[] = [
+                  {
+                    label: isFeat ? "Demote from signature" : "Promote to signature",
+                    onClick: async () => {
+                      await adminFlags({ data: { gameId: game.id, isFeatured: !isFeat } });
+                      toast.success(isFeat ? "Demoted" : "Promoted to signature variant");
+                      const fresh = await fetchGame({ data: { slug } });
+                      setData(fresh);
+                    },
+                  },
+                  {
+                    label: isHidden ? "Unarchive" : "Archive (hide)",
+                    confirm: isHidden ? undefined : "Archive this variant? It will be hidden from discovery and play.",
+                    onClick: async () => {
+                      await adminFlags({ data: { gameId: game.id, isHidden: !isHidden } });
+                      toast.success(isHidden ? "Unarchived" : "Archived");
+                      const fresh = await fetchGame({ data: { slug } });
+                      setData(fresh);
+                    },
+                  },
+                  {
+                    label: "Delete permanently",
+                    destructive: true,
+                    confirm: `Permanently delete "${game.name}"? This cannot be undone.`,
+                    onClick: async () => {
+                      await adminDelGame({ data: { gameId: game.id } });
+                      toast.success("Deleted");
+                      navigate({ to: "/" });
+                    },
+                  },
+                ];
+                return acts;
+              })()}
+            />
+
           </div>
         </section>
 
