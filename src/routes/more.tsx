@@ -125,7 +125,7 @@ function More() {
         <section className="space-y-2">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Settings</h2>
           <Card className="divide-y">
-            <Row to="/profile" icon={Bell} label="Notifications & profile" hint="Manage push notifications" />
+            <Row to="/profile" icon={Bell} label="Notifications & profile" hint="Avatar, emails, push notifications" />
             <Row to="/help" icon={BookOpen} label="Help & support" />
             <Row
               onClick={() => {
@@ -137,6 +137,14 @@ function More() {
               label="Reset AI memory (all variants)"
               hint="Wipes the engine's learned lessons across every game"
             />
+          </Card>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Legal</h2>
+          <Card className="divide-y">
+            <Row to="/terms" icon={BookOpen} label="Terms of Service" />
+            <Row to="/privacy" icon={BookOpen} label="Privacy Policy" />
           </Card>
         </section>
 
