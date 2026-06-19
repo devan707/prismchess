@@ -198,8 +198,9 @@ function SharedGamePage() {
                   {
                     label: isFeat ? "Demote from signature" : "Promote to signature",
                     onClick: async () => {
-                      await adminFlags({ data: { gameId: game.id, isFeatured: !isFeat } });
+                      const res = await adminFlags({ data: { gameId: game.id, isFeatured: !isFeat } });
                       toast.success(isFeat ? "Demoted" : "Promoted to signature variant");
+                      if (res.promoted && res.target) setPromoTarget(res.target);
                       const fresh = await fetchGame({ data: { slug } });
                       setData(fresh);
                     },
