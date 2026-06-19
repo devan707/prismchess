@@ -145,7 +145,7 @@ export const updateMyAvatar = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, string | null> = {};
+    const patch: { avatar?: string | null; avatar_url?: string | null } = {};
     if ("avatar" in data) patch.avatar = data.avatar ?? null;
     if ("avatar_url" in data) patch.avatar_url = data.avatar_url ?? null;
     if (Object.keys(patch).length === 0) return { ok: true };
