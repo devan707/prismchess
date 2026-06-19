@@ -228,6 +228,7 @@ function Create() {
                           </div>
                         </div>
                         <Link to="/g/$slug" params={{ slug: g.slug }}><Button size="sm" variant="ghost" aria-label="View"><ExternalLink className="h-3 w-3" /></Button></Link>
+                        <ShareGameButton slug={g.slug} name={g.name} description={g.description ?? undefined} size="sm" variant="ghost" iconOnly />
                         <Button size="sm" variant="ghost" onClick={() => editPublished(g)} aria-label="Edit"><Pencil className="h-3 w-3" /></Button>
                         <Link to="/sandbox" search={{ duplicate: g.id }}><Button size="sm" variant="ghost" aria-label="Duplicate" title="Duplicate as a new variant"><Copy className="h-3 w-3" /></Button></Link>
                         <Button size="sm" variant="ghost" onClick={() => handleDeleteGame(g)} aria-label="Delete"><Trash2 className="h-3 w-3" /></Button>
