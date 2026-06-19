@@ -58,6 +58,14 @@ function signatureTileGradient(id: string): string {
   }
 }
 
+// 8x8 checkerboard overlay: white squares at 50% opacity, black squares fully transparent.
+// Two 2x2 tiles repeated 4 times each axis = 8x8 cells.
+const CHESSBOARD_OVERLAY_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "conic-gradient(rgba(255,255,255,0.5) 25%, transparent 0 50%, rgba(255,255,255,0.5) 0 75%, transparent 0)",
+  backgroundSize: "25% 25%",
+};
+
 function readLastVariant(): LastVariant | null {
   if (typeof window === "undefined") return null;
   try {
