@@ -1,0 +1,1103 @@
+{
+  "design": {
+    "cols": 8,
+    "customPieces": [],
+    "placements": [
+      {
+        "c": 0,
+        "color": "w",
+        "pieceId": "A",
+        "r": 0
+      },
+      {
+        "c": 1,
+        "color": "w",
+        "pieceId": "D",
+        "r": 0
+      },
+      {
+        "c": 2,
+        "color": "w",
+        "pieceId": "W",
+        "r": 0
+      },
+      {
+        "c": 3,
+        "color": "w",
+        "pieceId": "Z",
+        "r": 0
+      },
+      {
+        "c": 4,
+        "color": "w",
+        "pieceId": "G",
+        "r": 0
+      },
+      {
+        "c": 5,
+        "color": "w",
+        "pieceId": "W",
+        "r": 0
+      },
+      {
+        "c": 6,
+        "color": "w",
+        "pieceId": "D",
+        "r": 0
+      },
+      {
+        "c": 7,
+        "color": "w",
+        "pieceId": "A",
+        "r": 0
+      },
+      {
+        "c": 0,
+        "color": "b",
+        "pieceId": "A",
+        "r": 7
+      },
+      {
+        "c": 1,
+        "color": "b",
+        "pieceId": "D",
+        "r": 7
+      },
+      {
+        "c": 2,
+        "color": "b",
+        "pieceId": "W",
+        "r": 7
+      },
+      {
+        "c": 3,
+        "color": "b",
+        "pieceId": "Z",
+        "r": 7
+      },
+      {
+        "c": 4,
+        "color": "b",
+        "pieceId": "L",
+        "r": 7
+      },
+      {
+        "c": 5,
+        "color": "b",
+        "pieceId": "W",
+        "r": 7
+      },
+      {
+        "c": 6,
+        "color": "b",
+        "pieceId": "D",
+        "r": 7
+      },
+      {
+        "c": 7,
+        "color": "b",
+        "pieceId": "A",
+        "r": 7
+      },
+      {
+        "c": 0,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 0,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 1,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 1,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 2,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 2,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 3,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 3,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 4,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 4,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 5,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 5,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 6,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 6,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      },
+      {
+        "c": 7,
+        "color": "w",
+        "pieceId": "S",
+        "r": 1
+      },
+      {
+        "c": 7,
+        "color": "b",
+        "pieceId": "S",
+        "r": 6
+      }
+    ],
+    "reserves": {
+      "b": {
+        "X": 2
+      },
+      "w": {
+        "X": 2
+      }
+    },
+    "rows": 8
+  },
+  "moves": [
+    {
+      "captured": null,
+      "from": {
+        "c": 4,
+        "r": 1
+      },
+      "kind": "double",
+      "piece": {
+        "color": "w",
+        "id": "S"
+      },
+      "to": {
+        "c": 4,
+        "r": 3
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "W"
+      },
+      "to": {
+        "c": 5,
+        "r": 5
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 0
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 5,
+        "r": 4
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 4,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 5,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 4,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 0
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 7,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 4,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 5,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 4,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 3,
+        "r": 0
+      },
+      "piece": {
+        "color": "w",
+        "id": "Z"
+      },
+      "to": {
+        "c": 5,
+        "r": 2
+      }
+    },
+    {
+      "captured": {
+        "color": "w",
+        "id": "S"
+      },
+      "from": {
+        "c": 5,
+        "r": 5
+      },
+      "piece": {
+        "color": "b",
+        "id": "W"
+      },
+      "to": {
+        "c": 5,
+        "r": 1
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "W"
+      },
+      "from": {
+        "c": 4,
+        "r": 0
+      },
+      "piece": {
+        "color": "w",
+        "id": "G"
+      },
+      "to": {
+        "c": 5,
+        "r": 1
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 1
+      },
+      "piece": {
+        "color": "w",
+        "id": "G"
+      },
+      "to": {
+        "c": 4,
+        "r": 2
+      }
+    },
+    {
+      "captured": {
+        "color": "w",
+        "id": "S"
+      },
+      "from": {
+        "c": 2,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "W"
+      },
+      "to": {
+        "c": 2,
+        "r": 1
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "W"
+      },
+      "from": {
+        "c": 1,
+        "r": 0
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 2,
+        "r": 1
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 0,
+        "r": 7
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "b",
+        "id": "A"
+      },
+      "to": {
+        "c": 0,
+        "r": 5
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 0,
+        "r": 0
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 0,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 7
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "b",
+        "id": "D"
+      },
+      "to": {
+        "c": 3,
+        "r": 2
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "D"
+      },
+      "from": {
+        "c": 2,
+        "r": 1
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 3,
+        "r": 2
+      }
+    },
+    {
+      "captured": {
+        "color": "w",
+        "id": "D"
+      },
+      "from": {
+        "c": 0,
+        "r": 5
+      },
+      "kind": "archerShoot",
+      "piece": {
+        "color": "b",
+        "id": "A"
+      },
+      "to": {
+        "c": 3,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 0,
+        "r": 2
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 2,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 4,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 5,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 6,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 2,
+        "r": 2
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 3,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 5,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 6,
+        "r": 7
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "A"
+      },
+      "from": {
+        "c": 3,
+        "r": 2
+      },
+      "kind": "archerShoot",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 0,
+        "r": 5
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 1,
+        "r": 6
+      },
+      "piece": {
+        "color": "b",
+        "id": "S"
+      },
+      "to": {
+        "c": 1,
+        "r": 5
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 2
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 7,
+        "r": 4
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 1,
+        "r": 7
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "b",
+        "id": "D"
+      },
+      "to": {
+        "c": 3,
+        "r": 3
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "D"
+      },
+      "from": {
+        "c": 4,
+        "r": 2
+      },
+      "piece": {
+        "color": "w",
+        "id": "G"
+      },
+      "to": {
+        "c": 3,
+        "r": 3
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 3,
+        "r": 3
+      },
+      "piece": {
+        "color": "w",
+        "id": "G"
+      },
+      "to": {
+        "c": 4,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 7
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "b",
+        "id": "A"
+      },
+      "to": {
+        "c": 7,
+        "r": 5
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "A"
+      },
+      "from": {
+        "c": 5,
+        "r": 2
+      },
+      "piece": {
+        "color": "w",
+        "id": "Z"
+      },
+      "to": {
+        "c": 7,
+        "r": 5
+      }
+    },
+    {
+      "captured": {
+        "color": "w",
+        "id": "Z"
+      },
+      "from": {
+        "c": 6,
+        "r": 6
+      },
+      "piece": {
+        "color": "b",
+        "id": "S"
+      },
+      "shapeshiftTo": "Z",
+      "to": {
+        "c": 7,
+        "r": 5
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "Z"
+      },
+      "from": {
+        "c": 7,
+        "r": 4
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 7,
+        "r": 5
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 7,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 6,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 0
+      },
+      "piece": {
+        "color": "w",
+        "id": "W"
+      },
+      "to": {
+        "c": 5,
+        "r": 2
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 7,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 6,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 2
+      },
+      "piece": {
+        "color": "w",
+        "id": "W"
+      },
+      "to": {
+        "c": 6,
+        "r": 3
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 7,
+        "r": 7
+      }
+    },
+    {
+      "from": {
+        "c": 7,
+        "r": 7
+      },
+      "kind": "handPass",
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 7,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 5
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "A"
+      },
+      "to": {
+        "c": 6,
+        "r": 6
+      }
+    },
+    {
+      "captured": {
+        "color": "w",
+        "id": "A"
+      },
+      "from": {
+        "c": 7,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 6,
+        "r": 6
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 6
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 7,
+        "r": 7
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "S"
+      },
+      "from": {
+        "c": 5,
+        "r": 4
+      },
+      "kind": "dragonAttack",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 5,
+        "r": 6
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 7,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 6,
+        "r": 6
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 6,
+        "r": 6
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 5,
+        "r": 7
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "S"
+      },
+      "from": {
+        "c": 5,
+        "r": 4
+      },
+      "kind": "dragonAttack",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 7,
+        "r": 6
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 3,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "Z"
+      },
+      "to": {
+        "c": 4,
+        "r": 5
+      }
+    },
+    {
+      "captured": {
+        "color": "b",
+        "id": "Z"
+      },
+      "from": {
+        "c": 5,
+        "r": 4
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 4,
+        "r": 5
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 5,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 4,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 4,
+        "r": 7
+      },
+      "piece": {
+        "color": "b",
+        "id": "L"
+      },
+      "to": {
+        "c": 5,
+        "r": 7
+      }
+    },
+    {
+      "captured": null,
+      "from": {
+        "c": 4,
+        "r": 5
+      },
+      "kind": "normal",
+      "piece": {
+        "color": "w",
+        "id": "D"
+      },
+      "to": {
+        "c": 6,
+        "r": 7
+      }
+    }
+  ]
+}
