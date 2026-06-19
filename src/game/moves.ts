@@ -1,4 +1,4 @@
-import type { Board, Color, GameState, Move, MovementSpec, Offset, Piece, PieceDef, PieceId, Square } from "./types";
+import type { Board, Color, GameState, Move, MoveTarget, MovementSpec, Offset, Piece, PieceDef, PieceId, Square } from "./types";
 import { cloneBoard, findRoyals, inBoardBounds } from "./board";
 import { compileOption } from "./customMovement";
 
@@ -154,47 +154,6 @@ function attackerInFrontArc(targetSq: Square, attacker: Square, targetColor: Col
   return (af - tf) * dir > 0;
 }
 const attackerInJuggFrontArc = attackerInFrontArc;
-
-/** Knight-vs-Juggernaut armor is judged by the final one-square leg of the
- * L-shape, not only by where the knight started. A knight may finish its
- * attack into an exposed outside side, or into the rear, but not through the
- * paired half or into the front. */
-function knightCanCaptureJuggernaut(
-  board: Board,
-  from: Square,
-  target: Square,
-  targetColor: Color,
-  registry: Record<PieceId, PieceDef>,
-): boolean {
-  const wide = boardIsWide(board);
-  const partner = findJuggPartner(board, target, targetColor, registry);
-  const fAxis: "r" | "c" = wide ? "c" : "r";
-  const pAxis: "r" | "c" = wide ? "r" : "c";
-  const df = target[fAxis] - from[fAxis];
-  const dp = target[pAxis] - from[pAxis];
-  const aF = Math.abs(df);
-  const aP = Math.abs(dp);
-  if (!((aF === 2 && aP === 1) || (aF === 1 && aP === 2))) return false;
-
-  // Long leg forward/back, final short leg sideways: the knight must enter
-  // from the outside edge of the whole 2-square body, not through its partner.
-  if (aF === 2 && aP === 1 && partner) {
-    const targetP = target[pAxis];
-    const partnerP = partner[pAxis];
-    const fromP = from[pAxis];
-    const minP = Math.min(targetP, partnerP);
-    const maxP = Math.max(targetP, partnerP);
-    return (targetP === minP && fromP === minP - 1) || (targetP === maxP && fromP === maxP + 1);
-  }
-
-  // Long leg sideways, final short leg forward/back: only the rear is exposed.
-  if (aF === 1 && aP === 2) {
-    const preAttack = wide ? { r: target.r, c: from.c } : { r: from.r, c: target.c };
-    return !attackerInFrontArc(target, preAttack, targetColor, wide);
-  }
-
-  return !attackerInFrontArc(target, from, targetColor, wide);
-}
 
 /** True when the enemy piece at `occSq` is front-immune (juggernaut or
  *  immobile barricade) AND the attacker at `attackerSq` is approaching it
@@ -1676,18 +1635,14 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
   }
   const wide = state.cols > state.rows;
   return pseudoMovesFrom(state, from).filter((m) => {
-    // Knights leap onto their target — they bypass front-arc immunity on
-    // BARRICADES only. Juggernauts can only be hit from the front by a
-    // Trebuchet (any custom siege piece named "Trebuchet").
+    // Knights leap onto their target and treat juggernauts like ordinary
+    // capturable pieces. Trebuchets also crack front armor.
     const knightBypass = m.piece.id === "N";
     const trebuchetBypass = isTrebuchet(state.registry[m.piece.id]);
     // Front-arc immunity: a juggernaut cannot be captured from the front,
-    // except by a Trebuchet. Knights are special: judge their L-shape by the
-    // final attack leg, so a forward-then-side leap can hit an exposed side.
-    if (m.captured && m.captured.id === "J" && m.from && !trebuchetBypass) {
-      if (m.piece.id === "N") {
-        if (!knightCanCaptureJuggernaut(state.board, m.from, m.to, m.captured.color, state.registry)) return false;
-      } else if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) {
+    // except by a Knight or Trebuchet.
+    if (m.captured && m.captured.id === "J" && m.from && !knightBypass && !trebuchetBypass) {
+      if (attackerInFrontArc(m.to, m.from, m.captured.color, wide)) {
         return false;
       }
     }
@@ -1726,6 +1681,77 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     const preFlipBoard = applyMoveToBoard(state.board, m);
     return !inCheck({ ...state, board: preFlipBoard }, state.turn);
   });
+}
+
+const rangedMoveKinds = new Set<Move["kind"]>(["archerShoot", "dragonAttack"]);
+const attackOnlyMoveKinds = new Set<Move["kind"]>([
+  "archerShoot",
+  "dragonAttack",
+  "portalSwap",
+  "resurrect",
+  "necroRaise",
+  "juggExit",
+  "castle",
+  "juggCastle",
+]);
+
+function isRangedMove(move: Move): boolean {
+  return rangedMoveKinds.has(move.kind);
+}
+
+function canRelocateTo(move: Move): boolean {
+  return !attackOnlyMoveKinds.has(move.kind);
+}
+
+/** Rich target data for UI markers: green movement-only, orange melee attack,
+ * red melee capture, orange ranged crosshair, red ranged crosshair capture. */
+export function moveTargetsFrom(state: GameState, from: Square, legal = true): MoveTarget[] {
+  const piece = state.board[from.r]?.[from.c];
+  if (!piece) return [];
+  const moves = legal && piece.color === state.turn && !state.pendingHand
+    ? legalMovesFrom(state, from)
+    : pseudoMovesFrom(state, from);
+  const targets = new Map<string, MoveTarget>();
+  const rank: Record<MoveTarget["kind"], number> = {
+    move: 0,
+    attack: 1,
+    ranged: 2,
+    capture: 3,
+    rangedCapture: 4,
+  };
+  const put = (square: Square, kind: MoveTarget["kind"]) => {
+    const key = `${square.r},${square.c}`;
+    const prev = targets.get(key);
+    if (!prev || rank[kind] > rank[prev.kind]) targets.set(key, { square, kind });
+  };
+
+  for (const m of moves) {
+    if (m.kind === "drop") continue;
+    const ranged = isRangedMove(m);
+    const captured = !!m.captured;
+    if (ranged) put(m.to, captured ? "rangedCapture" : "ranged");
+    else if (captured) put(m.to, "capture");
+    else if (canRelocateTo(m)) put(m.to, "move");
+  }
+
+  const attacks = attackSquaresFrom(state, from);
+  for (const sq of attacks) {
+    const occ = state.board[sq.r]?.[sq.c];
+    const probe = state.board.map((row, ri) =>
+      ri === sq.r
+        ? row.map((cell, ci) => (ci === sq.c ? ({ id: "P", color: piece.color === "w" ? "b" : "w" } as Piece) : cell))
+        : row,
+    );
+    const probeState = { ...state, board: probe } as GameState;
+    const probeMoves = legal && piece.color === state.turn && !state.pendingHand
+      ? legalMovesFrom(probeState, from)
+      : pseudoMovesFrom(probeState, from);
+    const ranged = probeMoves.some((m) => m.to.r === sq.r && m.to.c === sq.c && !!m.captured && isRangedMove(m));
+    if (ranged) put(sq, occ && occ.color !== piece.color ? "rangedCapture" : "ranged");
+    else put(sq, occ && occ.color !== piece.color ? "capture" : "attack");
+  }
+
+  return [...targets.values()];
 }
 
 export function allLegalMoves(state: GameState): Move[] {
