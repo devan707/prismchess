@@ -15,6 +15,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { Card } from "@/components/ui/card";
 import { Play, Heart, MessageSquare, ChevronRight, Swords, Hammer } from "lucide-react";
 import logoUrl from "@/assets/logo.png";
+import juggernautArt from "@/assets/juggernaut-top.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
