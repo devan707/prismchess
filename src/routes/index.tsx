@@ -189,7 +189,7 @@ function Home() {
           <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/70 px-1">Featured variant</h2>
           <Card className="p-4 rounded-sm">
             <div className="flex items-start gap-3">
-              <div className="h-14 w-14 rounded-sm bg-gradient-to-br from-[#ff4d6d]/40 via-[#ffe24d]/30 to-[#4dc4ff]/40 flex items-center justify-center text-card-foreground shrink-0 font-display font-black text-2xl">
+              <div className="h-14 w-14 rounded-sm bg-gradient-to-br from-emerald-400/40 via-emerald-300/30 to-emerald-600/40 flex items-center justify-center text-card-foreground shrink-0 font-display font-black text-2xl">
                 {featured.name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
