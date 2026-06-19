@@ -141,8 +141,9 @@ function ContentPage() {
           <VariantTable
             rows={games}
             onPromote={async (r) => {
-              await setGameFlags({ data: { gameId: r.id, isFeatured: !r.is_featured } });
+              const res = await setGameFlags({ data: { gameId: r.id, isFeatured: !r.is_featured } });
               toast.success(r.is_featured ? "Demoted" : "Promoted to signature variant");
+              if (res.promoted && res.target) setPromoTarget(res.target);
               reload();
             }}
             onArchive={async (r) => {
