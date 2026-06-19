@@ -1790,7 +1790,7 @@ export function moveTargetsFrom(state: GameState, from: Square, legal = true): M
         : row,
     );
     const probeState = { ...state, board: probe } as GameState;
-    const probeMoves = legal && piece.color === state.turn && !state.pendingHand
+    const probeMoves = useLegal
       ? legalMovesFrom(probeState, from)
       : pseudoMovesFrom(probeState, from);
     const ranged = probeMoves.some((m) => m.to.r === sq.r && m.to.c === sq.c && !!m.captured && isRangedMove(m));
