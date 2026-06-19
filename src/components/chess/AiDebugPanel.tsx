@@ -59,7 +59,7 @@ export function AiDebugPanel({ stats, thinking }: Props) {
     : 0;
 
   return (
-    <div className="fixed top-20 right-3 z-40 w-64 max-w-[80vw] rounded-lg border bg-card/95 backdrop-blur p-2 shadow-lg text-[11px] font-mono leading-tight">
+    <div className="fixed top-20 right-3 z-40 w-72 max-w-[85vw] rounded-lg border bg-card/95 backdrop-blur p-2 shadow-lg text-[11px] font-mono leading-tight">
       <div className="flex items-center justify-between mb-1 pb-1 border-b">
         <button
           onClick={() => setCollapsed((c) => !c)}
@@ -113,6 +113,42 @@ export function AiDebugPanel({ stats, thinking }: Props) {
                   <div className="break-all">
                     {stats.pv.slice(0, 6).map((m, i) => (
                       <span key={i} className="inline-block mr-1">{fmtMove(m)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {stats.candidates && stats.candidates.length > 0 && (
+                <div className="mt-1 pt-1 border-t">
+                  <div className="text-muted-foreground mb-0.5">candidates (safety gate)</div>
+                  <div className="space-y-0.5">
+                    {stats.candidates.slice(0, 8).map((c, i) => (
+                      <div
+                        key={i}
+                        className={
+                          c.selected
+                            ? "rounded bg-emerald-500/15 text-emerald-700 px-1"
+                            : c.rejected
+                              ? "rounded bg-red-500/10 text-red-600 px-1"
+                              : "px-1"
+                        }
+                        title={c.rejectReason ?? (c.selected ? "selected" : "")}
+                      >
+                        <div className="flex justify-between">
+                          <span>{fmtMove(c.move)}</span>
+                          <span>{fmtScore(c.score)}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>
+                            +{Math.round(c.ourGain)} / −{Math.round(c.oppGain)}
+                            {c.givesCheck ? " ✚" : ""}
+                            {c.oppRoyalThreat ? " ☠" : ""}
+                          </span>
+                          <span>net {c.materialNet >= 0 ? "+" : ""}{Math.round(c.materialNet)}</span>
+                        </div>
+                        {c.rejectReason && (
+                          <div className="text-[10px]">⛔ {c.rejectReason}</div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
