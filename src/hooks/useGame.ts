@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/game/rules";
 import { allLegalMoves, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
-import { requestMove as engineRequestMove, cancel as engineCancel } from "@/game/ai/engine";
+import { requestMove as engineRequestMove, cancel as engineCancel, type AiSearchStats } from "@/game/ai/engine";
+import { isAiDebugEnabled } from "@/lib/ai-debug";
 import { loadPlaybook, mergeCloudPlaybook, difficultyCloudScale, type Playbook } from "@/game/ai/playbook";
 import { getVariantPlaybook, submitGameReport, type ReportedMove } from "@/lib/ai-learning.functions";
 import { loadCurrentMeta } from "@/game/design";
@@ -24,6 +25,7 @@ export function useGame(opts: UseGameOptions) {
   const [aiThinking, setAiThinking] = useState(false);
   const [aiThinkingSince, setAiThinkingSince] = useState<number | null>(null);
   const [aiNudge, setAiNudge] = useState(0);
+  const [aiStats, setAiStats] = useState<AiSearchStats | null>(null);
 
   const status = gameStatus(state);
   const gameOver = status.kind === "checkmate" || status.kind === "stalemate" || status.kind === "royal-loss";
@@ -190,7 +192,13 @@ export function useGame(opts: UseGameOptions) {
     // Snapshot this variant's playbook so the worker's evaluate() actually sees it.
     const variantId = typeof window !== "undefined" ? loadCurrentMeta()?.id : undefined;
     const playbook = cloudPlaybook ?? loadPlaybook(variantId ?? undefined);
-    engineRequestMove(state, opts.difficulty, { hardTimeoutMs: 30000, playbook })
+    const debug = isAiDebugEnabled();
+    engineRequestMove(state, opts.difficulty, {
+      hardTimeoutMs: 30000,
+      playbook,
+      verifyZobrist: debug,
+      onStats: (s) => setAiStats(s),
+    })
       .then((move) => {
         if (cancelled) return;
         if (move) {
@@ -306,6 +314,7 @@ export function useGame(opts: UseGameOptions) {
     legalDropSquares,
     aiThinking,
     aiThinkingSince,
+    aiStats,
     nudgeAi,
     selectedDrop,
     setSelectedDrop,

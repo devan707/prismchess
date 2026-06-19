@@ -3,6 +3,10 @@
  * inside a Web Worker (see ./worker.ts) so the UI thread stays responsive.
  *
  * Beyond plain negamax + alpha-beta, this includes:
+ *   - Transposition table (Zobrist-hashed) with mate-distance-adjusted
+ *     scores. The TT short-circuits identical positions reached by
+ *     different move orders, gaining ~1 ply of effective depth at the
+ *     same wall-clock budget.
  *   - Killer-move + history-heuristic ordering for non-captures
  *   - Recapture-loss penalty in ordering (don't grab a pawn with a wizard)
  *   - Check extensions (search 1 ply deeper when in check)
@@ -16,14 +20,33 @@ import type { Difficulty, GameState, Move } from "../types";
 import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
 // Note: check-giving moves are treated as "loud" via per-call computation in
 // qsearch (see below) — we can't fold it into isLoud() without a state arg.
-import { evaluate, seeMove, valueFor } from "./evaluate";
+import { evaluate, seeMove, shuffleAdjustment, valueFor } from "./evaluate";
 import { getActivePlaybook } from "./playbook";
+import {
+  computeVariantSalt,
+  computeZobristFromScratch,
+  zkeyAfter,
+} from "./zobrist";
+import {
+  MATE_THRESHOLD,
+  TT,
+  TT_FLAG_EXACT,
+  TT_FLAG_LOWER,
+  TT_FLAG_UPPER,
+  type TTStats,
+} from "./tt";
 
 
 export interface SearchOptions {
   difficulty: Difficulty;
   budgetMs: number;
   maxDepth: number;
+  /** Reusable TT — pass the worker-owned table to amortize across calls. */
+  tt?: TT;
+  /** When true, every node verifies the incremental Zobrist key against a
+   *  from-scratch recompute. On mismatch the TT is disabled for the rest
+   *  of this search and the failure is logged. Off in production. */
+  verifyZobrist?: boolean;
 }
 
 export interface SearchResult {
@@ -32,6 +55,11 @@ export interface SearchResult {
   score: number;
   nodes: number;
   elapsedMs: number;
+  tt: TTStats;
+  /** Set if the verifier caught a hash mismatch and we hard-fell-back. */
+  zobristFailed?: boolean;
+  /** Principal variation (rough — walks TT from root, may terminate early). */
+  pv: Move[];
 }
 
 class TimeUp extends Error {}
@@ -63,11 +91,7 @@ function isLoud(m: Move): boolean {
   );
 }
 
-/** Squares that the opponent's last move directly affected: the square the
- *  moved piece now sits on (it may have become capturable) and the square it
- *  vacated (a piece behind it may now be exposed, or our piece can slide
- *  through there to threaten / check). Used to focus tactical attention on
- *  the part of the board the opponent just touched. */
+/** Squares that the opponent's last move directly affected. */
 function lastMoveFocus(state: GameState): { to: { r: number; c: number } | null; from: { r: number; c: number } | null } {
   const h = state.history;
   for (let i = h.length - 1; i >= 0; i--) {
@@ -79,9 +103,6 @@ function lastMoveFocus(state: GameState): { to: { r: number; c: number } | null;
   return { to: null, from: null };
 }
 
-/** Move-ordering score. Captures by SEE (true material gain after recaptures),
- *  promotions, shape-shifts, and juggernaut trample on top. Losing captures
- *  drop below quiet moves so we don't waste depth searching them first. */
 function orderingScore(state: GameState, m: Move): number {
   let s = 0;
   if (m.captured) {
@@ -101,9 +122,6 @@ function orderingScore(state: GameState, m: Move): number {
   if (m.juggTrampled) {
     for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]) * 6;
   }
-  // Last-move focus: bias toward replies that interact with the square the
-  // opponent just moved to (capture/attack the piece they just moved) or the
-  // square they just vacated (often opens a tactic / discovered attack).
   const focus = lastMoveFocus(state);
   if (focus.to && m.to.r === focus.to.r && m.to.c === focus.to.c) {
     s += m.captured ? 300 : 80;
@@ -118,23 +136,51 @@ function orderingScore(state: GameState, m: Move): number {
 class Searcher {
   nodes = 0;
   readonly deadline: number;
+  readonly tt: TT | null;
+  readonly salt: bigint;
+  readonly verify: boolean;
+  /** Becomes true if the Zobrist verifier ever caught a mismatch — disables
+   *  TT probes/stores for the rest of the search and surfaces in the result. */
+  ttDisabled = false;
+  zobristFailed = false;
+
   bestMoveAtRoot: Move | null = null;
   bestScoreAtRoot = -Infinity;
   tiesAtRoot: Move[] = [];
-  /** Every root move and the score the deepest completed iteration assigned
-   *  to it. Used by the blunder guard at the end of runSearch. */
   rootScores: Array<{ move: Move; score: number }> = [];
-  /** killers[depth] = [primary, secondary] non-capture moves that caused a cutoff. */
   killers: Array<[Move | null, Move | null]> = [];
-  /** history[moveKey] cumulative cutoff bonus. */
   history = new Map<string, number>();
 
-  constructor(deadline: number) {
+  constructor(deadline: number, tt: TT | null, salt: bigint, verify: boolean) {
     this.deadline = deadline;
+    this.tt = tt;
+    this.salt = salt;
+    this.verify = verify;
   }
 
   checkTime(): void {
     if ((this.nodes & 1023) === 0 && Date.now() > this.deadline) throw new TimeUp();
+  }
+
+  /** Hard fallback per the plan: if the incremental key ever diverges from
+   *  the from-scratch recompute, log loudly and disable TT for the rest of
+   *  this search. We surface the flag in the result so the caller can show
+   *  it in the debug panel. */
+  private failZobrist(prevKey: bigint, key: bigint, state: GameState, fromMove: Move | null): void {
+    if (this.ttDisabled) return;
+    this.ttDisabled = true;
+    this.zobristFailed = true;
+    try {
+      console.error("[ai] Zobrist verification failed — disabling TT for this search", {
+        incrementalKey: key.toString(16),
+        prevKey: prevKey.toString(16),
+        recomputed: computeZobristFromScratch(state, this.salt).toString(16),
+        move: fromMove,
+        turn: state.turn,
+      });
+    } catch {
+      /* console may not exist in some hosts */
+    }
   }
 
   recordKiller(depth: number, m: Move): void {
@@ -162,7 +208,7 @@ class Searcher {
     return this.history.get(moveKey(m)) ?? 0;
   }
 
-  qsearch(state: GameState, alpha: number, beta: number, depthLeft: number): number {
+  qsearch(state: GameState, key: bigint, alpha: number, beta: number, depthLeft: number, ply: number): number {
     this.nodes++;
     this.checkTime();
     const standPat = evaluate(state, state.turn);
@@ -170,54 +216,105 @@ class Searcher {
     if (standPat >= beta) return beta;
     if (standPat > alpha) alpha = standPat;
     const moves = allLegalMoves(state);
-    // PRINCIPLE #8 — forcing moves. Treat captures/promos/specials as loud,
-    // AND any move that delivers check (so qsearch follows mating sequences).
     const loud: Move[] = [];
     const loudNexts: GameState[] = [];
+    const loudKeys: bigint[] = [];
     for (const m of moves) {
-      if (isLoud(m)) { loud.push(m); loudNexts.push(applyMoveToState(state, m)); continue; }
-      // Only spend the applyMove cost on a quiet move when depthLeft is high
-      // enough to be worth following its check.
+      if (isLoud(m)) {
+        const next = applyMoveToState(state, m);
+        loud.push(m); loudNexts.push(next);
+        loudKeys.push(this.nextKey(key, state, next, m));
+        continue;
+      }
       if (depthLeft >= 4) {
         const next = applyMoveToState(state, m);
-        if (inCheck(next, next.turn)) { loud.push(m); loudNexts.push(next); }
+        if (inCheck(next, next.turn)) {
+          loud.push(m); loudNexts.push(next);
+          loudKeys.push(this.nextKey(key, state, next, m));
+        }
       }
     }
     if (loud.length === 0) return standPat;
-    // Pair-sort by orderingScore (captures first, checks after).
     const order = loud.map((_, i) => i).sort((a, b) => orderingScore(state, loud[b]) - orderingScore(state, loud[a]));
     for (const i of order) {
-      const next = loudNexts[i];
-      const score = -this.qsearch(next, -beta, -alpha, depthLeft - 1);
+      const score = -this.qsearch(loudNexts[i], loudKeys[i], -beta, -alpha, depthLeft - 1, ply + 1);
       if (score >= beta) return beta;
       if (score > alpha) alpha = score;
     }
     return alpha;
   }
 
-  search(state: GameState, depth: number, alpha: number, beta: number, ttBest: Move | null): number {
+  /** Compute (or look up) the Zobrist key for the child state. */
+  private nextKey(prevKey: bigint, prev: GameState, next: GameState, fromMove: Move | null): bigint {
+    const k = zkeyAfter(prevKey, prev, next, this.salt);
+    if (this.verify && !this.ttDisabled) {
+      const ref = computeZobristFromScratch(next, this.salt);
+      if (ref !== k) this.failZobrist(prevKey, k, next, fromMove);
+    }
+    return k;
+  }
+
+  search(state: GameState, key: bigint, depth: number, alpha: number, beta: number, ttBestSeed: Move | null, ply: number): number {
     this.nodes++;
     this.checkTime();
+
+    // TT probe (skipped while disabled).
+    let ttBest = ttBestSeed;
+    if (this.tt && !this.ttDisabled) {
+      const e = this.tt.probe(key);
+      if (e) {
+        // Validate `best` against the actual legal-move list — protects
+        // against the rare event of a true 64-bit key collision producing
+        // a move that's illegal here.
+        if (e.depth >= depth) {
+          const score = this.tt.adjustMateForRead(e.score, ply);
+          if (e.flag === TT_FLAG_EXACT) {
+            this.tt.recordCutoff();
+            return score;
+          }
+          if (e.flag === TT_FLAG_LOWER && score >= beta) {
+            this.tt.recordCutoff();
+            return score;
+          }
+          if (e.flag === TT_FLAG_UPPER && score <= alpha) {
+            this.tt.recordCutoff();
+            return score;
+          }
+        }
+        if (e.best) ttBest = e.best;
+      }
+    }
+
     const moves = allLegalMoves(state);
     if (moves.length === 0) {
       if (inCheck(state, state.turn)) return -100000 - depth;
       return 0;
     }
-    // Check extension: don't drop into qsearch while in check.
+    // Validate ttBest is actually legal in this position (collision safety).
+    if (ttBest) {
+      let found = false;
+      for (const m of moves) { if (sameMove(m, ttBest)) { found = true; break; } }
+      if (!found) {
+        if (this.tt) this.tt.recordCollision();
+        ttBest = null;
+      }
+    }
+
     const isInCheck = inCheck(state, state.turn);
     if (depth === 0) {
       if (isInCheck) depth = 1;
-      else return this.qsearch(state, alpha, beta, 8);
+      else return this.qsearch(state, key, alpha, beta, 8, ply);
     }
     moves.sort((a, b) => this.scoreFor(state, b, depth, ttBest) - this.scoreFor(state, a, depth, ttBest));
+    const alphaOrig = alpha;
     let best = -Infinity;
     let bestMove: Move | null = null;
     for (const m of moves) {
       const next = applyMoveToState(state, m);
-      // Single-ply check extension when our move puts them in check.
+      const childKey = this.nextKey(key, state, next, m);
       const gaveCheck = inCheck(next, next.turn);
       const ext = gaveCheck ? 1 : 0;
-      const score = -this.search(next, depth - 1 + ext, -beta, -alpha, null);
+      const score = -this.search(next, childKey, depth - 1 + ext, -beta, -alpha, null, ply + 1);
       if (score > best) { best = score; bestMove = m; }
       if (best > alpha) alpha = best;
       if (alpha >= beta) {
@@ -227,10 +324,18 @@ class Searcher {
       }
     }
     if (bestMove) this.bumpHistory(bestMove, depth);
+
+    // TT store
+    if (this.tt && !this.ttDisabled && bestMove) {
+      let flag: 0 | 1 | 2 = TT_FLAG_EXACT;
+      if (best <= alphaOrig) flag = TT_FLAG_UPPER;
+      else if (best >= beta) flag = TT_FLAG_LOWER;
+      this.tt.store(key, depth, best, flag, bestMove, ply);
+    }
     return best;
   }
 
-  rootIteration(state: GameState, depth: number, prevBest: Move | null): void {
+  rootIteration(state: GameState, rootKey: bigint, depth: number, prevBest: Move | null): void {
     const moves = allLegalMoves(state);
     if (moves.length === 0) return;
     moves.sort((a, b) => this.scoreFor(state, b, depth, prevBest) - this.scoreFor(state, a, depth, prevBest));
@@ -242,9 +347,10 @@ class Searcher {
     const scored: Array<{ move: Move; score: number }> = [];
     for (const m of moves) {
       const next = applyMoveToState(state, m);
+      const childKey = this.nextKey(rootKey, state, next, m);
       const gaveCheck = inCheck(next, next.turn);
       const ext = gaveCheck ? 1 : 0;
-      const score = -this.search(next, depth - 1 + ext, -beta, -alpha, null);
+      const score = -this.search(next, childKey, depth - 1 + ext, -beta, -alpha, null, 1);
       scored.push({ move: m, score });
       if (score > bestScore + 0.5) {
         bestScore = score;
@@ -261,14 +367,14 @@ class Searcher {
       this.bestScoreAtRoot = bestScore;
       this.tiesAtRoot = ties;
       this.rootScores = scored;
+      // Store the root with depth so subsequent iterations probe it.
+      if (this.tt && !this.ttDisabled) {
+        this.tt.store(rootKey, depth, bestScore, TT_FLAG_EXACT, bestMove, 0);
+      }
     }
   }
 }
 
-/** Tempo / purpose score used to break root-eval ties intelligently. Higher
- *  = the move "does something" (captures, checks, threats, defense,
- *  advancement). Used so the AI never picks a pointless shuffle when a
- *  purposeful alternative scores the same. */
 function purposeBonus(state: GameState, m: Move): number {
   let b = 0;
   if (m.captured) {
@@ -277,38 +383,39 @@ function purposeBonus(state: GameState, m: Move): number {
   }
   if (m.promotion || m.shapeshiftTo) b += 80;
   if (m.juggTrampled && m.juggTrampled.length) b += 60;
-  // Reward giving check.
   const next = applyMoveToState(state, m);
   if (inCheck(next, next.turn)) b += 60;
-  // Focus on squares the opponent just touched.
   const focus = lastMoveFocus(state);
   if (focus.to && m.to.r === focus.to.r && m.to.c === focus.to.c) {
     b += m.captured ? 120 : 30;
   }
   if (focus.from && m.to.r === focus.from.r && m.to.c === focus.from.c) b += 20;
-  // Forward progress (only for non-special moves with a from-square).
   if (m.from) {
     const wide = state.cols > state.rows;
     const dir = m.piece.color === "w" ? 1 : -1;
     const forwardDelta = wide ? (m.to.c - m.from.c) * dir : (m.to.r - m.from.r) * dir;
     if (forwardDelta > 0) b += Math.min(20, forwardDelta * 6);
   }
-  // Penalise immediate self-repeat (just-moved-this-piece-back-and-forth).
   const h = state.history;
   if (h && h.length >= 2 && m.from) {
-    const prev = h[h.length - 2]; // our previous move
+    const prev = h[h.length - 2];
     if (prev && prev.piece.color === m.piece.color && prev.to.r === m.from.r &&
         prev.to.c === m.from.c && prev.from && !m.captured) {
       b -= 120;
     }
   }
-  // Cloud opening-book bias: if we're still in the book for this variant,
-  // reward moves that extend a line with a good aggregate win rate.
+  // Anti-shuffle (moved out of cached eval to keep TT path-independent).
+  // Adds a positive bonus when this move would REDUCE the shuffle penalty
+  // for our side relative to the current position.
+  const after = applyMoveToState(state, m);
+  const adjBefore = shuffleAdjustment(state, m.piece.color);
+  const adjAfter = shuffleAdjustment(after, m.piece.color);
+  b += (adjAfter - adjBefore);
+
   const pb = getActivePlaybook();
   const book = pb.openingBook;
   const scale = pb.cloudScale ?? 0;
   if (book && scale > 0 && m.to) {
-    // Build the AI side's prior opening sequence (max 12 plies) from history.
     const aiColor = m.piece.color;
     const seq: string[] = [];
     for (const h of state.history) {
@@ -322,8 +429,6 @@ function purposeBonus(state: GameState, m: Move): number {
       const entry = book[key];
       if (entry && entry.plays >= 3) {
         const winrate = entry.wins / entry.plays;
-        // Up to ~100 cp bias at full scale for a sharp winning line; minus
-        // for sharply losing lines. Scaled by difficulty.
         b += Math.round((winrate - 0.5) * 200 * scale);
       }
     }
@@ -331,19 +436,52 @@ function purposeBonus(state: GameState, m: Move): number {
   return b;
 }
 
+/** Walk the TT from the root state to assemble a rough principal variation.
+ *  Stops at empty entries, illegal moves, or cycles. Cap protects against
+ *  pathological loops. */
+function reconstructPV(tt: TT | null, state: GameState, rootKey: bigint, salt: bigint, cap = 12): Move[] {
+  if (!tt) return [];
+  const out: Move[] = [];
+  const seen = new Set<string>();
+  let cur = state;
+  let key = rootKey;
+  for (let i = 0; i < cap; i++) {
+    const sig = key.toString(16);
+    if (seen.has(sig)) break;
+    seen.add(sig);
+    const e = tt.probe(key);
+    if (!e || !e.best) break;
+    // Verify legality (collision safety).
+    const moves = allLegalMoves(cur);
+    let m: Move | null = null;
+    for (const cand of moves) { if (sameMove(cand, e.best)) { m = cand; break; } }
+    if (!m) break;
+    out.push(m);
+    const next = applyMoveToState(cur, m);
+    key = zkeyAfter(key, cur, next, salt);
+    cur = next;
+  }
+  return out;
+}
+
 export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   const start = Date.now();
   const deadline = start + Math.max(20, opts.budgetMs);
-  const searcher = new Searcher(deadline);
+  const salt = computeVariantSalt(state);
+  const tt = opts.tt ?? null;
+  if (tt) {
+    tt.newGeneration();
+    tt.resetCounters();
+  }
+  const searcher = new Searcher(deadline, tt, salt, !!opts.verifyZobrist);
+  const rootKey = computeZobristFromScratch(state, salt);
   let depthReached = 0;
   let prevBest: Move | null = null;
   try {
     for (let d = 1; d <= opts.maxDepth; d++) {
-      searcher.rootIteration(state, d, prevBest);
+      searcher.rootIteration(state, rootKey, d, prevBest);
       depthReached = d;
       prevBest = searcher.bestMoveAtRoot;
-      // If we have enough time for another iteration we'll do it; otherwise
-      // commit to what we have. Heuristic: if 65% of budget is gone, stop.
       const elapsed = Date.now() - start;
       if (elapsed > opts.budgetMs * 0.65) break;
     }
@@ -351,9 +489,6 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     if (!(err instanceof TimeUp)) throw err;
   }
   let chosen = searcher.bestMoveAtRoot;
-  // On medium / hard, break score-ties by purpose (captures, checks, threats,
-  // advancement) instead of randomness — every move should "do something".
-  // Easy keeps a touch of randomness so beginners can win.
   if (searcher.tiesAtRoot.length > 1) {
     if (opts.difficulty === "easy") {
       chosen = pickRandom(searcher.tiesAtRoot);
@@ -368,15 +503,10 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
       chosen = best.length > 1 ? pickRandom(best) : best[0];
     }
   }
-  // Easy: 25% chance to play a random legal move so beginners can win.
   if (opts.difficulty === "easy" && chosen && Math.random() < 0.25) {
     const all = allLegalMoves(state);
     if (all.length > 1) chosen = pickRandom(all);
   }
-  // Blunder guard: if the chosen move immediately hangs significant material
-  // (negative SEE on the move itself, not counted in deep search because
-  // hangingTerm can be smoothed away by other positional terms), look for an
-  // alternative whose search score is within ~150 cp and whose SEE is safe.
   if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
     const chosenSee = seeMove(state, chosen);
     if (chosenSee <= -150) {
@@ -386,7 +516,7 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
         if (sameMove(r.move, chosen)) continue;
         if (r.score < searcher.bestScoreAtRoot - tolerance) continue;
         const see = seeMove(state, r.move);
-        if (see < -25) continue; // still a sac, keep looking
+        if (see < -25) continue;
         if (!safest || see > safest.see || (see === safest.see && r.score > safest.score)) {
           safest = { move: r.move, score: r.score, see };
         }
@@ -394,37 +524,17 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
       if (safest) chosen = safest.move;
     }
   }
-  // Opportunist guard: if some root move wins material outright AND the deep
-  // search agrees it's a sound capture, prefer it over a quiet move that only
-  // beat it on positional terms. We trust the deep search here: it already
-  // accounts for recaptures, king-safety, discovered threats, and follow-ups.
-  // So we only override when:
-  //   - the candidate is a real capture/trample with non-negative SEE
-  //     (capturing a piece without losing a more valuable one back),
-  //   - the candidate's deep score is essentially as good as the chosen
-  //     move's (within a small noise tolerance), and
-  //   - the chosen move isn't itself a meaningfully larger capture.
-  // This prevents the previous failure mode where we'd grab a "free" queen
-  // that the deep search had correctly flagged as a trap (e.g. mate-in-1
-  // for the opponent, lost king, larger material loss elsewhere).
   if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
     const chosenSee = seeMove(state, chosen);
     const chosenGain = Math.max(0, chosenSee);
-    // Noise tolerance — different depths / null windows produce small wobble.
     const NOISE = 40;
     let bestGrab: { move: Move; score: number; gain: number } | null = null;
     for (const r of searcher.rootScores) {
       if (sameMove(r.move, chosen)) continue;
       if (!r.move.captured && !r.move.juggTrampled?.length) continue;
       const gain = seeMove(state, r.move);
-      // Must be a sound capture (SEE >= 0 — we don't lose more than we gain
-      // in the immediate exchange) AND meaningfully more material than what
-      // the chosen move already wins.
       if (gain < 0) continue;
       if (gain <= chosenGain + 50) continue;
-      // Deep search must still rate this near the top. If it scores notably
-      // worse than the chosen move, the search saw something bad (mate
-      // threat, king exposure, bigger follow-up loss) — respect that.
       if (r.score < searcher.bestScoreAtRoot - NOISE) continue;
       if (!bestGrab || gain > bestGrab.gain ||
           (gain === bestGrab.gain && r.score > bestGrab.score)) {
@@ -434,12 +544,24 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     if (bestGrab) chosen = bestGrab.move;
   }
 
+  // Sanitise mate scores so the debug panel shows a finite number.
+  let displayScore = searcher.bestScoreAtRoot;
+  if (!Number.isFinite(displayScore)) displayScore = 0;
+  if (Math.abs(displayScore) > MATE_THRESHOLD) {
+    // Already in mate range — leave as is, the UI formats it.
+  }
+
+  const pv = tt && !searcher.ttDisabled ? reconstructPV(tt, state, rootKey, salt) : [];
+
   return {
     move: chosen,
     depthReached,
-    score: searcher.bestScoreAtRoot,
+    score: displayScore,
     nodes: searcher.nodes,
     elapsedMs: Date.now() - start,
+    tt: tt ? tt.stats() : { hits: 0, stores: 0, cutoffs: 0, collisions: 0, fillPct: 0, size: 0 },
+    zobristFailed: searcher.zobristFailed,
+    pv,
   };
 }
 
@@ -467,7 +589,6 @@ export function paramsFor(state: GameState, difficulty: Difficulty): { budgetMs:
       maxDepth: heavyBranching ? 4 : area > 100 ? 4 : 5,
     };
   }
-  // hard
   return {
     budgetMs: Math.round(6000 * sizePenalty * branchPenalty),
     maxDepth: heavyBranching ? 6 : area > 100 ? 6 : 8,
