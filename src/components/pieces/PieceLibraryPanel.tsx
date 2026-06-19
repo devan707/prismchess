@@ -209,6 +209,22 @@ export function PieceLibraryPanel({ onAdd, alreadyInDesign, onRemoveFromDesign }
           )}
         </>
       )}
+
+      <Dialog open={!!infoRow} onOpenChange={(o) => { if (!o) setInfoRow(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">Movement & attacks</DialogTitle>
+          </DialogHeader>
+          {infoRow && (
+            <PieceInfoView
+              def={infoRow.def as PieceDef}
+              name={infoRow.name}
+              description={infoRow.description}
+              movementSummary={infoRow.movement_summary}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
