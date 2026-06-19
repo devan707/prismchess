@@ -166,13 +166,16 @@ export const updatePiece = createServerFn({ method: "POST" })
       name: data.name,
       def: defWithImage,
     });
+    const defWithSummary = movementSummary
+      ? { ...defWithImage, movementSummary }
+      : defWithImage;
 
     const { data: row, error } = await context.supabase
       .from("custom_pieces")
       .update({
         name: data.name,
         description: data.description,
-        def: defWithImage as never,
+        def: defWithSummary as never,
         visibility: data.visibility,
         movement_summary: movementSummary,
       })
@@ -183,7 +186,7 @@ export const updatePiece = createServerFn({ method: "POST" })
 
     // Pull the engine-facing piece id out of the def (e.g. "u:abc123"). That is
     // what's stored in design.customPieces[*].id — not the row UUID.
-    const enginePieceId = (defWithImage as { id?: unknown }).id;
+    const enginePieceId = (defWithSummary as { id?: unknown }).id;
     let refreshedGames = 0;
     if (typeof enginePieceId === "string" && enginePieceId.length > 0) {
       const { data: myGames } = await context.supabase
@@ -195,7 +198,7 @@ export const updatePiece = createServerFn({ method: "POST" })
         if (!design || !Array.isArray(design.customPieces)) continue;
         let touched = false;
         const nextPieces = design.customPieces.map((p) => {
-          if (p && p.id === enginePieceId) { touched = true; return defWithImage; }
+          if (p && p.id === enginePieceId) { touched = true; return defWithSummary; }
           return p;
         });
         if (!touched) continue;
