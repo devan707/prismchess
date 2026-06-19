@@ -44,6 +44,7 @@ function ContentPage() {
   const [pieces, setPieces] = useState<PieceRow[]>([]);
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [promoTarget, setPromoTarget] = useState<PromotionTarget | null>(null);
 
   useEffect(() => {
     fetchRole({}).then((r) => setAllowed(r.isAdmin || r.isModerator)).catch(() => setAllowed(false));
