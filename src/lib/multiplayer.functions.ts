@@ -650,12 +650,12 @@ export const respondDraw = createServerFn({ method: "POST" })
       .maybeSingle();
     if (laterResp) throw new Error("That draw offer was already answered.");
 
-    await context.supabase.from("match_events").insert({
+    await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: data.accept ? "draw_accept" : "draw_decline",
       actor_id: context.userId,
       payload: {},
-    });
+    } as never);
     if (data.accept) {
       await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update({
         status: "finished",
