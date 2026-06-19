@@ -40,7 +40,7 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
     }
     const out: { id: string; def: PieceDef | undefined }[] = [];
     for (const id of Array.from(ids)) out.push({ id, def: registry[id] });
-    out.sort((a, b) => (b.def?.worth ?? 0) - (a.def?.worth ?? 0));
+    out.sort((a, b) => (a.def?.name ?? a.id).localeCompare(b.def?.name ?? b.id));
     return out;
   }, [design.placements, design.reserves, registry]);
 
