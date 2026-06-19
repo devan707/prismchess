@@ -16,6 +16,7 @@ import type { Difficulty, GameState, Move } from "../types";
 import { setActivePlaybookSnapshot, type Playbook } from "./playbook";
 import { TT, type TTStats } from "./tt";
 import { computeVariantSalt, resetZobristKeyCache } from "./zobrist";
+import type { CandidateAnalysis } from "./safety";
 
 export type WorkerRequest = {
   type: "search";
