@@ -17,7 +17,7 @@
  * at the deepest *completed* iteration.
  */
 import type { Difficulty, GameState, Move } from "../types";
-import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
+import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 // Note: check-giving moves are treated as "loud" via per-call computation in
 // qsearch (see below) — we can't fold it into isLoud() without a state arg.
 import { evaluate, seeMove, shuffleAdjustment, valueFor } from "./evaluate";
