@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
 import type { Design } from "@/game/types";
 import type { GameTutorial } from "@/game/tutorials";
+import { GamePreview } from "@/components/chess/GamePreview";
+import { ShareGameButton } from "@/components/social/ShareGameButton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/g/$slug")({
