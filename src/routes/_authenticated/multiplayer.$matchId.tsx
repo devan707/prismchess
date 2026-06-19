@@ -14,7 +14,7 @@ import { Home, Flag, RefreshCw, Clock, Copy, Handshake, UserPlus } from "lucide-
 import { MatchChatPanel } from "@/components/MatchChatPanel";
 import { sendFriendRequest } from "@/lib/social.functions";
 import {
-  getMatch, resign, claimTimeout,
+  getMatch, resign, claimTimeout, markReady,
 } from "@/lib/multiplayer.functions";
 import {
   formatClock, liveTimeRemaining, useMultiplayerGame, type MatchEvent, type MatchSnapshot,
