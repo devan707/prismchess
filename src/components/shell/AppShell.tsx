@@ -48,6 +48,7 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
               </span>
             </Link>
             <div className="flex items-center gap-2">
+              <NotificationsBell />
               <AdminBadge />
               <UserMenu />
             </div>
