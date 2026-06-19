@@ -116,10 +116,10 @@ export function CreateChallengeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Challenge a friend</DialogTitle>
+          <DialogTitle>Create a challenge</DialogTitle>
           <DialogDescription>
             {usingPreset
-              ? `Challenge a friend to "${presetDesign!.name}". Share the link or post it to the lobby.`
+              ? `Create a challenge for "${presetDesign!.name}". Share the link or post it to the lobby.`
               : "Pick a design and a time control. Post it to the public lobby or share a private link."}
           </DialogDescription>
         </DialogHeader>

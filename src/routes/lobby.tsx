@@ -12,7 +12,7 @@ export const Route = createFileRoute("/lobby")({
   head: () => ({
     meta: [
       { title: "New Game — Prism Chess" },
-      { name: "description", content: "Start a multiplayer match, challenge a friend, or play a variant against the AI." },
+      { name: "description", content: "Start a multiplayer match, create a challenge, or play a variant against the AI." },
     ],
   }),
   component: Lobby,
@@ -75,7 +75,7 @@ function Lobby() {
                   <UserPlus className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold">Challenge a Friend</div>
+                  <div className="font-semibold">Create a Challenge</div>
                   <div className="text-xs text-muted-foreground">Pick any variant and send a link</div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />

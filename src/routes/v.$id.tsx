@@ -79,7 +79,7 @@ function VariantPage() {
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button size="sm" onClick={handlePlay}><Play className="h-3 w-3 mr-1" /> Play vs AI</Button>
             <Button size="sm" variant="outline" onClick={() => setChallengeOpen(true)}>
-              <Swords className="h-3 w-3 mr-1" /> Challenge a friend
+              <Swords className="h-3 w-3 mr-1" /> Create a challenge
             </Button>
             <ShareGameButton path={`/v/${game.id}`} name={game.name} description={game.description} />
             <Link to="/forum">

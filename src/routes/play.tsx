@@ -752,7 +752,7 @@ function ChallengeFriendButton({ design }: { design: Design }) {
   return (
     <>
       <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
-        <UserPlus className="h-4 w-4 mr-1" /> Challenge a friend with this game
+        <UserPlus className="h-4 w-4 mr-1" /> Create a challenge with this game
       </Button>
       <CreateChallengeDialog
         open={open}
