@@ -27,6 +27,8 @@ import { MoveDiagram } from "@/components/chess/MoveDiagram";
 import { sfx } from "@/lib/sfx";
 import { PostGameAnalysis } from "@/components/chess/PostGameAnalysis";
 import { AiThinkingIndicator } from "@/components/chess/AiThinkingIndicator";
+import { AiDebugPanel } from "@/components/chess/AiDebugPanel";
+import { isAiDebugEnabled } from "@/lib/ai-debug";
 import { recordSoloGame } from "@/lib/history.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
