@@ -23,14 +23,19 @@ async function isAdminOrMod(ctx: { supabase: any; userId: string }) {
 
 export const listTopics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data: topics, error } = await context.supabase
+  .inputValidator((input: unknown) =>
+    z.object({ category: z.string().min(1).max(40).optional() }).optional().parse(input) ?? {},
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
       .from("forum_topics")
-      .select("id, title, body, author_id, reply_count, like_count, last_activity_at, created_at, is_featured, is_pinned, is_announcement, shared_design, shared_design_name")
+      .select("id, title, body, author_id, reply_count, like_count, last_activity_at, created_at, is_featured, is_pinned, is_announcement, category, shared_design, shared_design_name")
       .order("is_pinned", { ascending: false })
       .order("is_featured", { ascending: false })
       .order("last_activity_at", { ascending: false })
       .limit(50);
+    if (data?.category) q = q.eq("category", data.category);
+    const { data: topics, error } = await q;
     if (error) throw new Error(error.message);
     const authorIds = Array.from(new Set((topics ?? []).map((t) => t.author_id)));
     const authorsMap: Record<string, { username: string; display_name: string | null }> = {};
