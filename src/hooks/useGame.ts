@@ -314,6 +314,7 @@ export function useGame(opts: UseGameOptions) {
     legalDropSquares,
     aiThinking,
     aiThinkingSince,
+    aiStats,
     nudgeAi,
     selectedDrop,
     setSelectedDrop,
