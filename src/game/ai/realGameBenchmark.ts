@@ -153,12 +153,7 @@ function ruleNoHangValuableUndefended(rc: RuleContext): string | null {
   const moverPts = getPiecePoints(move.piece.id, before.registry[move.piece.id]);
   if (moverPts < 5) return null;
   // What can opponent immediately do after our move?
-  // We can't import applyMoveToState here without circular issues — but it's
-  // safe (search.ts already imports it). Reuse opponentBestGain on the
-  // resulting state.
-  // Lazy require to keep type-only deps clean.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { applyMoveToState } = require("../moves") as typeof import("../moves");
+  // Reuse opponentBestGain on the resulting state.
   const after = applyMoveToState(before, move);
   const opp = opponentBestGain(after);
   if (opp.royalCapture) return `move allows opponent to capture our royal`;
