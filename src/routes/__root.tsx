@@ -34,12 +34,36 @@ function NotFoundComponent() {
   );
 }
 
+function isChunkLoadError(error: unknown): boolean {
+  const msg = (error as { message?: string } | null)?.message ?? "";
+  const name = (error as { name?: string } | null)?.name ?? "";
+  return (
+    /Failed to fetch dynamically imported module/i.test(msg) ||
+    /Importing a module script failed/i.test(msg) ||
+    /Loading chunk \S+ failed/i.test(msg) ||
+    name === "ChunkLoadError"
+  );
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
+    // Stale chunk after a redeploy: old HTML references a JS file that no longer exists.
+    // Hard-reload once so the browser pulls the new index + chunk manifest.
+    if (typeof window !== "undefined" && isChunkLoadError(error)) {
+      const KEY = "prismchess.chunkReloadAt";
+      const last = Number(sessionStorage.getItem(KEY) ?? "0");
+      const now = Date.now();
+      if (now - last > 10_000) {
+        sessionStorage.setItem(KEY, String(now));
+        window.location.reload();
+        return;
+      }
+    }
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
