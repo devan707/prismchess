@@ -129,6 +129,8 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
             if (row.kind === "draw_offer") toast.message("Opponent offered a draw");
             else if (row.kind === "draw_accept") toast.success("Draw accepted");
             else if (row.kind === "draw_decline") toast.message("Draw declined");
+            else if (row.kind === "rematch_offer") toast.message("Opponent wants a rematch");
+            else if (row.kind === "rematch_decline") toast.message("Rematch declined");
           }
         },
       )
