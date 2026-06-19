@@ -236,6 +236,14 @@ function promotionOptionsFor(state: GameState): PieceId[] {
     if (ai === -1) return 1; if (bi === -1) return -1;
     return ai - bi;
   });
+  // Safety fallback: if the starting set was so minimal there's literally
+  // nothing legal to promote into, fall back to every canBePromoted piece in
+  // the registry so a pawn on the back rank isn't stuck with no move.
+  if (out.length === 0) {
+    for (const id of Object.keys(state.registry)) {
+      if (state.registry[id]?.canBePromoted) out.push(id);
+    }
+  }
   return out;
 }
 
