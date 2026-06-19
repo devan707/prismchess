@@ -87,12 +87,12 @@ const REAL_GAME_FIXTURES: RealGameFixture[] = [
     note: "Lich g8↔f8 shuffle while the kingside was under Archer pressure.",
   },
   {
-    name: "[ply 42] Lich shuffle (late-game) — third repeat shuffle pattern",
-    replayPlies: 41,
+    name: "[ply 36] Lich shuffle (late-game) — third repeat shuffle pattern",
+    replayPlies: 35,
     expectedTurn: "b",
     knownBadMove: { from: { r: 7, c: 6 }, to: { r: 7, c: 7 } },
     rule: "noLichShuffle",
-    note: "Lich g8↔h8 shuffle, immediately preceded the lost-Wizard sequence.",
+    note: "Lich g8→h8 starting yet another g8↔h8 shuffle while down material.",
   },
   {
     name: "[ply 29] Dragon donated to d4 — captured by Regent next ply",
