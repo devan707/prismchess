@@ -27,7 +27,7 @@ import {
   computeZobristFromScratch,
   zkeyAfter,
 } from "./zobrist";
-import { runSafetyGate, type CandidateAnalysis } from "./safety";
+import { runSafetyGate, opponentBestGain, type CandidateAnalysis } from "./safety";
 import {
   MATE_THRESHOLD,
   TT,
