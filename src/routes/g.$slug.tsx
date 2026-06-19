@@ -290,6 +290,7 @@ function SharedGamePage() {
         onOpenChange={setChallengeOpen}
         presetDesign={{ design: game.design as unknown as Design, name: game.name }}
       />
+      <PromoteAnnouncementDialog target={promoTarget} onClose={() => setPromoTarget(null)} />
     </div>
   );
 }
