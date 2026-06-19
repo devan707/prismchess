@@ -212,7 +212,13 @@ export async function runRealGameBenchmark(timeMs = 1200): Promise<{
         reasons.push(`turn mismatch after replay: got ${before.turn} expected ${fx.expectedTurn}`);
       }
       const tt = new TT(1 << 14);
-      const res = runSearch(before, { difficulty: "medium", budgetMs: timeMs, maxDepth: 4, tt });
+      // Mirror production "hard" settings so the benchmark matches the
+      // budget the AI actually had in the real game. `timeMs` floors the
+      // budget so a benchmark run isn't slower than what the engine got
+      // live — but never below paramsFor(hard).
+      const prod = paramsFor(before, "hard");
+      const budgetMs = Math.max(timeMs, prod.budgetMs);
+      const res = runSearch(before, { difficulty: "hard", budgetMs, maxDepth: prod.maxDepth, tt });
       const move = res.move;
       if (!move) {
         reasons.push("engine returned no move");
