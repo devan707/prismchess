@@ -1,9 +1,47 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Design, Move } from "@/game/types";
 
 const ColorSchema = z.enum(["w", "b"]);
 const ResultSchema = z.enum(["w", "b", "draw"]);
+
+export interface SoloGameDetail {
+  id: string;
+  designName: string;
+  design: Design;
+  difficulty: string;
+  humanColor: "w" | "b";
+  result: "w" | "b" | "draw";
+  resultReason: string;
+  moves: Move[];
+  endedAt: string;
+}
+
+export const getSoloGame = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<SoloGameDetail> => {
+    const { data: row, error } = await context.supabase
+      .from("solo_games")
+      .select("id, design_name, design, difficulty, human_color, result, result_reason, moves, ended_at")
+      .eq("id", data.id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Game not found");
+    return {
+      id: row.id,
+      designName: row.design_name,
+      design: row.design as unknown as Design,
+      difficulty: row.difficulty,
+      humanColor: row.human_color as "w" | "b",
+      result: row.result as "w" | "b" | "draw",
+      resultReason: row.result_reason,
+      moves: (row.moves as unknown as Move[]) ?? [],
+      endedAt: row.ended_at,
+    };
+  });
 
 export const recordSoloGame = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -41,6 +41,7 @@ import { Route as MultiplayerJoinTokenRouteImport } from './routes/multiplayer.j
 import { Route as AuthenticatedUUsernameRouteImport } from './routes/_authenticated/u.$username'
 import { Route as AuthenticatedMultiplayerMatchIdRouteImport } from './routes/_authenticated/multiplayer.$matchId'
 import { Route as AuthenticatedMessagesThreadIdRouteImport } from './routes/_authenticated/messages.$threadId'
+import { Route as AuthenticatedHistoryIdRouteImport } from './routes/_authenticated/history.$id'
 import { Route as AuthenticatedForumSuggestRouteImport } from './routes/_authenticated/forum.suggest'
 import { Route as AuthenticatedForumNewRouteImport } from './routes/_authenticated/forum.new'
 import { Route as AuthenticatedForumTopicIdRouteImport } from './routes/_authenticated/forum.$topicId'
@@ -217,6 +218,11 @@ const AuthenticatedMessagesThreadIdRoute =
     path: '/$threadId',
     getParentRoute: () => AuthenticatedMessagesRoute,
   } as any)
+const AuthenticatedHistoryIdRoute = AuthenticatedHistoryIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedHistoryRoute,
+} as any)
 const AuthenticatedForumSuggestRoute =
   AuthenticatedForumSuggestRouteImport.update({
     id: '/suggest',
@@ -293,7 +299,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
   '/friends': typeof AuthenticatedFriendsRoute
-  '/history': typeof AuthenticatedHistoryRoute
+  '/history': typeof AuthenticatedHistoryRouteWithChildren
   '/messages': typeof AuthenticatedMessagesRouteWithChildren
   '/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -312,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/history/$id': typeof AuthenticatedHistoryIdRoute
   '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/u/$username': typeof AuthenticatedUUsernameRoute
@@ -336,7 +343,7 @@ export interface FileRoutesByTo {
   '/sandbox': typeof SandboxRoute
   '/terms': typeof TermsRoute
   '/friends': typeof AuthenticatedFriendsRoute
-  '/history': typeof AuthenticatedHistoryRoute
+  '/history': typeof AuthenticatedHistoryRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/g/$slug': typeof GSlugRoute
@@ -353,6 +360,7 @@ export interface FileRoutesByTo {
   '/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/forum/new': typeof AuthenticatedForumNewRoute
   '/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/history/$id': typeof AuthenticatedHistoryIdRoute
   '/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/u/$username': typeof AuthenticatedUUsernameRoute
@@ -380,7 +388,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
   '/_authenticated/friends': typeof AuthenticatedFriendsRoute
-  '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/history': typeof AuthenticatedHistoryRouteWithChildren
   '/_authenticated/messages': typeof AuthenticatedMessagesRouteWithChildren
   '/_authenticated/multiplayer': typeof AuthenticatedMultiplayerRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -399,6 +407,7 @@ export interface FileRoutesById {
   '/_authenticated/forum/$topicId': typeof AuthenticatedForumTopicIdRoute
   '/_authenticated/forum/new': typeof AuthenticatedForumNewRoute
   '/_authenticated/forum/suggest': typeof AuthenticatedForumSuggestRoute
+  '/_authenticated/history/$id': typeof AuthenticatedHistoryIdRoute
   '/_authenticated/messages/$threadId': typeof AuthenticatedMessagesThreadIdRoute
   '/_authenticated/multiplayer/$matchId': typeof AuthenticatedMultiplayerMatchIdRoute
   '/_authenticated/u/$username': typeof AuthenticatedUUsernameRoute
@@ -445,6 +454,7 @@ export interface FileRouteTypes {
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
+    | '/history/$id'
     | '/messages/$threadId'
     | '/multiplayer/$matchId'
     | '/u/$username'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/forum/$topicId'
     | '/forum/new'
     | '/forum/suggest'
+    | '/history/$id'
     | '/messages/$threadId'
     | '/multiplayer/$matchId'
     | '/u/$username'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/_authenticated/forum/$topicId'
     | '/_authenticated/forum/new'
     | '/_authenticated/forum/suggest'
+    | '/_authenticated/history/$id'
     | '/_authenticated/messages/$threadId'
     | '/_authenticated/multiplayer/$matchId'
     | '/_authenticated/u/$username'
@@ -792,6 +804,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMessagesThreadIdRouteImport
       parentRoute: typeof AuthenticatedMessagesRoute
     }
+    '/_authenticated/history/$id': {
+      id: '/_authenticated/history/$id'
+      path: '/$id'
+      fullPath: '/history/$id'
+      preLoaderRoute: typeof AuthenticatedHistoryIdRouteImport
+      parentRoute: typeof AuthenticatedHistoryRoute
+    }
     '/_authenticated/forum/suggest': {
       id: '/_authenticated/forum/suggest'
       path: '/suggest'
@@ -889,6 +908,17 @@ const AuthenticatedForumRouteChildren: AuthenticatedForumRouteChildren = {
 const AuthenticatedForumRouteWithChildren =
   AuthenticatedForumRoute._addFileChildren(AuthenticatedForumRouteChildren)
 
+interface AuthenticatedHistoryRouteChildren {
+  AuthenticatedHistoryIdRoute: typeof AuthenticatedHistoryIdRoute
+}
+
+const AuthenticatedHistoryRouteChildren: AuthenticatedHistoryRouteChildren = {
+  AuthenticatedHistoryIdRoute: AuthenticatedHistoryIdRoute,
+}
+
+const AuthenticatedHistoryRouteWithChildren =
+  AuthenticatedHistoryRoute._addFileChildren(AuthenticatedHistoryRouteChildren)
+
 interface AuthenticatedMessagesRouteChildren {
   AuthenticatedMessagesThreadIdRoute: typeof AuthenticatedMessagesThreadIdRoute
   AuthenticatedMessagesIndexRoute: typeof AuthenticatedMessagesIndexRoute
@@ -923,7 +953,7 @@ const AuthenticatedMultiplayerRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedForumRoute: typeof AuthenticatedForumRouteWithChildren
   AuthenticatedFriendsRoute: typeof AuthenticatedFriendsRoute
-  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRouteWithChildren
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRouteWithChildren
   AuthenticatedMultiplayerRoute: typeof AuthenticatedMultiplayerRouteWithChildren
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -940,7 +970,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedForumRoute: AuthenticatedForumRouteWithChildren,
   AuthenticatedFriendsRoute: AuthenticatedFriendsRoute,
-  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRouteWithChildren,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRouteWithChildren,
   AuthenticatedMultiplayerRoute: AuthenticatedMultiplayerRouteWithChildren,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
@@ -995,13 +1025,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
