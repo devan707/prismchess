@@ -593,7 +593,34 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   } catch (err) {
     if (!(err instanceof TimeUp)) throw err;
   }
+
+  // Root-level anti-shuffle re-rank for royal pieces. Mutates rootScores
+  // in place, then re-derives best/ties so downstream tie-break and the
+  // safety gate see the penalised values. See isRoyalShuffleAtRoot.
+  if (searcher.rootScores.length > 0) {
+    applyRoyalShufflePenalty(state, searcher.rootScores);
+    let bestScore = -Infinity;
+    let bestMove: Move | null = null;
+    const ties: Move[] = [];
+    for (const r of searcher.rootScores) {
+      if (r.score > bestScore + 0.5) {
+        bestScore = r.score;
+        bestMove = r.move;
+        ties.length = 0;
+        ties.push(r.move);
+      } else if (Math.abs(r.score - bestScore) <= 0.5) {
+        ties.push(r.move);
+      }
+    }
+    if (bestMove) {
+      searcher.bestMoveAtRoot = bestMove;
+      searcher.bestScoreAtRoot = bestScore;
+      searcher.tiesAtRoot = ties;
+    }
+  }
+
   let chosen = searcher.bestMoveAtRoot;
+
   // Absolute last-resort fallback: depth 1 should always commit a move
   // thanks to the starvation guard in Searcher.checkTime, but if anything
   // upstream (e.g. an exception in evaluate/qsearch) bypasses that path,
