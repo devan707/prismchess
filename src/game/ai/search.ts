@@ -217,11 +217,13 @@ class Searcher {
     let bestScore = -Infinity;
     let bestMove: Move | null = null;
     const ties: Move[] = [];
+    const scored: Array<{ move: Move; score: number }> = [];
     for (const m of moves) {
       const next = applyMoveToState(state, m);
       const gaveCheck = inCheck(next, next.turn);
       const ext = gaveCheck ? 1 : 0;
       const score = -this.search(next, depth - 1 + ext, -beta, -alpha, null);
+      scored.push({ move: m, score });
       if (score > bestScore + 0.5) {
         bestScore = score;
         bestMove = m;
@@ -236,6 +238,7 @@ class Searcher {
       this.bestMoveAtRoot = bestMove;
       this.bestScoreAtRoot = bestScore;
       this.tiesAtRoot = ties;
+      this.rootScores = scored;
     }
   }
 }
