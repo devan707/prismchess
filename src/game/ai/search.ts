@@ -154,6 +154,17 @@ class Searcher {
   killers: Array<[Move | null, Move | null]> = [];
   history = new Map<string, number>();
 
+  /** Depth of the iteration currently executing at the root. Used to grant
+   *  depth 1 a grace period so it always commits at least one root move
+   *  even when the wall-clock budget is exhausted by setup work or a slow
+   *  first qsearch on a heavy-branching variant. */
+  iterationDepth = 0;
+  /** Number of root moves whose subtree has fully returned during the
+   *  current `rootIteration`. While this is 0 at depth 1 we suppress
+   *  TimeUp — otherwise we'd return with bestMoveAtRoot === null (the
+   *  "engine returned no move" symptom from ply-13 starvation). */
+  rootMovesTriedThisIter = 0;
+
   constructor(deadline: number, tt: TT | null, salt: bigint, verify: boolean) {
     this.deadline = deadline;
     this.tt = tt;
@@ -162,7 +173,10 @@ class Searcher {
   }
 
   checkTime(): void {
-    if ((this.nodes & 1023) === 0 && Date.now() > this.deadline) throw new TimeUp();
+    if ((this.nodes & 1023) !== 0) return;
+    if (Date.now() <= this.deadline) return;
+    if (this.iterationDepth <= 1 && this.rootMovesTriedThisIter === 0) return;
+    throw new TimeUp();
   }
 
   /** Hard fallback per the plan: if the incremental key ever diverges from
