@@ -182,14 +182,19 @@ function Home() {
               </div>
             </div>
             <div className="mt-3 flex gap-2">
+              <Link to="/v/$id" params={{ id: featured.id }} className="flex-1">
+                <button className="prism-border prism-border-hover w-full inline-flex items-center justify-center h-10 text-sm font-semibold tracking-wide">
+                  View
+                </button>
+              </Link>
               <button
                 onClick={() => playBuiltin(featured)}
-                className="prism-border prism-border-hover flex-1 inline-flex items-center justify-center h-10 text-sm font-semibold tracking-wide"
+                className="rounded-sm h-10 px-3 inline-flex items-center justify-center text-sm font-semibold border border-input bg-background hover:bg-accent"
               >
-                <Play className="h-4 w-4 mr-2" /> Play vs AI
+                <Play className="h-4 w-4 mr-1" /> Play
               </button>
               <Link to="/lobby" className="flex-shrink-0">
-                <Button variant="outline" className="rounded-sm h-10">More games</Button>
+                <Button variant="outline" className="rounded-sm h-10">More</Button>
               </Link>
             </div>
           </Card>
