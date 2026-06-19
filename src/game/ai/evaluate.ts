@@ -553,10 +553,19 @@ export function evaluate(state: GameState, toMove: Color): number {
   score -= positionalTerm(state, toMove === "w" ? "b" : "w");
   // Learned tactical squares — defend the ones the AI lost to last game.
   score += squareControlTerm(state, toMove, pb.squareDefenseBonuses);
-  // Anti-shuffle: discourage repeatedly moving the same piece without capturing.
-  score += shuffleTerm(state, toMove);
-  score -= shuffleTerm(state, toMove === "w" ? "b" : "w");
+  // Anti-shuffle is intentionally NOT folded into this cached evaluation:
+  // it depends on `state.history`, which means two positions reachable via
+  // different move orders would evaluate differently and break the TT
+  // contract. Callers (search root + qsearch) add `shuffleAdjustment(state)`
+  // separately when they want it.
   return score;
+}
+
+/** Post-eval, history-dependent term. Kept outside `evaluate()` so the
+ *  cached score in the transposition table is path-independent. */
+export function shuffleAdjustment(state: GameState, toMove: Color): number {
+  const opp: Color = toMove === "w" ? "b" : "w";
+  return shuffleTerm(state, toMove) - shuffleTerm(state, opp);
 }
 
 /**
