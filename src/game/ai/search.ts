@@ -154,6 +154,17 @@ class Searcher {
   killers: Array<[Move | null, Move | null]> = [];
   history = new Map<string, number>();
 
+  /** Depth of the iteration currently executing at the root. Used to grant
+   *  depth 1 a grace period so it always commits at least one root move
+   *  even when the wall-clock budget is exhausted by setup work or a slow
+   *  first qsearch on a heavy-branching variant. */
+  iterationDepth = 0;
+  /** Number of root moves whose subtree has fully returned during the
+   *  current `rootIteration`. While this is 0 at depth 1 we suppress
+   *  TimeUp — otherwise we'd return with bestMoveAtRoot === null (the
+   *  "engine returned no move" symptom from ply-13 starvation). */
+  rootMovesTriedThisIter = 0;
+
   constructor(deadline: number, tt: TT | null, salt: bigint, verify: boolean) {
     this.deadline = deadline;
     this.tt = tt;
@@ -162,7 +173,10 @@ class Searcher {
   }
 
   checkTime(): void {
-    if ((this.nodes & 1023) === 0 && Date.now() > this.deadline) throw new TimeUp();
+    if ((this.nodes & 1023) !== 0) return;
+    if (Date.now() <= this.deadline) return;
+    if (this.iterationDepth <= 1 && this.rootMovesTriedThisIter === 0) return;
+    throw new TimeUp();
   }
 
   /** Hard fallback per the plan: if the incremental key ever diverges from
@@ -342,6 +356,8 @@ class Searcher {
     const moves = allLegalMoves(state);
     if (moves.length === 0) return;
     moves.sort((a, b) => this.scoreFor(state, b, depth, prevBest) - this.scoreFor(state, a, depth, prevBest));
+    this.iterationDepth = depth;
+    this.rootMovesTriedThisIter = 0;
     let alpha = -Infinity;
     const beta = Infinity;
     let bestScore = -Infinity;
@@ -355,6 +371,7 @@ class Searcher {
       const ext = gaveCheck ? 1 : 0;
       const score = -this.search(next, childKey, depth - 1 + ext, -beta, -alpha, null, 1);
       scored.push({ move: m, score });
+      this.rootMovesTriedThisIter++;
       if (score > bestScore + 0.5) {
         bestScore = score;
         bestMove = m;
@@ -364,16 +381,19 @@ class Searcher {
         ties.push(m);
       }
       if (bestScore > alpha) alpha = bestScore;
-    }
-    if (bestMove) {
-      this.bestMoveAtRoot = bestMove;
-      this.bestScoreAtRoot = bestScore;
-      this.tiesAtRoot = ties;
-      this.rootScores = scored;
-      // Store the root with depth so subsequent iterations probe it.
-      if (this.tt && !this.ttDisabled) {
-        this.tt.store(rootKey, depth, bestScore, TT_FLAG_EXACT, bestMove, 0);
+      // Incremental commit: even if TimeUp interrupts the next sibling, we
+      // already have a best move from this depth's partial sweep. This is
+      // the second half of the depth-1 starvation fix.
+      if (bestMove) {
+        this.bestMoveAtRoot = bestMove;
+        this.bestScoreAtRoot = bestScore;
+        this.tiesAtRoot = ties.slice();
+        this.rootScores = scored.slice();
       }
+    }
+    // Store the root with depth so subsequent iterations probe it.
+    if (bestMove && this.tt && !this.ttDisabled) {
+      this.tt.store(rootKey, depth, bestScore, TT_FLAG_EXACT, bestMove, 0);
     }
   }
 }
@@ -492,6 +512,14 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     if (!(err instanceof TimeUp)) throw err;
   }
   let chosen = searcher.bestMoveAtRoot;
+  // Absolute last-resort fallback: depth 1 should always commit a move
+  // thanks to the starvation guard in Searcher.checkTime, but if anything
+  // upstream (e.g. an exception in evaluate/qsearch) bypasses that path,
+  // make sure we never hand the worker a null move.
+  if (!chosen) {
+    const legal = allLegalMoves(state);
+    if (legal.length > 0) chosen = legal[0];
+  }
   if (searcher.tiesAtRoot.length > 1) {
     if (opts.difficulty === "easy") {
       chosen = pickRandom(searcher.tiesAtRoot);
