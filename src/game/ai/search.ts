@@ -63,24 +63,36 @@ function isLoud(m: Move): boolean {
   );
 }
 
+/** Squares that the opponent's last move directly affected: the square the
+ *  moved piece now sits on (it may have become capturable) and the square it
+ *  vacated (a piece behind it may now be exposed, or our piece can slide
+ *  through there to threaten / check). Used to focus tactical attention on
+ *  the part of the board the opponent just touched. */
+function lastMoveFocus(state: GameState): { to: { r: number; c: number } | null; from: { r: number; c: number } | null } {
+  const h = state.history;
+  for (let i = h.length - 1; i >= 0; i--) {
+    const m = h[i];
+    if (m.piece.color !== state.turn) {
+      return { to: m.to, from: m.from };
+    }
+  }
+  return { to: null, from: null };
+}
+
 /** Move-ordering score. Captures by SEE (true material gain after recaptures),
  *  promotions, shape-shifts, and juggernaut trample on top. Losing captures
  *  drop below quiet moves so we don't waste depth searching them first. */
 function orderingScore(state: GameState, m: Move): number {
   let s = 0;
   if (m.captured) {
-    // Real swap-off result. Positive = winning capture; negative = sac.
     const see = seeMove(state, m);
     if (see >= 0) {
-      // MVV-LVA-flavoured tiebreak so two equally-winning captures still order.
       const victim = valueFor(m.captured.id, state.registry[m.captured.id]);
       s += 1_000 + see + victim / 10;
     } else {
-      // Losing capture — order it below quiet moves but still ahead of nothing.
-      s += see; // negative
+      s += see;
     }
   } else {
-    // Quiet move — penalise if it parks the piece on a square we'd lose it.
     const see = seeMove(state, m);
     if (see < 0) s += see;
   }
@@ -88,6 +100,16 @@ function orderingScore(state: GameState, m: Move): number {
   if (m.shapeshiftTo) s += valueFor(m.shapeshiftTo, state.registry[m.shapeshiftTo]) * 4;
   if (m.juggTrampled) {
     for (const p of m.juggTrampled) s += valueFor(p.id, state.registry[p.id]) * 6;
+  }
+  // Last-move focus: bias toward replies that interact with the square the
+  // opponent just moved to (capture/attack the piece they just moved) or the
+  // square they just vacated (often opens a tactic / discovered attack).
+  const focus = lastMoveFocus(state);
+  if (focus.to && m.to.r === focus.to.r && m.to.c === focus.to.c) {
+    s += m.captured ? 300 : 80;
+  }
+  if (focus.from && m.to.r === focus.from.r && m.to.c === focus.from.c) {
+    s += 40;
   }
   return s;
 }
