@@ -510,42 +510,23 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     const all = allLegalMoves(state);
     if (all.length > 1) chosen = pickRandom(all);
   }
-  if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
-    const chosenSee = seeMove(state, chosen);
-    if (chosenSee <= -150) {
-      const tolerance = Math.min(220, -chosenSee + 60);
-      let safest: { move: Move; score: number; see: number } | null = null;
-      for (const r of searcher.rootScores) {
-        if (sameMove(r.move, chosen)) continue;
-        if (r.score < searcher.bestScoreAtRoot - tolerance) continue;
-        const see = seeMove(state, r.move);
-        if (see < -25) continue;
-        if (!safest || see > safest.see || (see === safest.see && r.score > safest.score)) {
-          safest = { move: r.move, score: r.score, see };
-        }
-      }
-      if (safest) chosen = safest.move;
-    }
+  // Root Move Safety Gate — replaces the older "safest swap" / "best grab"
+  // passes (their thresholds were too conservative; see safety.ts).
+  // Runs at all difficulties above easy and on EVERY move, not just
+  // when SEE looks scary, because hanging detection inside the search
+  // is leaf-only and can miss quiet threats entirely.
+  let candidates: CandidateAnalysis[] = [];
+  if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 0) {
+    const gate = runSafetyGate({
+      state,
+      scored: searcher.rootScores,
+      bestScoreAtRoot: searcher.bestScoreAtRoot,
+      mateThreshold: MATE_THRESHOLD,
+    });
+    if (gate.chosen) chosen = gate.chosen;
+    candidates = gate.candidates;
   }
-  if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
-    const chosenSee = seeMove(state, chosen);
-    const chosenGain = Math.max(0, chosenSee);
-    const NOISE = 40;
-    let bestGrab: { move: Move; score: number; gain: number } | null = null;
-    for (const r of searcher.rootScores) {
-      if (sameMove(r.move, chosen)) continue;
-      if (!r.move.captured && !r.move.juggTrampled?.length) continue;
-      const gain = seeMove(state, r.move);
-      if (gain < 0) continue;
-      if (gain <= chosenGain + 50) continue;
-      if (r.score < searcher.bestScoreAtRoot - NOISE) continue;
-      if (!bestGrab || gain > bestGrab.gain ||
-          (gain === bestGrab.gain && r.score > bestGrab.score)) {
-        bestGrab = { move: r.move, score: r.score, gain };
-      }
-    }
-    if (bestGrab) chosen = bestGrab.move;
-  }
+
 
   // Sanitise mate scores so the debug panel shows a finite number.
   let displayScore = searcher.bestScoreAtRoot;
