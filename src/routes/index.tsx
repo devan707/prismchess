@@ -182,14 +182,19 @@ function Home() {
               </div>
             </div>
             <div className="mt-3 flex gap-2">
+              <Link to="/v/$id" params={{ id: featured.id }} className="flex-1">
+                <button className="prism-border prism-border-hover w-full inline-flex items-center justify-center h-10 text-sm font-semibold tracking-wide">
+                  View
+                </button>
+              </Link>
               <button
                 onClick={() => playBuiltin(featured)}
-                className="prism-border prism-border-hover flex-1 inline-flex items-center justify-center h-10 text-sm font-semibold tracking-wide"
+                className="rounded-sm h-10 px-3 inline-flex items-center justify-center text-sm font-semibold border border-input bg-background hover:bg-accent"
               >
-                <Play className="h-4 w-4 mr-2" /> Play vs AI
+                <Play className="h-4 w-4 mr-1" /> Play
               </button>
               <Link to="/lobby" className="flex-shrink-0">
-                <Button variant="outline" className="rounded-sm h-10">More games</Button>
+                <Button variant="outline" className="rounded-sm h-10">More</Button>
               </Link>
             </div>
           </Card>
@@ -209,10 +214,11 @@ function Home() {
               {BUILTIN_GAMES.map((g) => {
                 const glyphs = signatureGlyphs(g.id);
                 return (
-                  <button
+                  <Link
                     key={g.id}
-                    onClick={() => playBuiltin(g)}
-                    className="w-44 shrink-0 snap-start text-left"
+                    to="/v/$id"
+                    params={{ id: g.id }}
+                    className="w-44 shrink-0 snap-start text-left block"
                   >
                     <Card className="p-3 h-full flex flex-col rounded-sm bg-card border-foreground/10 hover:border-foreground/30 transition overflow-hidden">
                       <div className="prism-tile h-24 -mx-3 -mt-3 mb-2 flex items-center justify-center gap-1">
@@ -225,10 +231,10 @@ function Home() {
                       <div className="font-display font-bold text-sm tracking-wide uppercase truncate">{g.name}</div>
                       <p className="text-[11px] text-card-foreground/70 line-clamp-2 mt-0.5 flex-1">{g.description}</p>
                       <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold">
-                        <Play className="h-3 w-3" /> Play
+                        View
                       </div>
                     </Card>
-                  </button>
+                  </Link>
                 );
               })}
             </div>

@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface Props {
-  /** URL slug under /g/$slug. */
-  slug: string;
+  /** URL slug under /g/$slug. Ignored if `path` is given. */
+  slug?: string;
+  /** Absolute app path, e.g. "/v/classic-8". Overrides `slug`. */
+  path?: string;
   /** Game name, used in the share sheet title. */
   name: string;
   description?: string;
@@ -19,15 +21,16 @@ interface Props {
  * a clipboard-copy fallback (desktop / unsupported browsers).
  */
 export function ShareGameButton({
-  slug, name, description, size = "sm", variant = "outline", iconOnly,
+  slug, path, name, description, size = "sm", variant = "outline", iconOnly,
 }: Props) {
   const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const relPath = path ?? (slug ? `/g/${slug}` : "/");
     const url =
       typeof window === "undefined"
-        ? `/g/${slug}`
-        : `${window.location.origin}/g/${slug}`;
+        ? relPath
+        : `${window.location.origin}${relPath}`;
     const shareData: ShareData = {
       title: `${name} — Prism Chess`,
       text: description ? `${name}: ${description}` : `Play "${name}" on Prism Chess`,
