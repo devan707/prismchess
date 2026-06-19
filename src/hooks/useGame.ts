@@ -192,7 +192,13 @@ export function useGame(opts: UseGameOptions) {
     // Snapshot this variant's playbook so the worker's evaluate() actually sees it.
     const variantId = typeof window !== "undefined" ? loadCurrentMeta()?.id : undefined;
     const playbook = cloudPlaybook ?? loadPlaybook(variantId ?? undefined);
-    engineRequestMove(state, opts.difficulty, { hardTimeoutMs: 30000, playbook })
+    const debug = isAiDebugEnabled();
+    engineRequestMove(state, opts.difficulty, {
+      hardTimeoutMs: 30000,
+      playbook,
+      verifyZobrist: debug,
+      onStats: (s) => setAiStats(s),
+    })
       .then((move) => {
         if (cancelled) return;
         if (move) {
