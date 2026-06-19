@@ -92,6 +92,8 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
     time_control: bootstrap.match.time_control as MatchSnapshot["time_control"],
     design: bootstrap.match.design as unknown as MatchSnapshot["design"],
     design_name: bootstrap.match.design_name,
+    ready_w: (bootstrap.match as { ready_w?: boolean }).ready_w ?? false,
+    ready_b: (bootstrap.match as { ready_b?: boolean }).ready_b ?? false,
   };
   const initialMoves = (bootstrap.moves ?? []).map((m) => m.move as unknown as Move);
   const initialEvents = (bootstrap.events ?? []) as unknown as MatchEvent[];
