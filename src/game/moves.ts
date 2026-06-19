@@ -205,12 +205,19 @@ function findLinkPartner(
 }
 
 function promotionOptionsFor(state: GameState): PieceId[] {
+  // Only allow promotion into pieces that were actually in the starting
+  // game (placed on the board or in either side's reserves). Falls back to
+  // every canBePromoted piece if the starting set is unknown (legacy states).
+  const starting = state.startingPieceIds && state.startingPieceIds.length > 0
+    ? new Set(state.startingPieceIds)
+    : null;
   const out: PieceId[] = [];
   for (const id of Object.keys(state.registry)) {
     const def = state.registry[id];
-    if (def.canBePromoted) out.push(id);
+    if (!def.canBePromoted) continue;
+    if (starting && !starting.has(id)) continue;
+    out.push(id);
   }
-  // Prefer Q,R,B,N order
   const order = ["Q", "R", "B", "N"];
   out.sort((a, b) => {
     const ai = order.indexOf(a); const bi = order.indexOf(b);
