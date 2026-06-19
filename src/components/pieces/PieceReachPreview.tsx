@@ -24,17 +24,124 @@ type Marker =
 
 /** Mini board that highlights every square the compiled piece can reach
  *  from a center cell. */
+const KING_OFFSETS = [
+  { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+  { dr: 0, dc: -1 },                      { dr: 0, dc: 1 },
+  { dr: 1, dc: -1 },  { dr: 1, dc: 0 },  { dr: 1, dc: 1 },
+];
+const KNIGHT_OFFSETS = [
+  { dr: -2, dc: -1 }, { dr: -2, dc: 1 }, { dr: -1, dc: -2 }, { dr: -1, dc: 2 },
+  { dr: 1, dc: -2 },  { dr: 1, dc: 2 },  { dr: 2, dc: -1 },  { dr: 2, dc: 1 },
+];
+
+/** Synthesize movement specs for pieces whose behavior lives in code
+ *  (driven by `special: "..."`). Returns null when the piece has no
+ *  `special` field or when its existing movement spec is sufficient. */
+function specsForSpecial(def?: PieceDef): {
+  movement?: MovementSpec;
+  capture?: MovementSpec;
+  ranged?: MovementSpec;
+} | undefined {
+  if (!def?.special) return undefined;
+  // dr = -1 means "forward" (toward the opponent) from the white perspective.
+  switch (def.special) {
+    case "pawn":
+    case "shapeshifter":
+      return {
+        movement: { leaps: [{ dr: -1, dc: 0 }, { dr: -2, dc: 0 }] },
+        capture: { leaps: [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }] },
+      };
+    case "juggernaut":
+      return {
+        movement: {
+          leaps: [{ dr: 0, dc: -1 }, { dr: 0, dc: 1 }],
+          slides: [{ dr: -1, dc: 0, max: 5 }],
+        },
+      };
+    case "archer":
+      return {
+        movement: {
+          leaps: [
+            ...KING_OFFSETS,
+            { dr: -2, dc: 0 }, { dr: 2, dc: 0 },
+            { dr: 0, dc: -2 }, { dr: 0, dc: 2 },
+          ],
+        },
+        ranged: {
+          leaps: [
+            { dr: -2, dc: -2 }, { dr: -2, dc: 2 }, { dr: 2, dc: -2 }, { dr: 2, dc: 2 },
+            { dr: -3, dc: -3 }, { dr: -3, dc: 3 }, { dr: 3, dc: -3 }, { dr: 3, dc: 3 },
+          ],
+        },
+      };
+    case "dragon":
+      return {
+        movement: { leaps: KING_OFFSETS },
+        ranged: {
+          leaps: [
+            { dr: -2, dc: 0 }, { dr: 2, dc: 0 }, { dr: 0, dc: -2 }, { dr: 0, dc: 2 },
+            { dr: -2, dc: -2 }, { dr: -2, dc: 2 }, { dr: 2, dc: -2 }, { dr: 2, dc: 2 },
+          ],
+        },
+      };
+    case "assassin":
+      // Lands exactly 2 or 3 king-steps away (not adjacent). Approximate the
+      // reachable squares as everything within a Chebyshev distance of 2 or 3.
+      return {
+        movement: {
+          leaps: (() => {
+            const arr: { dr: number; dc: number }[] = [];
+            for (let dr = -3; dr <= 3; dr++)
+              for (let dc = -3; dc <= 3; dc++) {
+                const d = Math.max(Math.abs(dr), Math.abs(dc));
+                if (d === 2 || d === 3) arr.push({ dr, dc });
+              }
+            return arr;
+          })(),
+        },
+      };
+    case "wizard":
+      return {
+        movement: {
+          slides: [
+            { dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 },
+            // Orthogonal "color-bound" slides — shown as ordinary slides; the
+            // color restriction is documented in the description.
+            { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+          ],
+        },
+      };
+    case "shadowKnight":
+      return { movement: { leaps: KNIGHT_OFFSETS } };
+    case "twinTower":
+      return {
+        movement: {
+          slides: [
+            { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+          ],
+        },
+      };
+    case "necromancer":
+    case "portal":
+    case "prism":
+    default:
+      return undefined;
+  }
+}
+
 export function PieceReachPreview({ def, options, rangedSpec, size = 9 }: Props) {
   const center = Math.floor(size / 2);
 
   // Resolve the effective options / specs from either source.
   const effOptions: MoveOption[] = options ?? def?.options ?? [];
-  const effRanged: MovementSpec | undefined = rangedSpec ?? def?.rangedCapture?.spec;
+  const special = specsForSpecial(def);
+  const effRanged: MovementSpec | undefined =
+    rangedSpec ?? def?.rangedCapture?.spec ?? special?.ranged;
   // Legacy specs only apply when no v2 options are provided.
   const legacyMovement: MovementSpec | undefined =
-    effOptions.length === 0 ? def?.movement : undefined;
+    effOptions.length === 0 ? (def?.movement ?? special?.movement) : undefined;
   const legacyCapture: MovementSpec | undefined =
-    effOptions.length === 0 ? def?.capture : undefined;
+    effOptions.length === 0 ? (def?.capture ?? special?.capture) : undefined;
 
   const { map, conditional, error } = useMemo(() => {
     const m = new Map<string, Marker>();
