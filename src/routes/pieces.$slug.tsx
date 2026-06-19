@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PieceById } from "@/components/chess/PieceGlyph";
 import type { PieceDef } from "@/game/types";
 import { PieceWorthBadge } from "@/components/pieces/PieceWorthBadge";
+import { PieceInfoView } from "@/components/pieces/PieceInfoView";
 import {
   getPieceBySlug,
   likePiece,
@@ -175,6 +176,17 @@ function PieceDetail() {
               </button>
             </div>
           </div>
+        </section>
+
+        {/* Movement & attacks */}
+        <section className="rounded-xl border bg-card p-6">
+          <PieceInfoView
+            def={def}
+            name={piece.name}
+            movementSummary={piece.movement_summary}
+            hideDescription
+            glyphSize="sm"
+          />
         </section>
 
         {/* Sharing */}

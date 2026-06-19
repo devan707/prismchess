@@ -54,6 +54,38 @@ export const suggestPieceEmoji = createServerFn({ method: "POST" })
     }
   });
 
+// ---------- AI: generate technical movement/attack summary ----------
+
+async function generateMovementSummaryFromDef(opts: {
+  name: string;
+  def: unknown;
+}): Promise<string | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
+  try {
+    const gateway = createLovableAiGatewayProvider(key);
+    const { text } = await generateText({
+      model: gateway("google/gemini-3-flash-preview"),
+      system:
+        "You are a chess piece analyst. Given a custom chess piece definition (JSON), " +
+        "write a concise TECHNICAL summary of how the piece MOVES and ATTACKS. " +
+        "Cover: leaps vs slides, range, directions (forward / sideways / diagonal / backward), " +
+        "whether captures and quiet moves use the same pattern or differ, any ranged or special " +
+        "captures, and any conditional moves (e.g. first-move only, only when adjacent to friend). " +
+        "Use chess vocabulary players know. 2-4 short sentences. No marketing language, no piece " +
+        "names from classical chess unless directly comparable, no markdown, no bullet points, no headings.",
+      prompt:
+        `Piece name: ${opts.name}\n` +
+        `Definition JSON:\n${JSON.stringify(opts.def, null, 2)}`,
+      maxOutputTokens: 400,
+    });
+    const cleaned = text.trim().replace(/^["']+|["']+$/g, "").slice(0, 1200);
+    return cleaned || null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------- Save / publish a custom piece ----------
 
 const SaveInput = z.object({
@@ -68,6 +100,13 @@ export const savePiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => SaveInput.parse(i))
   .handler(async ({ data, context }) => {
+    const movementSummary = await generateMovementSummaryFromDef({
+      name: data.name,
+      def: data.def,
+    });
+    const defWithSummary = movementSummary
+      ? { ...data.def, movementSummary }
+      : data.def;
     for (let attempt = 0; attempt < 5; attempt++) {
       const slug = slugify(data.name);
       const { data: row, error } = await context.supabase
@@ -77,9 +116,10 @@ export const savePiece = createServerFn({ method: "POST" })
           slug,
           name: data.name,
           description: data.description,
-          def: data.def as never,
+          def: defWithSummary as never,
           visibility: data.visibility,
           remixed_from_id: data.remixedFromId ?? null,
+          movement_summary: movementSummary,
         })
         .select("id, slug")
         .single();
@@ -122,13 +162,22 @@ export const updatePiece = createServerFn({ method: "POST" })
       ? { ...data.def, imageUrl: existing.image_url }
       : data.def;
 
+    const movementSummary = await generateMovementSummaryFromDef({
+      name: data.name,
+      def: defWithImage,
+    });
+    const defWithSummary = movementSummary
+      ? { ...defWithImage, movementSummary }
+      : defWithImage;
+
     const { data: row, error } = await context.supabase
       .from("custom_pieces")
       .update({
         name: data.name,
         description: data.description,
-        def: defWithImage as never,
+        def: defWithSummary as never,
         visibility: data.visibility,
+        movement_summary: movementSummary,
       })
       .eq("id", data.pieceId)
       .select("id, slug")
@@ -137,7 +186,7 @@ export const updatePiece = createServerFn({ method: "POST" })
 
     // Pull the engine-facing piece id out of the def (e.g. "u:abc123"). That is
     // what's stored in design.customPieces[*].id — not the row UUID.
-    const enginePieceId = (defWithImage as { id?: unknown }).id;
+    const enginePieceId = (defWithSummary as { id?: unknown }).id;
     let refreshedGames = 0;
     if (typeof enginePieceId === "string" && enginePieceId.length > 0) {
       const { data: myGames } = await context.supabase
@@ -149,7 +198,7 @@ export const updatePiece = createServerFn({ method: "POST" })
         if (!design || !Array.isArray(design.customPieces)) continue;
         let touched = false;
         const nextPieces = design.customPieces.map((p) => {
-          if (p && p.id === enginePieceId) { touched = true; return defWithImage; }
+          if (p && p.id === enginePieceId) { touched = true; return defWithSummary; }
           return p;
         });
         if (!touched) continue;
@@ -173,7 +222,7 @@ export const getMyPieceBySlug = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, image_url, author_id")
+      .select("id, slug, name, description, def, visibility, image_url, author_id, movement_summary")
       .eq("slug", data.slug)
       .eq("author_id", context.userId)
       .maybeSingle();
@@ -183,7 +232,7 @@ export const getMyPieceBySlug = createServerFn({ method: "GET" })
 
 // ---------- List queries ----------
 
-const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url";
+const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, movement_summary";
 
 export const listMyPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -212,14 +261,14 @@ export const listMyLikedPieces = createServerFn({ method: "GET" })
     if (ids.length === 0) return [];
     const { data: pieces, error: piecesErr } = await context.supabase
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, movement_summary")
       .in("id", ids);
     if (piecesErr) throw new Error(piecesErr.message);
     type Row = {
       id: string; slug: string; name: string; description: string;
       def: import("@/integrations/supabase/types").Json; visibility: string;
       like_count: number; created_at: string; author_id: string;
-      image_url: string | null; is_hidden: boolean;
+      image_url: string | null; is_hidden: boolean; movement_summary: string | null;
     };
     const visible = ((pieces ?? []) as unknown as Row[]).filter((p) => !p.is_hidden);
     const order = new Map(ids.map((id, i) => [id, i] as const));
@@ -236,6 +285,7 @@ export const listDiscoveryPieces = createServerFn({ method: "GET" })
       def: import("@/integrations/supabase/types").Json;
       visibility: string; like_count: number;
       created_at: string; author_id: string;
+      image_url: string | null; movement_summary: string | null;
     };
     if (!url || !key) return { newest: [] as Row[], popular: [] as Row[], archive: [] as Row[] };
     const sb = createClient(url, key, {
@@ -313,7 +363,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
     });
     const { data: row, error } = await sb
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, remixed_from_id")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, remixed_from_id, movement_summary")
       .eq("slug", data.slug)
       .eq("visibility", "public")
       .eq("is_hidden", false)
@@ -324,7 +374,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
       id: string; slug: string; name: string; description: string;
       def: import("@/integrations/supabase/types").Json; visibility: string; like_count: number;
       created_at: string; author_id: string; image_url: string | null; is_hidden: boolean;
-      remixed_from_id: string | null;
+      remixed_from_id: string | null; movement_summary: string | null;
     };
     const { data: prof } = await sb
       .from("profiles")
