@@ -3,7 +3,8 @@ import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/ga
 import { allLegalMoves, legalMovesFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
 import { requestMove as engineRequestMove, cancel as engineCancel } from "@/game/ai/engine";
-import { loadPlaybook } from "@/game/ai/playbook";
+import { loadPlaybook, mergeCloudPlaybook, difficultyCloudScale, type Playbook } from "@/game/ai/playbook";
+import { getVariantPlaybook, submitGameReport, type ReportedMove } from "@/lib/ai-learning.functions";
 import { loadCurrentMeta } from "@/game/design";
 import { recordVariantPlay } from "@/lib/variant-stats.functions";
 import type { Color, Design, Difficulty, GameState, Move, PieceId, Square } from "@/game/types";
@@ -144,6 +145,26 @@ export function useGame(opts: UseGameOptions) {
   );
 
 
+  // Cloud-merged playbook (refetched once per variant/difficulty change).
+  const [cloudPlaybook, setCloudPlaybook] = useState<Playbook | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const variantId = typeof window !== "undefined" ? loadCurrentMeta()?.id : undefined;
+    const vKey = variantId ?? "__default__";
+    const base = loadPlaybook(variantId ?? undefined);
+    // Optimistic: use local immediately so the first AI move isn't delayed.
+    setCloudPlaybook(base);
+    getVariantPlaybook({ data: { variantId: vKey } })
+      .then((cloud) => {
+        if (cancelled) return;
+        setCloudPlaybook(mergeCloudPlaybook(base, cloud, difficultyCloudScale(opts.difficulty)));
+      })
+      .catch(() => {
+        // Network or signed-out — local playbook is fine.
+      });
+    return () => { cancelled = true; };
+  }, [opts.difficulty, opts.design]);
+
   useEffect(() => {
     if (gameOver) return;
     if (state.turn === opts.humanColor) return;
@@ -155,7 +176,7 @@ export function useGame(opts: UseGameOptions) {
     // Off-thread AI: worker keeps UI responsive (spinner animates, Nudge works).
     // Snapshot this variant's playbook so the worker's evaluate() actually sees it.
     const variantId = typeof window !== "undefined" ? loadCurrentMeta()?.id : undefined;
-    const playbook = loadPlaybook(variantId ?? undefined);
+    const playbook = cloudPlaybook ?? loadPlaybook(variantId ?? undefined);
     engineRequestMove(state, opts.difficulty, { hardTimeoutMs: 30000, playbook })
       .then((move) => {
         if (cancelled) return;
@@ -187,7 +208,37 @@ export function useGame(opts: UseGameOptions) {
       setAiThinking(false);
       setAiThinkingSince(null);
     };
-  }, [state, opts.humanColor, opts.difficulty, gameOver, playMove, aiNudge]);
+  }, [state, opts.humanColor, opts.difficulty, gameOver, playMove, aiNudge, cloudPlaybook]);
+
+  // Submit the finished game to the shared training pool (so the AI gets
+  // better for everyone). Fire-and-forget; failures are silent.
+  const reportedRef = useRef(false);
+  useEffect(() => {
+    if (!gameOver || reportedRef.current) return;
+    reportedRef.current = true;
+    const variantId = typeof window !== "undefined" ? loadCurrentMeta()?.id : "__default__";
+    const aiColor: "w" | "b" = opts.humanColor === "w" ? "b" : "w";
+    let result: "ai_win" | "ai_loss" | "draw" = "draw";
+    if (status.kind === "checkmate" || status.kind === "royal-loss") {
+      // The side whose turn it is has lost.
+      result = state.turn === aiColor ? "ai_loss" : "ai_win";
+    }
+    const moves: ReportedMove[] = state.history.map((m) => ({
+      m: m.from ? `${m.from.r * 100 + m.from.c}-${m.to.r * 100 + m.to.c}` : `drop@${m.to.r * 100 + m.to.c}`,
+      p: m.piece.id,
+      c: m.captured?.id,
+      s: m.piece.color,
+    }));
+    submitGameReport({
+      data: {
+        variantId: variantId ?? "__default__",
+        difficulty: opts.difficulty,
+        result,
+        aiColor,
+        moves,
+      },
+    }).catch(() => { /* not signed in or offline — fine */ });
+  }, [gameOver, status.kind, state.turn, state.history, opts.humanColor, opts.difficulty]);
 
   /** Re-kick the AI scheduler if it appears stuck. Terminates the worker. */
   const nudgeAi = useCallback(() => {

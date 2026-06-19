@@ -44,6 +44,75 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_playbook_stats: {
+        Row: {
+          ai_draws: number
+          ai_losses: number
+          ai_wins: number
+          games: number
+          opening_book: Json
+          piece_trade_outcomes: Json
+          updated_at: string
+          variant_id: string
+        }
+        Insert: {
+          ai_draws?: number
+          ai_losses?: number
+          ai_wins?: number
+          games?: number
+          opening_book?: Json
+          piece_trade_outcomes?: Json
+          updated_at?: string
+          variant_id: string
+        }
+        Update: {
+          ai_draws?: number
+          ai_losses?: number
+          ai_wins?: number
+          games?: number
+          opening_book?: Json
+          piece_trade_outcomes?: Json
+          updated_at?: string
+          variant_id?: string
+        }
+        Relationships: []
+      }
+      ai_training_games: {
+        Row: {
+          ai_color: string
+          created_at: string
+          difficulty: string
+          id: string
+          move_count: number
+          moves: Json
+          result: string
+          user_id: string
+          variant_id: string
+        }
+        Insert: {
+          ai_color: string
+          created_at?: string
+          difficulty: string
+          id?: string
+          move_count?: number
+          moves?: Json
+          result: string
+          user_id: string
+          variant_id: string
+        }
+        Update: {
+          ai_color?: string
+          created_at?: string
+          difficulty?: string
+          id?: string
+          move_count?: number
+          moves?: Json
+          result?: string
+          user_id?: string
+          variant_id?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           blocked_id: string

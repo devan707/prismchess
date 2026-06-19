@@ -1,60 +1,84 @@
-Plan to make the AI both safer AND more aggressive, with no wasted moves.
+# AI Learning System
 
-1. Real threat / defense map
-- Build a per-square attack/defense analyzer using the existing move generator (covers archers, dragons, juggernauts, knights, custom pieces, ranged shots).
-- For each piece, record: attackers, defenders, cheapest attacker/defender, hanging? winning capture available?
-- Replace the simple "isSquareAttacked" booleans in hanging/threat terms with a static-exchange-style swap-off score so trades are evaluated by actual material outcome, not just "attacked = bad".
+Make the engine genuinely improve over time by aggregating data from every solo game across all players, per variant, and feeding it back into the playbook all difficulty levels consume.
 
-2. Blunder prevention (defense)
-- Strongly penalize moves that leave the moving piece on a square it loses material on.
-- Strongly penalize moves that abandon defense of another friendly piece, leaving it hanging.
-- Special heavy penalty for hanging Queen / Dragon / Wizard / Necromancer / royals.
-- Root-level filter: never play a move whose static-exchange result is a clear material loss unless the search proves real compensation (mate threat, winning recapture, king attack pressure).
+## What it learns from
 
-3. Aggression: threats, checks, captures, mate
-- Reward moves that create new threats: pieces newly attacked by us, especially high-value and undefended ones.
-- Reward double attacks / forks / pins (a single move creating ≥2 winning threats).
-- Reward safe checks and check sequences that reduce king mobility.
-- Reward king-zone pressure: multiple attackers near enemy royal, attackers worth less than defenders.
-- Boost capture-and-recapture sequences that come out ahead (SEE > 0).
-- In quiescence search, already includes captures/promos/check — keep that and extend ordering so winning captures and safe checks are tried first.
+1. **Win/loss/draw outcome** — reinforce move patterns from AI wins, discourage from losses.
+2. **Per-move blunders** — after the game, re-evaluate each AI move at higher depth in a background pass; flag moves whose actual material loss exceeded the engine's prediction.
+3. **Opening book** — record the first ~8 plies of each game keyed by variant; track win rate per opening line; prefer winning lines.
+4. **Piece value calibration** — track trades involving each piece (especially custom pieces); nudge its effective value up or down based on whether trading it correlated with winning.
 
-4. Tempo awareness — every move must do something
-- Each candidate move gets a "purpose score":
-  - captures material (net positive SEE)
-  - delivers check or creates a real threat
-  - improves a piece's mobility / attack count meaningfully
-  - advances development (opening) or king attack (mid/endgame)
-  - defends a currently hanging or threatened friendly
-  - executes a planned multi-move attack (piece moving toward enemy royal zone, supporting attackers, opening lines)
-- Moves that do none of the above get a strong "wasted tempo" penalty.
-- Strengthen the existing anti-shuffle term: any back-and-forth (same piece returning to a recent square without a captured piece, check, or new threat) is heavily penalized.
+## Architecture
 
-5. Planning continuity (no random reshuffling)
-- Track lightweight "plan state" inside the evaluator using existing history:
-  - which side of the board our heavy pieces are clustering on
-  - whether we have an attack building near the enemy royal
-  - reward moves that continue an existing buildup (more attackers joining the same zone)
-  - penalize moves that abandon a built-up attack for no gain
-- Reward coordinated development: a piece's value is partly its synergy with friendly pieces around it.
+```text
+solo game ends
+   │
+   ▼
+client packages a GameReport
+   {variantId, difficulty, result, moves[], finalEval}
+   │
+   ▼
+server fn submitGameReport  ── writes to ai_training_games
+   │
+   ▼
+background analyzer (server fn, kicked off after submit)
+   re-scores AI moves, updates ai_playbook_stats rows
+   │
+   ▼
+server fn getVariantPlaybook(variantId)
+   returns merged tuned playbook
+   │
+   ▼
+client AI loads tuned playbook at game start,
+applies on top of local defaults
+```
 
-6. Search & move-ordering improvements
-- Make medium and hard always use the worker search (not easyMove fallback at any board size beyond a hard timeout).
-- Move-ordering priority: TT move → winning captures (SEE > 0) → safe checks → threats → killers → history → quiet.
-- Reduce root-tie randomness on medium/hard so the engine commits to the most purposeful move.
-- Tune difficulty budgets so medium feels solid and hard feels genuinely challenging (longer think on important positions, still responsive on simple ones).
+Cloud-synced, anonymous (only auth user id stored, never displayed). All variants get their own learned playbook so a custom variant's tactics don't pollute classic chess.
 
-7. Validation
-- Add scripted engine tests for these positions:
-  - AI must not hang queen/dragon to a defended attacker
-  - AI must take a free hanging piece
-  - AI must recapture when the capture is winning
-  - AI prefers a safe check / threat over a quiet move when both score equally
-  - AI does not shuffle the same piece across consecutive turns without purpose
-  - AI joins attackers into the enemy king zone when buildup exists
+## Database (new tables, RLS enabled, public read of aggregated playbook)
 
-Technical details
-- Files to edit: `src/game/ai/evaluate.ts`, `src/game/ai/search.ts`, `src/game/ai/index.ts`, possibly small helpers in `src/game/moves.ts` for cheap attack-map reuse.
-- Add a shared `tacticalMap(state)` helper memoized per evaluation so attack/defense isn't recomputed dozens of times per node.
-- Keep everything in the existing worker — no external AI service, no new dependencies.
-- Behavior on Easy stays beginner-friendly; Medium and Hard get the full upgrade.
+- `ai_training_games` — one row per finished solo game. Columns: id, user_id, variant_id, difficulty, result (ai_win/ai_loss/draw), move_count, moves jsonb (compact SAN-ish list with eval, time, capture), final_fen, created_at, analyzed bool.
+- `ai_playbook_stats` — aggregated per variant. Columns: variant_id (pk), piece_value_adjust jsonb (`{pieceType: delta}`), opening_book jsonb (`{moveSeq: {plays, wins}}`), square_bonus jsonb, blunder_patterns jsonb, games_analyzed int, updated_at. One row per variant.
+- Policies: authenticated users can insert their own `ai_training_games`; anyone (anon+authenticated) can SELECT `ai_playbook_stats`; only service role writes `ai_playbook_stats`.
+
+## Server functions (`src/lib/ai-learning.functions.ts`)
+
+- `submitGameReport({ data })` — auth required, inserts a training row, then triggers analyzer for that row.
+- `analyzeGame({ data: { gameId } })` — service-role: replays moves, re-scores each AI move with a deeper search using the existing engine ported to Node-compatible code, updates aggregated `ai_playbook_stats` for the variant.
+- `getVariantPlaybook({ data: { variantId } })` — public read, returns the tuned playbook (publishable client).
+
+## Engine integration
+
+- `src/game/ai/playbook.ts` — already exists locally. Add `loadCloudPlaybook(variantId)` which fetches `getVariantPlaybook` once per variant per session and merges values into the local playbook (cloud values are deltas applied on top of defaults; capped so easy mode stays beatable).
+- `src/game/ai/evaluate.ts` — accept the merged `pieceValueAdjust` so SEE / material counts use it.
+- `src/game/ai/search.ts` — at the root, if we're within the opening book ply window for this variant, bias move ordering by the `opening_book` win-rate map.
+- `src/game/solo/...` (where solo games end) — call `submitGameReport` on game end with the moves array we already store. Fire-and-forget; never block the result screen.
+
+## Difficulty tiering
+
+All levels use the tuned playbook, but with caps:
+- Easy: applies only 25% of the cloud adjustments and ignores the opening book bias (stays beatable).
+- Medium: 60%, uses opening book.
+- Hard: 100%, full opening book bias.
+
+## Validation
+
+- Migration runs cleanly with GRANTs.
+- Manual: play a quick solo game on Hard, confirm `ai_training_games` gets a row and `ai_playbook_stats` updates `games_analyzed`.
+- Confirm engine still picks reasonable moves when cloud fetch fails (graceful fallback to local playbook).
+
+## Files added/edited
+
+- migration: new tables + policies + grants
+- `src/lib/ai-learning.functions.ts` (new)
+- `src/game/ai/playbook.ts` (cloud merge)
+- `src/game/ai/evaluate.ts` (consume adjusted values)
+- `src/game/ai/search.ts` (opening book bias)
+- solo game end handler (submit report)
+
+## Notes / tradeoffs
+
+- The analyzer runs on the server worker; chess search is pure JS and Worker-compatible, so this is fine. It re-evaluates at depth a few plies deeper than the in-game search to detect blunders.
+- Aggregated stats are public reads (`TO anon`) so the AI works for not-yet-signed-in users on the homepage demo. Raw `ai_training_games` is private — only the user who submitted can read theirs.
+- We rate-limit blunder weight per game so a single weird game can't tank a variant's playbook; values move via running averages.

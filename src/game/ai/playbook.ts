@@ -8,6 +8,7 @@
  * v1 → v2 migration runs once per browser; the legacy global blob is
  * dropped into whatever variant is loaded the first time the page boots.
  */
+export interface OpeningBookEntry { plays: number; wins: number }
 export interface Playbook {
   lessons: string[];
   pieceValueMultipliers: Record<string, number>;
@@ -15,6 +16,11 @@ export interface Playbook {
   aggressionBonus: number;
   squareDefenseBonuses: Record<string, number>;
   gamesReviewed: number;
+  /** Cloud-synced opening lines (per variant). Key = "pid@toRC|pid@toRC|...".
+   *  Used to bias the AI toward openings that have won across all players. */
+  openingBook?: Record<string, OpeningBookEntry>;
+  /** How aggressively to apply cloud adjustments (0..1). Easy < Med < Hard. */
+  cloudScale?: number;
 }
 
 const V1_KEY = "menagerie.ai.playbook.v1";
@@ -64,6 +70,12 @@ export function normalizePlaybook(p: Partial<Playbook> | null | undefined): Play
   }
   if (typeof p.gamesReviewed === "number" && p.gamesReviewed >= 0) {
     base.gamesReviewed = Math.floor(p.gamesReviewed);
+  }
+  if (p.openingBook && typeof p.openingBook === "object") {
+    base.openingBook = p.openingBook as Record<string, OpeningBookEntry>;
+  }
+  if (typeof p.cloudScale === "number") {
+    base.cloudScale = Math.max(0, Math.min(1, p.cloudScale));
   }
   return base;
 }
@@ -177,4 +189,65 @@ export function setActivePlaybookSnapshot(p: Playbook | null): void {
 export function getActivePlaybook(): Playbook {
   if (activeSnapshot) return activeSnapshot;
   return loadPlaybook();
+}
+
+// ---------- cloud-synced learning ----------
+//
+// Cloud aggregates (from src/lib/ai-learning.functions.ts) are merged into a
+// local playbook snapshot before each game. We derive:
+//   * pieceValueMultipliers — pieces whose trades correlate with AI wins get
+//     valued slightly higher; pieces whose trades correlate with losses get
+//     valued lower (so the engine protects them more / sacs them less).
+//   * aggressionBonus — small nudge based on overall win rate.
+//   * openingBook — carried through so search.ts can bias the root.
+//
+// Cloud values are scaled by `difficultyScale` (Easy: 0.25, Med: 0.6,
+// Hard: 1.0) so beginner mode stays beatable.
+
+export interface CloudAggregates {
+  games: number;
+  aiWins: number;
+  aiLosses: number;
+  aiDraws: number;
+  pieceTradeOutcomes: Record<string, { wins: number; losses: number; draws: number }>;
+  openingBook: Record<string, OpeningBookEntry>;
+}
+
+export function mergeCloudPlaybook(
+  base: Playbook,
+  cloud: CloudAggregates | null,
+  difficultyScale: number,
+): Playbook {
+  if (!cloud || cloud.games < 3) {
+    // Not enough data to trust — leave defaults alone.
+    return { ...base, openingBook: cloud?.openingBook, cloudScale: difficultyScale };
+  }
+  const scale = Math.max(0, Math.min(1, difficultyScale));
+  const pieceMults = { ...base.pieceValueMultipliers };
+  for (const [pid, t] of Object.entries(cloud.pieceTradeOutcomes ?? {})) {
+    const total = t.wins + t.losses + t.draws;
+    if (total < 4) continue;
+    const winrate = (t.wins + t.draws * 0.5) / total;
+    // Centre at 0.5 → multiplier in [0.75 .. 1.25] before scaling.
+    const delta = (winrate - 0.5) * 0.5;
+    const mult = 1 + delta * scale;
+    pieceMults[pid] = clampMult((pieceMults[pid] ?? 1) * mult);
+  }
+  const totalGames = cloud.games;
+  const overall = totalGames > 0 ? (cloud.aiWins + cloud.aiDraws * 0.5) / totalGames : 0.5;
+  // -50..+50 cp aggression nudge based on how the AI is doing overall.
+  const aggression = Math.round((overall - 0.5) * 100 * scale);
+  return {
+    ...base,
+    pieceValueMultipliers: pieceMults,
+    aggressionBonus: Math.max(-150, Math.min(150, base.aggressionBonus + aggression)),
+    openingBook: cloud.openingBook ?? {},
+    cloudScale: scale,
+  };
+}
+
+export function difficultyCloudScale(d: "easy" | "medium" | "hard"): number {
+  if (d === "easy") return 0.25;
+  if (d === "medium") return 0.6;
+  return 1.0;
 }
