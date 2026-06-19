@@ -561,3 +561,40 @@ export const adminListAllPublishedGames = createServerFn({ method: "GET" })
     }
     return (rows ?? []).map((r: any) => ({ ...r, author: authors[r.author_id] ?? null }));
   });
+
+// ─── Founder + Admin DM ────────────────────────────────────────────────────
+export const adminSetFounder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ userId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    // Clear any existing founder, then set this one.
+    const { error: clearErr } = await context.supabase
+      .from("profiles").update({ is_founder: false }).eq("is_founder", true);
+    if (clearErr) throw new Error(clearErr.message);
+    const { error } = await context.supabase
+      .from("profiles").update({ is_founder: true }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    await log(context, "profile.set_founder", "profile", data.userId);
+    return { ok: true };
+  });
+
+/** Admin/mod: open (or find) a DM thread with any user, bypassing the friends-only rule. */
+export const adminStartDm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ userId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    await assertMod(context);
+    if (data.userId === context.userId) throw new Error("Can't message yourself.");
+    const [a, b] = context.userId < data.userId
+      ? [context.userId, data.userId]
+      : [data.userId, context.userId];
+    const { data: existing } = await context.supabase
+      .from("dm_threads").select("id").eq("user_a", a).eq("user_b", b).maybeSingle();
+    if (existing) return { threadId: existing.id as string };
+    const { data: inserted, error } = await context.supabase
+      .from("dm_threads").insert({ user_a: a, user_b: b }).select("id").single();
+    if (error) throw new Error(error.message);
+    await log(context, "dm.admin_start", "profile", data.userId);
+    return { threadId: inserted.id as string };
+  });

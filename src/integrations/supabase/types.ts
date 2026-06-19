@@ -879,6 +879,7 @@ export type Database = {
           display_name: string | null
           gameplay_notify_opt_in: boolean
           id: string
+          is_founder: boolean
           marketing_opt_in: boolean
           onboarded: boolean
           privacy_version: string | null
@@ -898,6 +899,7 @@ export type Database = {
           display_name?: string | null
           gameplay_notify_opt_in?: boolean
           id: string
+          is_founder?: boolean
           marketing_opt_in?: boolean
           onboarded?: boolean
           privacy_version?: string | null
@@ -917,6 +919,7 @@ export type Database = {
           display_name?: string | null
           gameplay_notify_opt_in?: boolean
           id?: string
+          is_founder?: boolean
           marketing_opt_in?: boolean
           onboarded?: boolean
           privacy_version?: string | null

@@ -1,12 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyRole } from "@/lib/profile.functions";
 import {
   adminListUsers, adminSetRole, adminSuspendUser, adminRenameUser,
+  adminSetFounder, adminStartDm,
 } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({ meta: [{ title: "Admin · Users — Prism Chess" }] }),
@@ -21,9 +23,13 @@ function UsersPage() {
   const setRole = useServerFn(adminSetRole);
   const suspend = useServerFn(adminSuspendUser);
   const rename = useServerFn(adminRenameUser);
+  const setFounder = useServerFn(adminSetFounder);
+  const startDm = useServerFn(adminStartDm);
+  const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<User[]>([]);
+
 
   useEffect(() => {
     fetchRole({}).then((r) => setAllowed(r.isAdmin)).catch(() => setAllowed(false));
@@ -102,12 +108,24 @@ function UsersPage() {
                   <td className="p-2 text-xs">{suspended ? <span className="text-red-600">suspended until {new Date(u.suspended_until!).toLocaleDateString()}</span> : "active"}</td>
                   <td className="p-2">
                     <div className="flex flex-wrap gap-1">
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        try {
+                          const { threadId } = await startDm({ data: { userId: u.id } });
+                          navigate({ to: "/messages/$threadId", params: { threadId } });
+                        } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                      }}>Message</Button>
                       <Button size="sm" variant="outline" onClick={() => toggleRole(u, "moderator")}>{u.roles.includes("moderator") ? "Revoke mod" : "Make mod"}</Button>
                       <Button size="sm" variant="outline" onClick={() => toggleRole(u, "admin")}>{u.roles.includes("admin") ? "Revoke admin" : "Make admin"}</Button>
                       <Button size="sm" variant="outline" onClick={() => toggleSuspend(u)}>{suspended ? "Unsuspend" : "Suspend"}</Button>
                       <Button size="sm" variant="outline" onClick={() => doRename(u)}>Rename</Button>
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        if (!window.confirm(`Set @${u.username} as the community founder? New signups will receive an automatic welcome DM from this user.`)) return;
+                        try { await setFounder({ data: { userId: u.id } }); toast.success("Founder set"); reload(); }
+                        catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                      }}>Make founder</Button>
                     </div>
                   </td>
+
                 </tr>
               );
             })}
