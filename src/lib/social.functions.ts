@@ -365,6 +365,13 @@ function jsonEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
+// Admin/mod helper inline (avoid cross-file import cycle).
+async function _callerIsModOrAdmin(ctx: { supabase: any; userId: string }): Promise<boolean> {
+  const { data } = await ctx.supabase.from("user_roles").select("role").eq("user_id", ctx.userId);
+  const roles = (data ?? []).map((r: any) => r.role as string);
+  return roles.includes("admin") || roles.includes("moderator");
+}
+
 export const publishGame = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({
@@ -377,27 +384,33 @@ export const publishGame = createServerFn({ method: "POST" })
   }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-
-    // Load all of this author's existing published games once for dedupe checks.
-    const { data: mine, error: mineErr } = await supabase
-      .from("published_games")
-      .select("id, slug, name, design")
-      .eq("author_id", userId);
-    if (mineErr) throw new Error(mineErr.message);
-    const rows = mine ?? [];
     const nameLower = data.name.toLowerCase();
 
-    // If updating an existing record, verify ownership and apply update in place.
+    // If updating an existing record, verify ownership OR admin/mod, then update.
     if (data.gameId) {
-      const target = rows.find((r) => r.id === data.gameId);
-      if (!target) throw new Error("You can only update a variant you published.");
-      // Name must remain unique among your other variants.
-      const nameClash = rows.find((r) => r.id !== data.gameId && r.name.toLowerCase() === nameLower);
-      if (nameClash) throw new Error(`You already have a published variant named "${nameClash.name}". Choose a different name.`);
-      // Design must not be identical to a different variant of yours.
+      const { data: target, error: tErr } = await supabase
+        .from("published_games")
+        .select("id, slug, name, design, author_id")
+        .eq("id", data.gameId)
+        .maybeSingle();
+      if (tErr) throw new Error(tErr.message);
+      if (!target) throw new Error("Variant not found.");
+      const isOwner = target.author_id === userId;
+      const isAdminEdit = !isOwner && (await _callerIsModOrAdmin(context));
+      if (!isOwner && !isAdminEdit) throw new Error("You can only update a variant you published.");
+
+      // Dedupe checks scope to the target's author, so admin edits don't false-collide with caller's own games.
+      const { data: siblings } = await supabase
+        .from("published_games")
+        .select("id, name, design")
+        .eq("author_id", target.author_id);
+      const rows = siblings ?? [];
+      const nameClash = rows.find((r) => r.id !== data.gameId && (r.name as string).toLowerCase() === nameLower);
+      if (nameClash) throw new Error(`That author already has a variant named "${nameClash.name}". Choose a different name.`);
       const dupDesign = rows.find((r) => r.id !== data.gameId && jsonEqual(r.design, data.design));
-      if (dupDesign) throw new Error(`This board is identical to your variant "${dupDesign.name}". Update that one instead.`);
-      const { data: updated, error } = await supabase
+      if (dupDesign) throw new Error(`This board is identical to "${dupDesign.name}". Update that one instead.`);
+
+      const upd = supabase
         .from("published_games")
         .update({
           name: data.name,
@@ -406,15 +419,30 @@ export const publishGame = createServerFn({ method: "POST" })
           tutorial: (data.tutorial ?? null) as never,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", data.gameId)
-        .eq("author_id", userId)
+        .eq("id", data.gameId);
+      // Owner edits keep the original RLS-friendly author_id filter; admin edits skip it.
+      const { data: updated, error } = await (isOwner ? upd.eq("author_id", userId) : upd)
         .select("id, slug").single();
       if (error) throw new Error(error.message);
+      if (isAdminEdit) {
+        await supabase.rpc("log_admin_action", {
+          _action: "published_game.admin_edit",
+          _target_type: "published_game",
+          _target_id: data.gameId,
+          _details: { name: data.name } as never,
+        });
+      }
       return { ...updated, updated: true as const };
     }
 
-    // New publish — block duplicates by name OR by identical design.
-    const sameName = rows.find((r) => r.name.toLowerCase() === nameLower);
+    // New publish — block duplicates by name OR by identical design among the caller's games.
+    const { data: mine, error: mineErr } = await supabase
+      .from("published_games")
+      .select("id, slug, name, design")
+      .eq("author_id", userId);
+    if (mineErr) throw new Error(mineErr.message);
+    const rows = mine ?? [];
+    const sameName = rows.find((r) => (r.name as string).toLowerCase() === nameLower);
     if (sameName) {
       throw new Error(`You already published a variant named "${sameName.name}". Open it from your library to update it instead of creating a new listing.`);
     }
