@@ -1218,6 +1218,36 @@ export type Database = {
       }
     }
     Views: {
+      public_profiles: {
+        Row: {
+          avatar: string | null
+          avatar_url: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          is_founder: boolean | null
+          username: string | null
+        }
+        Insert: {
+          avatar?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_founder?: boolean | null
+          username?: string | null
+        }
+        Update: {
+          avatar?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_founder?: boolean | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       variant_play_stats: {
         Row: {
           total_plays: number | null
