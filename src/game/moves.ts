@@ -682,18 +682,9 @@ export function pseudoMovesFrom(state: GameState, from: Square): Move[] {
       }
     }
     // DASH: jump exactly 2 squares orthogonally to an empty square. Not an
-    // attack — landing square must be empty. May leap over any piece in between.
-    // Restricted to the archer's first move (like a pawn's double-step):
-    // if no prior move records an archer of this color arriving on the
-    // current square, this archer hasn't moved yet.
-    const archerHasMoved = state.history.some(
-      (m) =>
-        m.piece.id === "A" &&
-        m.piece.color === piece.color &&
-        m.to.r === from.r &&
-        m.to.c === from.c,
-    );
-    if (!archerHasMoved) {
+    // attack — landing square must be empty. May leap over any piece in
+    // between. Available on every turn (not just the first move).
+    {
       const ORTHO_4: Offset[] = [
         { dr: 2, dc: 0 }, { dr: -2, dc: 0 }, { dr: 0, dc: 2 }, { dr: 0, dc: -2 },
       ];
@@ -1683,7 +1674,20 @@ export function legalMovesFrom(state: GameState, from: Square): Move[] {
     const isFirstHand = !state.pendingHand && m.piece.id === "H" && m.kind !== "handDouble";
     if (isFirstHand) return true;
     const preFlipBoard = applyMoveToBoard(state.board, m);
-    return !inCheck({ ...state, board: preFlipBoard }, state.turn);
+    if (inCheck({ ...state, board: preFlipBoard }, state.turn)) return false;
+    // Royal hand-pieces (Regent/Lich King) using the 2-square combo must
+    // also not pass through an attacked intermediate square (classic
+    // can't-move-through-check rule).
+    if (m.kind === "handDouble" && m.from && (m.piece.id === "G" || m.piece.id === "L")) {
+      const midR = (m.from.r + m.to.r) >> 1;
+      const midC = (m.from.c + m.to.c) >> 1;
+      // Simulate royal at the intermediate square (origin emptied).
+      const midBoard = cloneBoard(state.board);
+      midBoard[m.from.r][m.from.c] = null;
+      midBoard[midR][midC] = m.piece;
+      if (inCheck({ ...state, board: midBoard }, state.turn)) return false;
+    }
+    return true;
   });
 }
 
