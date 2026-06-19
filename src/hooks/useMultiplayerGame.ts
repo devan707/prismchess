@@ -54,6 +54,8 @@ export function useMultiplayerGame(opts: UseMultiplayerGameOpts) {
   const markFinishedFn = useServerFn(markFinished);
   const offerDrawFn = useServerFn(offerDraw);
   const respondDrawFn = useServerFn(respondDraw);
+  const offerRematchFn = useServerFn(offerRematch);
+  const respondRematchFn = useServerFn(respondRematch);
   const lastTerminalReportedRef = useRef<string | null>(null);
 
   const myColor: Color =
