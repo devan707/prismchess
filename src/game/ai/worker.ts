@@ -87,6 +87,7 @@ ctx.addEventListener("message", (ev: MessageEvent<WorkerRequest>) => {
         tt: result.tt,
         zobristFailed: !!result.zobristFailed,
         pv: result.pv,
+        candidates: result.candidates,
       },
     };
     ctx.postMessage(out);
