@@ -194,8 +194,11 @@ export async function runBenchmark(timeMs = 800): Promise<BenchmarkResult> {
     let pass = false, chose = "—", reason = "";
     try {
       const state = makeState(t.rows, t.turn);
-      // Use the synchronous in-thread search (skip worker) for determinism.
-      const move = chooseMove(state, "medium", { budgetMs: timeMs });
+      // Synchronous in-thread search so the test is deterministic and
+      // exercises the same code path (including the safety gate) as the worker.
+      const tt = new TT(1 << 14);
+      const res = runSearch(state, { difficulty: "medium", budgetMs: timeMs, maxDepth: 4, tt });
+      const move = res.move;
       if (!move) {
         chose = "null";
         reason = "engine returned no move";
