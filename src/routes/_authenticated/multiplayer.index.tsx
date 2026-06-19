@@ -2,23 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  createChallenge,
   listOpenChallenges,
   listMyMatches,
   joinMatch,
   cancelChallenge,
 } from "@/lib/multiplayer.functions";
-import { BUILTIN_GAMES } from "@/game/library";
-import { loadSavedGames, type SavedGame } from "@/game/library";
-import { Home, Swords, Users, Plus, Copy, Trash2, Clock, Hourglass, Zap } from "lucide-react";
+import { CreateChallengeDialog } from "@/components/multiplayer/CreateChallengeDialog";
+import { Home, Swords, Users, Plus, Trash2, Clock, Hourglass, Zap } from "lucide-react";
 import { toast } from "sonner";
-import type { Color, Design } from "@/game/types";
 
 export const Route = createFileRoute("/_authenticated/multiplayer/")({
   head: () => ({ meta: [{ title: "Multiplayer lobby — Prism Chess" }] }),
