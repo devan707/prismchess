@@ -546,6 +546,7 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     tt: tt ? tt.stats() : { hits: 0, stores: 0, cutoffs: 0, collisions: 0, fillPct: 0, size: 0 },
     zobristFailed: searcher.zobristFailed,
     pv,
+    candidates,
   };
 }
 
