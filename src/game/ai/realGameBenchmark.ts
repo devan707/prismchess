@@ -25,8 +25,7 @@ import type { Design, GameState, Move } from "../types";
 import { initialStateFromDesign, replayMoves } from "../rules";
 import { allLegalMoves, applyMoveToState } from "../moves";
 import { getPiecePoints } from "../pieceValue";
-import { runSearch } from "./search";
-import { TT } from "./tt";
+import { runSearch, paramsFor } from "./search";
 import { opponentBestGain } from "./safety";
 import gameData from "./fixtures/real-game-3bb066c9.json";
 
