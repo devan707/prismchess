@@ -23,7 +23,7 @@
  */
 import type { Design, GameState, Move } from "../types";
 import { initialStateFromDesign, replayMoves } from "../rules";
-import { allLegalMoves } from "../moves";
+import { allLegalMoves, applyMoveToState } from "../moves";
 import { getPiecePoints } from "../pieceValue";
 import { runSearch } from "./search";
 import { TT } from "./tt";
