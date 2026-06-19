@@ -304,13 +304,33 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
         )}
         <PlayerStrip name={topName} time={topTime} isTurn={topIsTurn} tc={match.time_control} />
 
+        {match.status === "ready_check" && amPlayer && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card p-4 text-center space-y-2">
+            <div className="font-display font-semibold">Both players present</div>
+            <div className="text-xs text-muted-foreground">
+              The clock won't start until you both tap Ready.
+            </div>
+            <div className="flex items-center justify-center gap-3 text-xs">
+              <span className={oppReady ? "text-primary" : "text-muted-foreground"}>
+                Opponent: {oppReady ? "Ready ✓" : "Not ready"}
+              </span>
+              <span className={myReady ? "text-primary" : "text-muted-foreground"}>
+                You: {myReady ? "Ready ✓" : "Not ready"}
+              </span>
+            </div>
+            <Button onClick={handleReady} disabled={myReady || readyBusy} size="sm" className="w-full">
+              {myReady ? "Waiting for opponent…" : readyBusy ? "…" : "I'm ready"}
+            </Button>
+          </div>
+        )}
+
         {hasReserves && (
           <ReservesPanel
             state={state}
             color={amPlayer ? myColor : "w"}
             selectedDrop={selectedDrop}
             onSelectDrop={setSelectedDrop}
-            disabled={!amPlayer || terminal || match.turn !== myColor}
+            disabled={!amPlayer || terminal || match.status !== "active" || match.turn !== myColor}
           />
         )}
 
@@ -323,8 +343,9 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
           dropPiece={selectedDrop}
           dropTargets={selectedDrop ? legalDropSquares(selectedDrop) : []}
           onDrop={(id, to) => tryDrop(id, to)}
-          disabled={!amPlayer || terminal || match.turn !== myColor}
+          disabled={!amPlayer || terminal || match.status !== "active" || match.turn !== myColor}
         />
+
 
         <PlayerStrip name={bottomName} time={bottomTime} isTurn={bottomIsTurn} tc={match.time_control} />
 
