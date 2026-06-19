@@ -3,7 +3,8 @@ import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/ga
 import { allLegalMoves, legalMovesFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
 import { requestMove as engineRequestMove, cancel as engineCancel } from "@/game/ai/engine";
-import { loadPlaybook } from "@/game/ai/playbook";
+import { loadPlaybook, mergeCloudPlaybook, difficultyCloudScale, type Playbook } from "@/game/ai/playbook";
+import { getVariantPlaybook, submitGameReport, type ReportedMove } from "@/lib/ai-learning.functions";
 import { loadCurrentMeta } from "@/game/design";
 import { recordVariantPlay } from "@/lib/variant-stats.functions";
 import type { Color, Design, Difficulty, GameState, Move, PieceId, Square } from "@/game/types";
