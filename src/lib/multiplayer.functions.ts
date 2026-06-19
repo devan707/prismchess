@@ -745,12 +745,12 @@ export const offerRematch = createServerFn({ method: "POST" })
       throw new Error("Your opponent already offered a rematch — respond to it.");
     }
 
-    const { error: iErr } = await context.supabase.from("match_events").insert({
+    const { error: iErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("match_events").insert({
       match_id: data.matchId,
       kind: "rematch_offer",
       actor_id: context.userId,
       payload: {},
-    });
+    } as never);
     if (iErr) throw new Error(iErr.message);
 
     const otherId = context.userId === match.host_id ? match.guest_id : match.host_id;
