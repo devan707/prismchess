@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SandboxRouteImport } from './routes/sandbox'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PlayRouteImport } from './routes/play'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as LobbyRouteImport } from './routes/lobby'
@@ -49,9 +51,19 @@ import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authentic
 import { Route as ApiPublicPieceImgSplatRouteImport } from './routes/api/public/piece-img/$'
 import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SandboxRoute = SandboxRouteImport.update({
   id: '/sandbox',
   path: '/sandbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlayRoute = PlayRouteImport.update({
@@ -262,7 +274,9 @@ export interface FileRoutesByFullPath {
   '/lobby': typeof LobbyRoute
   '/more': typeof MoreRoute
   '/play': typeof PlayRoute
+  '/privacy': typeof PrivacyRoute
   '/sandbox': typeof SandboxRoute
+  '/terms': typeof TermsRoute
   '/forum': typeof AuthenticatedForumRouteWithChildren
   '/friends': typeof AuthenticatedFriendsRoute
   '/history': typeof AuthenticatedHistoryRoute
@@ -302,7 +316,9 @@ export interface FileRoutesByTo {
   '/lobby': typeof LobbyRoute
   '/more': typeof MoreRoute
   '/play': typeof PlayRoute
+  '/privacy': typeof PrivacyRoute
   '/sandbox': typeof SandboxRoute
+  '/terms': typeof TermsRoute
   '/friends': typeof AuthenticatedFriendsRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -341,7 +357,9 @@ export interface FileRoutesById {
   '/lobby': typeof LobbyRoute
   '/more': typeof MoreRoute
   '/play': typeof PlayRoute
+  '/privacy': typeof PrivacyRoute
   '/sandbox': typeof SandboxRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/forum': typeof AuthenticatedForumRouteWithChildren
   '/_authenticated/friends': typeof AuthenticatedFriendsRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
@@ -383,7 +401,9 @@ export interface FileRouteTypes {
     | '/lobby'
     | '/more'
     | '/play'
+    | '/privacy'
     | '/sandbox'
+    | '/terms'
     | '/forum'
     | '/friends'
     | '/history'
@@ -423,7 +443,9 @@ export interface FileRouteTypes {
     | '/lobby'
     | '/more'
     | '/play'
+    | '/privacy'
     | '/sandbox'
+    | '/terms'
     | '/friends'
     | '/history'
     | '/onboarding'
@@ -461,7 +483,9 @@ export interface FileRouteTypes {
     | '/lobby'
     | '/more'
     | '/play'
+    | '/privacy'
     | '/sandbox'
+    | '/terms'
     | '/_authenticated/forum'
     | '/_authenticated/friends'
     | '/_authenticated/history'
@@ -503,7 +527,9 @@ export interface RootRouteChildren {
   LobbyRoute: typeof LobbyRoute
   MoreRoute: typeof MoreRoute
   PlayRoute: typeof PlayRoute
+  PrivacyRoute: typeof PrivacyRoute
   SandboxRoute: typeof SandboxRoute
+  TermsRoute: typeof TermsRoute
   GSlugRoute: typeof GSlugRoute
   PiecesSlugRoute: typeof PiecesSlugRouteWithChildren
   PiecesNewRoute: typeof PiecesNewRoute
@@ -516,11 +542,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sandbox': {
       id: '/sandbox'
       path: '/sandbox'
       fullPath: '/sandbox'
       preLoaderRoute: typeof SandboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/play': {
@@ -895,7 +935,9 @@ const rootRouteChildren: RootRouteChildren = {
   LobbyRoute: LobbyRoute,
   MoreRoute: MoreRoute,
   PlayRoute: PlayRoute,
+  PrivacyRoute: PrivacyRoute,
   SandboxRoute: SandboxRoute,
+  TermsRoute: TermsRoute,
   GSlugRoute: GSlugRoute,
   PiecesSlugRoute: PiecesSlugRouteWithChildren,
   PiecesNewRoute: PiecesNewRoute,

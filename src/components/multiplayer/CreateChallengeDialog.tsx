@@ -6,11 +6,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Copy } from "lucide-react";
+import { Bell, Copy, X } from "lucide-react";
 import { toast } from "sonner";
 import { createChallenge } from "@/lib/multiplayer.functions";
 import { BUILTIN_GAMES, loadSavedGames, type SavedGame } from "@/game/library";
 import type { Color, Design } from "@/game/types";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export interface CreateChallengeDialogProps {
   open: boolean;
@@ -36,6 +37,23 @@ export function CreateChallengeDialog({
   const [visibility, setVisibility] = useState<"public" | "link">(defaultVisibility);
   const [busy, setBusy] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  // One-off nudge: if push is available but the user hasn't enabled it yet,
+  // offer to turn it on so they get notified when someone joins. Dismissals
+  // persist per browser so we don't nag.
+  const push = usePushNotifications();
+  const NUDGE_KEY = "pc:push-nudge-challenge:dismissed";
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setNudgeDismissed(window.localStorage.getItem(NUDGE_KEY) === "1");
+  }, []);
+  const showPushNudge =
+    !nudgeDismissed &&
+    push.supported &&
+    !push.isPreview &&
+    !push.subscribed &&
+    push.permission !== "denied";
 
   useEffect(() => { if (open) setSaved(loadSavedGames()); }, [open]);
   useEffect(() => { if (open) { setShareUrl(null); setVisibility(defaultVisibility); } }, [open, defaultVisibility]);
@@ -122,6 +140,39 @@ export function CreateChallengeDialog({
           </div>
         ) : (
           <div className="space-y-3">
+            {showPushNudge && (
+              <div className="rounded-md border bg-card/60 px-3 py-2 flex items-start gap-2 text-xs">
+                <Bell className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">Get pinged when someone joins.</p>
+                  <p className="text-muted-foreground">Turn on push so you don&rsquo;t miss it.</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  disabled={push.busy}
+                  onClick={async () => {
+                    try { await push.enable(); toast.success("Notifications on"); }
+                    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't enable"); }
+                  }}
+                >
+                  Enable
+                </Button>
+                <button
+                  type="button"
+                  aria-label="Dismiss"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setNudgeDismissed(true);
+                    try { window.localStorage.setItem(NUDGE_KEY, "1"); } catch { /* noop */ }
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             {!usingPreset && (
               <div>
                 <Label>Design</Label>
