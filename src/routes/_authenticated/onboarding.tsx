@@ -88,6 +88,12 @@ function OnboardingPage() {
         },
       });
       toast.success(`Welcome, ${displayName.trim()}!`);
+      const sp = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+      const redirect = sp.get("redirect");
+      if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+        window.location.assign(redirect);
+        return;
+      }
       navigate({ to: "/", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save profile");

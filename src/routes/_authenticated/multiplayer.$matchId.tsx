@@ -14,7 +14,7 @@ import { Home, Flag, RefreshCw, Clock, Copy, Handshake, UserPlus } from "lucide-
 import { MatchChatPanel } from "@/components/MatchChatPanel";
 import { sendFriendRequest } from "@/lib/social.functions";
 import {
-  getMatch, resign, claimTimeout,
+  getMatch, resign, claimTimeout, markReady,
 } from "@/lib/multiplayer.functions";
 import {
   formatClock, liveTimeRemaining, useMultiplayerGame, type MatchEvent, type MatchSnapshot,
@@ -92,6 +92,8 @@ function Game({ matchId, bootstrap }: { matchId: string; bootstrap: Awaited<Retu
     time_control: bootstrap.match.time_control as MatchSnapshot["time_control"],
     design: bootstrap.match.design as unknown as MatchSnapshot["design"],
     design_name: bootstrap.match.design_name,
+    ready_w: (bootstrap.match as { ready_w?: boolean }).ready_w ?? false,
+    ready_b: (bootstrap.match as { ready_b?: boolean }).ready_b ?? false,
   };
   const initialMoves = (bootstrap.moves ?? []).map((m) => m.move as unknown as Move);
   const initialEvents = (bootstrap.events ?? []) as unknown as MatchEvent[];
@@ -125,6 +127,7 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
   const resignFn = useServerFn(resign);
   const claimFn = useServerFn(claimTimeout);
   const addFriendFn = useServerFn(sendFriendRequest);
+  const readyFn = useServerFn(markReady);
 
   const [flipped] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -177,9 +180,22 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
 
   const check = status.kind === "playing" ? status.check : false;
 
+  const myReady = myColor === "w" ? match.ready_w : match.ready_b;
+  const oppReady = myColor === "w" ? match.ready_b : match.ready_w;
+  const [readyBusy, setReadyBusy] = useState(false);
+
+  const handleReady = async () => {
+    setReadyBusy(true);
+    try { await readyFn({ data: { matchId } }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setReadyBusy(false); }
+  };
+
   let banner: string;
   if (match.status === "open") {
     banner = "Waiting for opponent…";
+  } else if (match.status === "ready_check") {
+    banner = myReady ? (oppReady ? "Starting…" : "Waiting for opponent to ready up") : "Tap Ready to start";
   } else if (match.status === "finished") {
     const winnerLabel = match.result === "draw" ? "Draw" :
       match.result === myColor ? "You won" : "You lost";
@@ -288,13 +304,33 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
         )}
         <PlayerStrip name={topName} time={topTime} isTurn={topIsTurn} tc={match.time_control} />
 
+        {match.status === "ready_check" && amPlayer && (
+          <div className="w-full max-w-[min(92vw,640px)] rounded-lg border bg-card p-4 text-center space-y-2">
+            <div className="font-display font-semibold">Both players present</div>
+            <div className="text-xs text-muted-foreground">
+              The clock won't start until you both tap Ready.
+            </div>
+            <div className="flex items-center justify-center gap-3 text-xs">
+              <span className={oppReady ? "text-primary" : "text-muted-foreground"}>
+                Opponent: {oppReady ? "Ready ✓" : "Not ready"}
+              </span>
+              <span className={myReady ? "text-primary" : "text-muted-foreground"}>
+                You: {myReady ? "Ready ✓" : "Not ready"}
+              </span>
+            </div>
+            <Button onClick={handleReady} disabled={myReady || readyBusy} size="sm" className="w-full">
+              {myReady ? "Waiting for opponent…" : readyBusy ? "…" : "I'm ready"}
+            </Button>
+          </div>
+        )}
+
         {hasReserves && (
           <ReservesPanel
             state={state}
             color={amPlayer ? myColor : "w"}
             selectedDrop={selectedDrop}
             onSelectDrop={setSelectedDrop}
-            disabled={!amPlayer || terminal || match.turn !== myColor}
+            disabled={!amPlayer || terminal || match.status !== "active" || match.turn !== myColor}
           />
         )}
 
@@ -307,8 +343,9 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
           dropPiece={selectedDrop}
           dropTargets={selectedDrop ? legalDropSquares(selectedDrop) : []}
           onDrop={(id, to) => tryDrop(id, to)}
-          disabled={!amPlayer || terminal || match.turn !== myColor}
+          disabled={!amPlayer || terminal || match.status !== "active" || match.turn !== myColor}
         />
+
 
         <PlayerStrip name={bottomName} time={bottomTime} isTurn={bottomIsTurn} tc={match.time_control} />
 

@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { AppShell } from "@/components/shell/AppShell";
 import { BUILTIN_GAMES, loadSavedGames, tutorialForBuiltin, tutorialForSaved, type GameType, type SavedGame } from "@/game/library";
 import { saveCurrentMeta, saveDesign } from "@/game/design";
-import { Swords, Bot, Users, Trophy, Play, ChevronRight } from "lucide-react";
+import { Swords, Bot, Users, Trophy, Play, ChevronRight, UserPlus } from "lucide-react";
+import { CreateChallengeDialog } from "@/components/multiplayer/CreateChallengeDialog";
 
 export const Route = createFileRoute("/lobby")({
   head: () => ({
@@ -21,6 +22,7 @@ function Lobby() {
   const navigate = useNavigate();
   const [pickAi, setPickAi] = useState(false);
   const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [challengeOpen, setChallengeOpen] = useState(false);
   useEffect(() => { setSaved(loadSavedGames()); }, []);
 
   const playBuiltin = (g: GameType) => {
@@ -65,13 +67,27 @@ function Lobby() {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </button>
               <div className="border-t" />
+              <button
+                onClick={() => setChallengeOpen(true)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition text-left"
+              >
+                <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center text-primary">
+                  <UserPlus className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold">Challenge a Friend</div>
+                  <div className="text-xs text-muted-foreground">Pick any variant and send a link</div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+              <div className="border-t" />
               <Link to="/multiplayer" className="flex items-center gap-3 p-4 hover:bg-muted/50 transition">
                 <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center text-primary">
                   <Users className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold">Play a Friend</div>
-                  <div className="text-xs text-muted-foreground">Create or join a challenge</div>
+                  <div className="font-semibold">Public Lobby</div>
+                  <div className="text-xs text-muted-foreground">Browse open challenges</div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
@@ -137,6 +153,7 @@ function Lobby() {
           </>
         )}
       </div>
+      <CreateChallengeDialog open={challengeOpen} onOpenChange={setChallengeOpen} defaultVisibility="link" />
     </AppShell>
   );
 }

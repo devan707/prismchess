@@ -602,6 +602,8 @@ export type Database = {
           id: string
           last_clock_update_at: string | null
           rated: boolean
+          ready_b: boolean
+          ready_w: boolean
           result: string | null
           result_reason: string | null
           share_token: string
@@ -626,6 +628,8 @@ export type Database = {
           id?: string
           last_clock_update_at?: string | null
           rated?: boolean
+          ready_b?: boolean
+          ready_w?: boolean
           result?: string | null
           result_reason?: string | null
           share_token?: string
@@ -650,6 +654,8 @@ export type Database = {
           id?: string
           last_clock_update_at?: string | null
           rated?: boolean
+          ready_b?: boolean
+          ready_w?: boolean
           result?: string | null
           result_reason?: string | null
           share_token?: string

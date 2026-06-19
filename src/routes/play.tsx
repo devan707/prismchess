@@ -33,8 +33,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { TutorialDialog } from "@/components/TutorialDialog";
 import { hasSeenTutorial } from "@/lib/tutorial-state";
 import { buildBaseTutorial, type GameTutorial } from "@/game/tutorials";
-import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter } from "lucide-react";
+import { Home, RotateCcw, Undo, RefreshCw, FlipVertical2, Volume2, VolumeX, ScrollText, Settings2, Flag, DoorOpen, Info, X, Brain, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Share2, Copy, MessagesSquare, Twitter, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { CreateChallengeDialog } from "@/components/multiplayer/CreateChallengeDialog";
 
 
 export const Route = createFileRoute("/play")({
@@ -450,6 +451,9 @@ function GameView({ humanColor, difficulty, showHints, tipsOn, design, flipped, 
                   <Switch checked={tipsOn} onCheckedChange={setTipsOn} />
                 </div>
                 <div className="border-t pt-3 space-y-2">
+                  <ChallengeFriendButton design={design} />
+                </div>
+                <div className="border-t pt-3 space-y-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full" disabled={terminal}>
@@ -738,5 +742,25 @@ function ShareGameButton({ design }: { design: Design }) {
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function ChallengeFriendButton({ design }: { design: Design }) {
+  const [open, setOpen] = useState(false);
+  const meta = useMemo(() => loadCurrentMeta(), []);
+  const name = meta?.name ?? `${design.rows}×${design.cols} Custom`;
+  return (
+    <>
+      <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
+        <UserPlus className="h-4 w-4 mr-1" /> Challenge a friend with this game
+      </Button>
+      <CreateChallengeDialog
+        open={open}
+        onOpenChange={setOpen}
+        presetDesign={{ design, name }}
+        defaultVisibility="link"
+        lockVisibility
+      />
+    </>
   );
 }

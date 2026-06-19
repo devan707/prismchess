@@ -21,16 +21,18 @@ export interface MatchSnapshot {
   host_id: string;
   guest_id: string | null;
   host_color: Color;
-  status: "open" | "active" | "finished" | "aborted";
+  status: "open" | "ready_check" | "active" | "finished" | "aborted";
   turn: Color;
   white_time_ms: number;
   black_time_ms: number;
   last_clock_update_at: string | null;
   result: "w" | "b" | "draw" | null;
   result_reason: string | null;
-  time_control: "10min" | "30min" | "3day";
+  time_control: string;
   design: Design;
   design_name: string;
+  ready_w: boolean;
+  ready_b: boolean;
 }
 
 export interface UseMultiplayerGameOpts {

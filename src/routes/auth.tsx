@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import logoUrl from "@/assets/logo.png";
 import { ArrowLeft } from "lucide-react";
+import { safeRedirectFromSearch, withRedirect } from "@/lib/redirect-after-auth";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -27,12 +28,27 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [redirectTo] = useState<string | null>(() => safeRedirectFromSearch());
+
+  const goAfterSignIn = () => {
+    if (redirectTo) {
+      // Use a hard navigation so the destination route mounts fresh with
+      // the new session cookie available to its loader.
+      window.location.assign(redirectTo);
+      return;
+    }
+    navigate({ to: "/", replace: true });
+  };
+  const goAfterSignUp = () => {
+    navigate({ to: "/onboarding", search: redirectTo ? { redirect: redirectTo } : undefined });
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/", replace: true });
+      if (data.user) goAfterSignIn();
     });
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +57,7 @@ function AuthPage() {
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Welcome back!");
-    navigate({ to: "/" });
+    goAfterSignIn();
   };
 
   const signUp = async (e: React.FormEvent) => {
@@ -50,24 +66,26 @@ function AuthPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: window.location.origin + withRedirect("/", redirectTo) },
     });
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Account created! Let's pick a name.");
-    navigate({ to: "/onboarding" });
+    goAfterSignUp();
   };
 
   const google = async () => {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + (redirectTo ?? "/"),
+    });
     if (result.error) {
       setBusy(false);
       toast.error(result.error.message ?? "Google sign-in failed");
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/" });
+    goAfterSignIn();
   };
 
   return (
