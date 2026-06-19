@@ -17,7 +17,7 @@
  * at the deepest *completed* iteration.
  */
 import type { Difficulty, GameState, Move } from "../types";
-import { allLegalMoves, applyMoveToState, inCheck } from "../moves";
+import { allLegalMoves, applyMoveToState, inCheck, isSquareAttacked } from "../moves";
 // Note: check-giving moves are treated as "loud" via per-call computation in
 // qsearch (see below) — we can't fold it into isLoud() without a state arg.
 import { evaluate, seeMove, shuffleAdjustment, valueFor } from "./evaluate";
@@ -27,7 +27,7 @@ import {
   computeZobristFromScratch,
   zkeyAfter,
 } from "./zobrist";
-import { runSafetyGate, type CandidateAnalysis } from "./safety";
+import { runSafetyGate, opponentBestGain, type CandidateAnalysis } from "./safety";
 import {
   MATE_THRESHOLD,
   TT,
@@ -487,6 +487,92 @@ function reconstructPV(tt: TT | null, state: GameState, rootKey: bigint, salt: b
   return out;
 }
 
+/**
+ * Root-level anti-shuffle penalty for royal pieces (K / G / L / H / etc.).
+ *
+ * Scope is intentionally narrow — this only fires on a *root* move that:
+ *   - belongs to a piece marked `royal` in the registry,
+ *   - is a quiet move (no capture / promotion / shapeshift / trample),
+ *   - does NOT escape an existing check (mover side was in check before),
+ *   - does NOT give check on the next ply,
+ *   - does NOT remove the mover from an attacked square (safety improvement),
+ *   - does NOT defuse a hanging-piece threat the opponent had queued up,
+ *   - AND repeats a recently-visited square for the same royal — i.e. the
+ *     classic g8↔h8 Lich bounce flagged by the real-game benchmark at ply 36.
+ *
+ * If all of the above are true the score for that root move is dropped by
+ * a flat amount large enough to demote it past any realistic alternative
+ * the search produced. The TT, search, evaluation, and safety gate are
+ * NOT touched — this only re-ranks already-scored root candidates.
+ */
+function isRoyalShuffleAtRoot(state: GameState, m: Move): boolean {
+  if (!m.from) return false;
+  if (m.captured || m.promotion || m.shapeshiftTo) return false;
+  if (m.juggTrampled && m.juggTrampled.length) return false;
+  const def = state.registry[m.piece.id];
+  if (!def?.royal) return false;
+  // If we're currently in check, even an "ugly" royal step might be the
+  // only escape. Don't penalise.
+  if (inCheck(state, state.turn)) return false;
+
+  const opp = state.turn === "w" ? "b" : "w";
+  const next = applyMoveToState(state, m);
+  if (inCheck(next, next.turn)) return false; // gives check — useful
+
+  // Safety improvement: from square was attacked, to square isn't.
+  const fromAttacked = isSquareAttacked(state, m.from, opp);
+  const toAttacked = isSquareAttacked(next, m.to, opp);
+  if (fromAttacked && !toAttacked) return false;
+
+  // Threat-defence check: did the move materially reduce the opponent's
+  // best immediate capture? If so, treat as a real defensive move.
+  try {
+    const oppBefore = opponentBestGain(state).gain;
+    const oppAfter = opponentBestGain(next).gain;
+    if (oppBefore - oppAfter >= 200) return false;
+  } catch {
+    /* opponentBestGain is best-effort here */
+  }
+
+  // Repetition signal: this royal has moved recently AND the destination
+  // square equals one this royal occupied within the last 6 same-color
+  // plies. That's the bouncing pattern the benchmark fails on.
+  const h = state.history;
+  let sameRoyalMoves = 0;
+  let revisitsPriorSquare = false;
+  const lookback = 24;
+  for (let i = h.length - 1; i >= 0 && i >= h.length - lookback; i--) {
+    const past = h[i];
+    if (past.piece.color !== m.piece.color) continue;
+    if (past.piece.id !== m.piece.id) continue;
+    sameRoyalMoves++;
+    if (past.from && past.from.r === m.to.r && past.from.c === m.to.c) {
+      revisitsPriorSquare = true;
+    }
+    if (past.to.r === m.to.r && past.to.c === m.to.c) {
+      revisitsPriorSquare = true;
+    }
+  }
+  // Two trigger conditions:
+  //   (a) the move literally returns to a square this royal stood on in
+  //       the recent lookback window — the classic 2-square bounce, or
+  //   (b) the royal has been a serial mover (≥2 prior steps in the window)
+  //       and this is yet another purposeless step. Catches "start a new
+  //       shuffle from a third square" patterns the bounce check misses.
+  return revisitsPriorSquare || sameRoyalMoves >= 2;
+
+}
+
+function applyRoyalShufflePenalty(state: GameState, scored: Array<{ move: Move; score: number }>): void {
+  const PENALTY = 800;
+  for (const r of scored) {
+    if (isRoyalShuffleAtRoot(state, r.move)) {
+      r.score -= PENALTY;
+    }
+  }
+}
+
+
 export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   const start = Date.now();
   const deadline = start + Math.max(20, opts.budgetMs);
@@ -511,7 +597,34 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
   } catch (err) {
     if (!(err instanceof TimeUp)) throw err;
   }
+
+  // Root-level anti-shuffle re-rank for royal pieces. Mutates rootScores
+  // in place, then re-derives best/ties so downstream tie-break and the
+  // safety gate see the penalised values. See isRoyalShuffleAtRoot.
+  if (searcher.rootScores.length > 0) {
+    applyRoyalShufflePenalty(state, searcher.rootScores);
+    let bestScore = -Infinity;
+    let bestMove: Move | null = null;
+    const ties: Move[] = [];
+    for (const r of searcher.rootScores) {
+      if (r.score > bestScore + 0.5) {
+        bestScore = r.score;
+        bestMove = r.move;
+        ties.length = 0;
+        ties.push(r.move);
+      } else if (Math.abs(r.score - bestScore) <= 0.5) {
+        ties.push(r.move);
+      }
+    }
+    if (bestMove) {
+      searcher.bestMoveAtRoot = bestMove;
+      searcher.bestScoreAtRoot = bestScore;
+      searcher.tiesAtRoot = ties;
+    }
+  }
+
   let chosen = searcher.bestMoveAtRoot;
+
   // Absolute last-resort fallback: depth 1 should always commit a move
   // thanks to the starvation guard in Searcher.checkTime, but if anything
   // upstream (e.g. an exception in evaluate/qsearch) bypasses that path,
