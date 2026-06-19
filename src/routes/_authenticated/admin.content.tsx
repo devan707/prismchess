@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Star, EyeOff, Trash2, Pencil, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { PromoteAnnouncementDialog, type PromotionTarget } from "@/components/admin/PromoteAnnouncementDialog";
 
 export const Route = createFileRoute("/_authenticated/admin/content")({
   head: () => ({ meta: [{ title: "Admin · Content library — Prism Chess" }, { name: "robots", content: "noindex" }] }),
