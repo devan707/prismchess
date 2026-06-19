@@ -328,6 +328,7 @@ function PieceDetail() {
           )}
         </section>
       </main>
+      <PromoteAnnouncementDialog target={promoTarget} onClose={() => setPromoTarget(null)} />
     </div>
   );
 }
