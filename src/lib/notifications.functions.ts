@@ -7,13 +7,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * "next time you open the app" message after admins promote your content.
  */
 
+type NotificationMetadata = {
+  target_type?: string;
+  target_id?: string;
+  target_slug?: string;
+  target_name?: string;
+  forum_topic_id?: string;
+};
+
 export type Notification = {
   id: string;
   kind: string;
   title: string;
   body: string | null;
   link: string | null;
-  metadata: unknown;
+  metadata: NotificationMetadata;
   read_at: string | null;
   created_at: string;
 };
