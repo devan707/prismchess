@@ -366,22 +366,38 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
       if (safest) chosen = safest.move;
     }
   }
-  // Opportunist guard: if some root move would win material outright (positive
-  // SEE — a free or favorable capture), don't let the search wander off into a
-  // positional move that scores only marginally better. Forces the AI to
-  // actually grab hanging pieces rather than "improving" elsewhere.
+  // Opportunist guard: if some root move wins material outright AND the deep
+  // search agrees it's a sound capture, prefer it over a quiet move that only
+  // beat it on positional terms. We trust the deep search here: it already
+  // accounts for recaptures, king-safety, discovered threats, and follow-ups.
+  // So we only override when:
+  //   - the candidate is a real capture/trample with non-negative SEE
+  //     (capturing a piece without losing a more valuable one back),
+  //   - the candidate's deep score is essentially as good as the chosen
+  //     move's (within a small noise tolerance), and
+  //   - the chosen move isn't itself a meaningfully larger capture.
+  // This prevents the previous failure mode where we'd grab a "free" queen
+  // that the deep search had correctly flagged as a trap (e.g. mate-in-1
+  // for the opponent, lost king, larger material loss elsewhere).
   if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
-    const chosenSee = Math.max(0, seeMove(state, chosen));
+    const chosenSee = seeMove(state, chosen);
+    const chosenGain = Math.max(0, chosenSee);
+    // Noise tolerance — different depths / null windows produce small wobble.
+    const NOISE = 40;
     let bestGrab: { move: Move; score: number; gain: number } | null = null;
     for (const r of searcher.rootScores) {
+      if (sameMove(r.move, chosen)) continue;
       if (!r.move.captured && !r.move.juggTrampled?.length) continue;
       const gain = seeMove(state, r.move);
-      if (gain <= chosenSee + 50) continue; // not meaningfully more material
-      // Don't override a clearly tactical pick (mate threat, big eval edge).
-      // Allow swap when the capture's deep score is within ~ the material it
-      // would win — so a free Queen always beats a +100 cp positional move.
-      const tolerance = Math.max(150, gain * 0.9);
-      if (r.score < searcher.bestScoreAtRoot - tolerance) continue;
+      // Must be a sound capture (SEE >= 0 — we don't lose more than we gain
+      // in the immediate exchange) AND meaningfully more material than what
+      // the chosen move already wins.
+      if (gain < 0) continue;
+      if (gain <= chosenGain + 50) continue;
+      // Deep search must still rate this near the top. If it scores notably
+      // worse than the chosen move, the search saw something bad (mate
+      // threat, king exposure, bigger follow-up loss) — respect that.
+      if (r.score < searcher.bestScoreAtRoot - NOISE) continue;
       if (!bestGrab || gain > bestGrab.gain ||
           (gain === bestGrab.gain && r.score > bestGrab.score)) {
         bestGrab = { move: r.move, score: r.score, gain };
@@ -389,6 +405,7 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     }
     if (bestGrab) chosen = bestGrab.move;
   }
+
   return {
     move: chosen,
     depthReached,
