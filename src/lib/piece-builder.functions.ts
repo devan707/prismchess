@@ -100,6 +100,10 @@ export const savePiece = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => SaveInput.parse(i))
   .handler(async ({ data, context }) => {
+    const movementSummary = await generateMovementSummaryFromDef({
+      name: data.name,
+      def: data.def,
+    });
     for (let attempt = 0; attempt < 5; attempt++) {
       const slug = slugify(data.name);
       const { data: row, error } = await context.supabase
@@ -112,6 +116,7 @@ export const savePiece = createServerFn({ method: "POST" })
           def: data.def as never,
           visibility: data.visibility,
           remixed_from_id: data.remixedFromId ?? null,
+          movement_summary: movementSummary,
         })
         .select("id, slug")
         .single();
@@ -154,6 +159,11 @@ export const updatePiece = createServerFn({ method: "POST" })
       ? { ...data.def, imageUrl: existing.image_url }
       : data.def;
 
+    const movementSummary = await generateMovementSummaryFromDef({
+      name: data.name,
+      def: defWithImage,
+    });
+
     const { data: row, error } = await context.supabase
       .from("custom_pieces")
       .update({
@@ -161,6 +171,7 @@ export const updatePiece = createServerFn({ method: "POST" })
         description: data.description,
         def: defWithImage as never,
         visibility: data.visibility,
+        movement_summary: movementSummary,
       })
       .eq("id", data.pieceId)
       .select("id, slug")
