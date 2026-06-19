@@ -48,6 +48,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminStatsRouteImport } from './routes/_authenticated/admin.stats'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
 import { Route as ApiPublicPieceImgSplatRouteImport } from './routes/api/public/piece-img/$'
 import { Route as ApiPublicHooksCleanupStaleChallengesRouteImport } from './routes/api/public/hooks/cleanup-stale-challenges'
 
@@ -253,6 +254,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminAnnouncementsRoute =
+  AuthenticatedAdminAnnouncementsRouteImport.update({
+    id: '/admin/announcements',
+    path: '/admin/announcements',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicPieceImgSplatRoute = ApiPublicPieceImgSplatRouteImport.update({
   id: '/api/public/piece-img/$',
   path: '/api/public/piece-img/$',
@@ -289,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/pieces/new': typeof PiecesNewRoute
   '/v/$id': typeof VIdRoute
   '/pieces/': typeof PiecesIndexRoute
+  '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/stats': typeof AuthenticatedAdminStatsRoute
@@ -328,6 +336,7 @@ export interface FileRoutesByTo {
   '/pieces/new': typeof PiecesNewRoute
   '/v/$id': typeof VIdRoute
   '/pieces': typeof PiecesIndexRoute
+  '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/stats': typeof AuthenticatedAdminStatsRoute
@@ -372,6 +381,7 @@ export interface FileRoutesById {
   '/pieces/new': typeof PiecesNewRoute
   '/v/$id': typeof VIdRoute
   '/pieces/': typeof PiecesIndexRoute
+  '/_authenticated/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/stats': typeof AuthenticatedAdminStatsRoute
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/pieces/new'
     | '/v/$id'
     | '/pieces/'
+    | '/admin/announcements'
     | '/admin/audit'
     | '/admin/reports'
     | '/admin/stats'
@@ -455,6 +466,7 @@ export interface FileRouteTypes {
     | '/pieces/new'
     | '/v/$id'
     | '/pieces'
+    | '/admin/announcements'
     | '/admin/audit'
     | '/admin/reports'
     | '/admin/stats'
@@ -498,6 +510,7 @@ export interface FileRouteTypes {
     | '/pieces/new'
     | '/v/$id'
     | '/pieces/'
+    | '/_authenticated/admin/announcements'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/reports'
     | '/_authenticated/admin/stats'
@@ -815,6 +828,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/announcements': {
+      id: '/_authenticated/admin/announcements'
+      path: '/admin/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AuthenticatedAdminAnnouncementsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/piece-img/$': {
       id: '/api/public/piece-img/$'
       path: '/api/public/piece-img/$'
@@ -888,6 +908,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMultiplayerRoute: typeof AuthenticatedMultiplayerRouteWithChildren
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedAdminAnnouncementsRoute: typeof AuthenticatedAdminAnnouncementsRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminStatsRoute: typeof AuthenticatedAdminStatsRoute
@@ -903,6 +924,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMultiplayerRoute: AuthenticatedMultiplayerRouteWithChildren,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedAdminAnnouncementsRoute: AuthenticatedAdminAnnouncementsRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminStatsRoute: AuthenticatedAdminStatsRoute,

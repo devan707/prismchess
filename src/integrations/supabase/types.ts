@@ -113,6 +113,88 @@ export type Database = {
         }
         Relationships: []
       }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          active: boolean
+          body: string
+          created_at: string
+          created_by: string | null
+          cta_href: string | null
+          cta_label: string | null
+          forum_topic_id: string | null
+          id: string
+          kind: string
+          pinned: boolean
+          published_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          created_at?: string
+          created_by?: string | null
+          cta_href?: string | null
+          cta_label?: string | null
+          forum_topic_id?: string | null
+          id?: string
+          kind?: string
+          pinned?: boolean
+          published_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          cta_href?: string | null
+          cta_label?: string | null
+          forum_topic_id?: string | null
+          id?: string
+          kind?: string
+          pinned?: boolean
+          published_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_forum_topic_id_fkey"
+            columns: ["forum_topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -326,6 +408,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          is_announcement: boolean
           is_featured: boolean
           is_pinned: boolean
           is_showcase: boolean
@@ -343,6 +426,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          is_announcement?: boolean
           is_featured?: boolean
           is_pinned?: boolean
           is_showcase?: boolean
@@ -360,6 +444,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          is_announcement?: boolean
           is_featured?: boolean
           is_pinned?: boolean
           is_showcase?: boolean
@@ -760,6 +845,7 @@ export type Database = {
           tos_version: string | null
           updated_at: string
           username: string
+          welcomed_at: string | null
         }
         Insert: {
           age_confirmed?: boolean
@@ -778,6 +864,7 @@ export type Database = {
           tos_version?: string | null
           updated_at?: string
           username: string
+          welcomed_at?: string | null
         }
         Update: {
           age_confirmed?: boolean
@@ -796,6 +883,7 @@ export type Database = {
           tos_version?: string | null
           updated_at?: string
           username?: string
+          welcomed_at?: string | null
         }
         Relationships: []
       }
