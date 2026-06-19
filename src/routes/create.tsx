@@ -13,6 +13,7 @@ import { listMyPublishedGames, unpublishGame, listMyLikedGames, toggleLike } fro
 import { listMyPieces, listMyLikedPieces, deletePiece, unlikePiece } from "@/lib/piece-builder.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Hammer, Sparkles, Play, Trash2, Crown, Share2, Heart, MessageSquare, Pencil, ExternalLink, LogIn, Copy } from "lucide-react";
+import { ShareGameButton } from "@/components/social/ShareGameButton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/create")({
