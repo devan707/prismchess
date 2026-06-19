@@ -446,13 +446,14 @@ export const submitMove = createServerFn({ method: "POST" })
     const { error: uErr } = await (await import("@/integrations/supabase/client.server")).supabaseAdmin.from("matches").update(update as never).eq("id", data.matchId);
     if (uErr) throw new Error(uErr.message);
 
-    const { error: iErr } = await context.supabase.from("match_moves").insert({
+    const { supabaseAdmin: _sbA1 } = await import("@/integrations/supabase/client.server");
+    const { error: iErr } = await _sbA1.from("match_moves").insert({
       match_id: data.matchId,
       ply: data.ply,
       move: data.move as never,
       actor_id: context.userId,
       time_left_ms: moverNewTime,
-    });
+    } as never);
     if (iErr) throw new Error(iErr.message);
 
     // Notify the opponent that it's their turn.
