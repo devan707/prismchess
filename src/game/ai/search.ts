@@ -280,6 +280,12 @@ function purposeBonus(state: GameState, m: Move): number {
   // Reward giving check.
   const next = applyMoveToState(state, m);
   if (inCheck(next, next.turn)) b += 60;
+  // Focus on squares the opponent just touched.
+  const focus = lastMoveFocus(state);
+  if (focus.to && m.to.r === focus.to.r && m.to.c === focus.to.c) {
+    b += m.captured ? 120 : 30;
+  }
+  if (focus.from && m.to.r === focus.from.r && m.to.c === focus.from.c) b += 20;
   // Forward progress (only for non-special moves with a from-square).
   if (m.from) {
     const wide = state.cols > state.rows;
