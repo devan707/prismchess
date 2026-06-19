@@ -744,3 +744,23 @@ function ShareGameButton({ design }: { design: Design }) {
     </Sheet>
   );
 }
+
+function ChallengeFriendButton({ design }: { design: Design }) {
+  const [open, setOpen] = useState(false);
+  const meta = useMemo(() => loadCurrentMeta(), []);
+  const name = meta?.name ?? `${design.rows}×${design.cols} Custom`;
+  return (
+    <>
+      <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
+        <UserPlus className="h-4 w-4 mr-1" /> Challenge a friend with this game
+      </Button>
+      <CreateChallengeDialog
+        open={open}
+        onOpenChange={setOpen}
+        presetDesign={{ design, name }}
+        defaultVisibility="link"
+        lockVisibility
+      />
+    </>
+  );
+}
