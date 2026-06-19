@@ -776,9 +776,11 @@ function hangingTerm(state: GameState, color: Color): number {
       const loss = expectedLossAt(state, { r, c }, color);
       if (loss <= 0) continue;
       // Heavier weighting on big pieces so the AI never casually hangs a
-      // Queen / Dragon / Wizard / Necromancer / royal.
+      // Queen / Dragon / Wizard / Necromancer / royal. Bumped so that
+      // putting a Dragon in front of a pawn is unambiguously worse than
+      // almost any positional gain the search can find.
       const v = valueFor(p.id, def);
-      const heavy = v >= 700 ? 1.15 : v >= 400 ? 1.0 : 0.9;
+      const heavy = v >= 900 ? 1.6 : v >= 600 ? 1.3 : v >= 400 ? 1.1 : 0.95;
       penalty -= loss * heavy;
     }
   }
