@@ -48,6 +48,16 @@ function signatureGlyphs(id: string): [string, string, string] {
   }
 }
 
+function signatureTileGradient(id: string): string {
+  switch (id) {
+    case "classic-8": return "radial-gradient(circle at 50% 50%, #eab308 0%, #000000 100%)";
+    case "mini-6": return "radial-gradient(circle at 50% 50%, #3b82f6 0%, #000000 100%)";
+    case "menagerie-8": return "radial-gradient(circle at 50% 50%, #10b981 0%, #000000 100%)";
+    case "grand-menagerie-12": return "radial-gradient(circle at 50% 50%, #a855f7 0%, #000000 100%)";
+    default: return "radial-gradient(circle at 50% 50%, #6b7280 0%, #000000 100%)";
+  }
+}
+
 function readLastVariant(): LastVariant | null {
   if (typeof window === "undefined") return null;
   try {
