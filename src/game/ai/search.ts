@@ -356,6 +356,8 @@ class Searcher {
     const moves = allLegalMoves(state);
     if (moves.length === 0) return;
     moves.sort((a, b) => this.scoreFor(state, b, depth, prevBest) - this.scoreFor(state, a, depth, prevBest));
+    this.iterationDepth = depth;
+    this.rootMovesTriedThisIter = 0;
     let alpha = -Infinity;
     const beta = Infinity;
     let bestScore = -Infinity;
@@ -369,6 +371,7 @@ class Searcher {
       const ext = gaveCheck ? 1 : 0;
       const score = -this.search(next, childKey, depth - 1 + ext, -beta, -alpha, null, 1);
       scored.push({ move: m, score });
+      this.rootMovesTriedThisIter++;
       if (score > bestScore + 0.5) {
         bestScore = score;
         bestMove = m;
@@ -378,16 +381,19 @@ class Searcher {
         ties.push(m);
       }
       if (bestScore > alpha) alpha = bestScore;
-    }
-    if (bestMove) {
-      this.bestMoveAtRoot = bestMove;
-      this.bestScoreAtRoot = bestScore;
-      this.tiesAtRoot = ties;
-      this.rootScores = scored;
-      // Store the root with depth so subsequent iterations probe it.
-      if (this.tt && !this.ttDisabled) {
-        this.tt.store(rootKey, depth, bestScore, TT_FLAG_EXACT, bestMove, 0);
+      // Incremental commit: even if TimeUp interrupts the next sibling, we
+      // already have a best move from this depth's partial sweep. This is
+      // the second half of the depth-1 starvation fix.
+      if (bestMove) {
+        this.bestMoveAtRoot = bestMove;
+        this.bestScoreAtRoot = bestScore;
+        this.tiesAtRoot = ties.slice();
+        this.rootScores = scored.slice();
       }
+    }
+    // Store the root with depth so subsequent iterations probe it.
+    if (bestMove && this.tt && !this.ttDisabled) {
+      this.tt.store(rootKey, depth, bestScore, TT_FLAG_EXACT, bestMove, 0);
     }
   }
 }
