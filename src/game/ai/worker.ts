@@ -37,6 +37,7 @@ export interface SearchStatsPayload {
   tt: TTStats;
   zobristFailed: boolean;
   pv: Move[];
+  candidates: CandidateAnalysis[];
 }
 
 export type WorkerResponse =
