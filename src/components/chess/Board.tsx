@@ -236,6 +236,9 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     }
   }
 
+  const pendingHand = state.pendingHand ?? null;
+  const isPendingHandTurn = !!pendingHand;
+
   const handleSquareClick = (sq: Square) => {
     if (disabled) return;
     if (dropPiece && dropTargets?.some((t) => t.r === sq.r && t.c === sq.c)) {
@@ -253,7 +256,16 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           if (ok) { setSelected(null); return; }
         }
       }
-      if (selected.r === sq.r && selected.c === sq.c) { setSelected(null); return; }
+      if (selected.r === sq.r && selected.c === sq.c) {
+        // King's Hand 2nd step is optional: clicking the pending piece's
+        // own square commits a handPass (stay put, end the turn).
+        if (isPendingHandTurn && pendingHand && pendingHand.r === sq.r && pendingHand.c === sq.c) {
+          const ok = onMove(selected, sq);
+          if (ok) { setSelected(null); return; }
+        }
+        setSelected(null);
+        return;
+      }
       // Clicking the partner half of the selected juggernaut keeps it selected.
       if (selectedPartner && selectedPartner.r === sq.r && selectedPartner.c === sq.c) {
         setSelected(sq); return;
@@ -293,6 +305,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
+          const isPendingHandSquare = !!pendingHand && pendingHand.r === r && pendingHand.c === c;
 
           // Three-color move indicator:
           //   RED  = piece can capture an enemy here (or juggernaut trample target).
@@ -309,6 +322,10 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           } else if (isEnemyInspect) {
             markerKind = targetKindBySquare.get(`${r},${c}`) ?? null;
           }
+          // The pending-hand square shows a dedicated "↺ stay" badge below,
+          // so suppress the generic green move dot the pass move would add
+          // on top of the piece itself.
+          if (isPendingHandSquare && markerKind === "move") markerKind = null;
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
           const isCheck = checkSquares.some((k) => k.r === r && k.c === c);
@@ -363,6 +380,31 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               )}
               {isSelected && (
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--color-board-highlight)" }} />
+              )}
+              {isPendingHandSquare && (
+                <>
+                  <div
+                    className="absolute inset-1 rounded-lg pointer-events-none ring-2 ring-dashed animate-pulse"
+                    style={{
+                      borderColor: "var(--color-board-legal)",
+                      boxShadow: "inset 0 0 0 2px var(--color-board-legal)",
+                    }}
+                    aria-hidden
+                  />
+                  <span
+                    className="absolute top-0.5 left-1/2 -translate-x-1/2 px-1.5 py-px rounded-full text-[9px] font-bold pointer-events-none uppercase tracking-wide"
+                    style={{
+                      background: "var(--color-board-legal)",
+                      color: "oklch(0.18 0.04 145)",
+                      lineHeight: 1,
+                      letterSpacing: "0.04em",
+                    }}
+                    aria-label="Click this piece to stay (skip 2nd step)"
+                    title="Click to stay — 2nd king-step is optional"
+                  >
+                    ↺ stay
+                  </span>
+                </>
               )}
               {isCheck && (
                 <div className="absolute inset-0 pointer-events-none animate-pulse"
