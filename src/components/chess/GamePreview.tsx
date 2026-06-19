@@ -67,7 +67,7 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
               return (
                 <div
                   key={`${r}-${c}`}
-                  className={`relative overflow-hidden flex items-center justify-center ${dark ? "bg-stone-400/40 dark:bg-stone-700/60" : "bg-stone-200/40 dark:bg-stone-800/40"}`}
+                  className={`relative flex items-center justify-center ${dark ? "bg-stone-400/40 dark:bg-stone-700/60" : "bg-stone-200/40 dark:bg-stone-800/40"}`}
                 >
                   {cell && (
                     <div className="absolute inset-[10%] flex items-center justify-center">
@@ -75,7 +75,7 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
                         id={cell.pieceId}
                         color={cell.color}
                         def={registry[cell.pieceId]}
-                        className="w-full h-full text-[min(4.5vw,1.4rem)] leading-none [&_img]:max-w-full [&_img]:max-h-full [&_img]:!w-auto [&_img]:!h-auto"
+                        className="w-full h-full text-[min(4.5vw,1.4rem)] leading-none"
                       />
                     </div>
                   )}
@@ -97,7 +97,9 @@ export function GamePreview({ design, maxBoardPx = 320 }: Props) {
               className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs"
               title={def?.description ?? def?.name ?? id}
             >
-              <PieceById id={id} color="w" def={def} className="text-lg leading-none" />
+              <div className="w-4 h-4 flex items-center justify-center overflow-hidden">
+                <PieceById id={id} color="w" def={def} className="w-full h-full leading-none [&_img]:w-full [&_img]:h-full [&_img]:object-contain" />
+              </div>
               <span className="font-medium">{def?.name ?? id}</span>
             </li>
           ))}
