@@ -21,6 +21,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
 import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
 import { useRouter } from "@tanstack/react-router";
+import { PromoteAnnouncementDialog, type PromotionTarget } from "@/components/admin/PromoteAnnouncementDialog";
 
 export const Route = createFileRoute("/pieces/$slug")({
   loader: async ({ params }) => {
