@@ -216,7 +216,7 @@ export const getMyPieceBySlug = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, image_url, author_id")
+      .select("id, slug, name, description, def, visibility, image_url, author_id, movement_summary")
       .eq("slug", data.slug)
       .eq("author_id", context.userId)
       .maybeSingle();
@@ -226,7 +226,7 @@ export const getMyPieceBySlug = createServerFn({ method: "GET" })
 
 // ---------- List queries ----------
 
-const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url";
+const PIECE_COLS = "id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, movement_summary";
 
 export const listMyPieces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -255,7 +255,7 @@ export const listMyLikedPieces = createServerFn({ method: "GET" })
     if (ids.length === 0) return [];
     const { data: pieces, error: piecesErr } = await context.supabase
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, movement_summary")
       .in("id", ids);
     if (piecesErr) throw new Error(piecesErr.message);
     type Row = {
@@ -356,7 +356,7 @@ export const getPieceBySlug = createServerFn({ method: "GET" })
     });
     const { data: row, error } = await sb
       .from("custom_pieces")
-      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, remixed_from_id")
+      .select("id, slug, name, description, def, visibility, like_count, created_at, author_id, image_url, is_hidden, remixed_from_id, movement_summary")
       .eq("slug", data.slug)
       .eq("visibility", "public")
       .eq("is_hidden", false)
