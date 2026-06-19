@@ -116,8 +116,9 @@ function ContentPage() {
           <PieceTable
             rows={pieces}
             onPromote={async (r) => {
-              await setPieceFlags({ data: { pieceId: r.id, isFeatured: !r.is_featured } });
+              const res = await setPieceFlags({ data: { pieceId: r.id, isFeatured: !r.is_featured } });
               toast.success(r.is_featured ? "Demoted" : "Promoted to signature piece");
+              if (res.promoted && res.target) setPromoTarget(res.target);
               reload();
             }}
             onArchive={async (r) => {
