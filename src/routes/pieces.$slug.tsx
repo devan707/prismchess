@@ -15,8 +15,12 @@ import {
   createPieceShowcase,
 } from "@/lib/piece-builder.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Heart, MessageSquarePlus, Share2, Twitter, Facebook, Link as LinkIcon, Wand2 } from "lucide-react";
+import { ArrowLeft, Heart, MessageSquarePlus, Share2, Twitter, Facebook, Link as LinkIcon, Wand2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { AdminMenu, type AdminAction } from "@/components/admin/AdminMenu";
+import { adminSetCustomPieceFlags, adminDeleteCustomPiece } from "@/lib/admin.functions";
+import { useRouter } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/pieces/$slug")({
   loader: async ({ params }) => {
