@@ -141,7 +141,18 @@ function ActiveGameView({ matchId, meId, initialMatch, initialMoves, initialEven
     tryMove, tryDrop, legalFor, legalDropSquares, selectedDrop, setSelectedDrop,
     pendingPromotion, promotionOptions, confirmPromotion, cancelPromotion,
     incomingDrawOffer, myPendingDrawOffer, sendDrawOffer, respondToDraw,
+    incomingRematchOffer, myPendingRematchOffer, rematchNewMatchId, rematchDeclined,
+    sendRematchOffer, respondToRematch,
   } = game;
+
+  // When the rematch is accepted (by either side), both clients see the
+  // accept event arrive via realtime and navigate to the new match.
+  const [rematchBusy, setRematchBusy] = useState(false);
+  useEffect(() => {
+    if (rematchNewMatchId) {
+      navigate({ to: "/multiplayer/$matchId", params: { matchId: rematchNewMatchId } });
+    }
+  }, [rematchNewMatchId, navigate]);
 
   const whiteRemaining = liveTimeRemaining(match, "w", now);
   const blackRemaining = liveTimeRemaining(match, "b", now);
