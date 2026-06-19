@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyMove, gameStatus, initialStateFromDesign, replayMoves } from "@/game/rules";
-import { allLegalMoves, legalMovesFrom } from "@/game/moves";
+import { allLegalMoves, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
 import { chooseMove } from "@/game/ai";
 import { requestMove as engineRequestMove, cancel as engineCancel } from "@/game/ai/engine";
 import { loadPlaybook, mergeCloudPlaybook, difficultyCloudScale, type Playbook } from "@/game/ai/playbook";
 import { getVariantPlaybook, submitGameReport, type ReportedMove } from "@/lib/ai-learning.functions";
 import { loadCurrentMeta } from "@/game/design";
 import { recordVariantPlay } from "@/lib/variant-stats.functions";
-import type { Color, Design, Difficulty, GameState, Move, PieceId, Square } from "@/game/types";
+import type { Color, Design, Difficulty, GameState, Move, MoveTarget, PieceId, Square } from "@/game/types";
 import { sfx } from "@/lib/sfx";
 
 export interface UseGameOptions {
@@ -262,9 +262,9 @@ export function useGame(opts: UseGameOptions) {
   }, []);
 
   const legalFor = useCallback(
-    (from: Square | null): Square[] => {
+    (from: Square | null): MoveTarget[] => {
       if (!from) return [];
-      return legalMovesFrom(state, from).map((m) => m.to);
+      return moveTargetsFrom(state, from);
     },
     [state],
   );

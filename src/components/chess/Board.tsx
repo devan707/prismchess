@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import type { GameState, PieceId, Square } from "@/game/types";
+import type { GameState, MoveTarget, PieceId, Square } from "@/game/types";
 import { PieceGlyph } from "./PieceGlyph";
 import { JuggernautGlyph } from "./JuggernautGlyph";
 import { findRoyals } from "@/game/board";
-import { inCheck, pseudoMovesFrom, legalMovesFrom, attackSquaresFrom } from "@/game/moves";
+import { inCheck, legalMovesFrom, moveTargetsFrom } from "@/game/moves";
 
 interface BoardProps {
   state: GameState;
   humanColor: "w" | "b";
   flipped: boolean;
-  legalFor: (sq: Square | null) => Square[];
+  legalFor: (sq: Square | null) => MoveTarget[];
   onMove: (from: Square, to: Square) => boolean;
   /** Currently-selected drop piece (renders legal-drop indicators). */
   dropPiece?: PieceId | null;
@@ -41,46 +41,12 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
 
   const rows = state.board.length;
   const cols = state.board[0]?.length ?? 0;
-  const legalTargets = legalFor(selected ?? dragFrom);
   const selectedPieceForInspect = selected ? state.board[selected.r][selected.c] : null;
   const isEnemyInspect = !!selectedPieceForInspect && selectedPieceForInspect.color !== humanColor;
-
-  // Attack pattern of the selected piece (any owner) — squares the piece
-  // threatens, i.e. could capture if an enemy stood there. Used to paint
-  // orange "attack-only" indicators (e.g. dragon strike on empty squares,
-  // pawn diagonals without a target).
-  const attackSquares: Square[] = (() => {
-    if (!selected || !selectedPieceForInspect) return [];
-    return attackSquaresFrom(state, selected);
-  })();
-  const attackSet = new Set(attackSquares.map((s) => `${s.r},${s.c}`));
-
-  // Ranged attacks (archer shoot, dragon strike) get crosshair markers;
-  // melee threats stay as orange dots.
-  const rangedAttackSet: Set<string> = (() => {
-    const out = new Set<string>();
-    if (!selected || !selectedPieceForInspect) return out;
-    for (const m of pseudoMovesFrom(state, selected)) {
-      if (m.kind === "archerShoot" || m.kind === "dragonAttack") {
-        out.add(`${m.to.r},${m.to.c}`);
-      }
-    }
-    return out;
-  })();
-
-  // For enemy inspection we don't have legalFor — derive pseudo non-capture
-  // move squares directly so we can still paint green move-only dots.
-  const enemyMoveOnlyTargets: Square[] = (() => {
-    if (!isEnemyInspect || !selected) return [];
-    const out: Square[] = [];
-    for (const m of pseudoMovesFrom(state, selected)) {
-      if (m.captured) continue;
-      if (m.kind === "portalSwap" || m.kind === "resurrect" || m.kind === "necroRaise") continue;
-      if (m.kind === "juggExit") continue;
-      out.push(m.to);
-    }
-    return out;
-  })();
+  const selectedTargets = isEnemyInspect && selected
+    ? moveTargetsFrom(state, selected, false)
+    : legalFor(selected ?? dragFrom);
+  const targetKindBySquare = new Map(selectedTargets.map((t) => [`${t.square.r},${t.square.c}`, t.kind]));
   const last = state.history[state.history.length - 1];
   const moveCount = state.history.length;
 
@@ -312,35 +278,22 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           const juggFoot = juggInfo?.footprint.has(`${r},${c}`) ?? false;
           const juggPath = juggInfo?.tramplePath.has(`${r},${c}`) ?? false;
           const juggTrample = juggInfo?.trampleEnemies.has(`${r},${c}`) ?? false;
-          const isLegalRaw = legalTargets.some((t) => t.r === r && t.c === c);
-          void isLegalRaw;
-          const isLegalForJugg = isLegalRaw || juggFoot;
-          void isLegalForJugg;
           const isDropTarget = !!dropPiece && (dropTargets?.some((t) => t.r === r && t.c === c) ?? false);
-          const isAttackPattern = attackSet.has(`${r},${c}`);
-          const isEnemyMoveOnly = isEnemyInspect && enemyMoveOnlyTargets.some((t) => t.r === r && t.c === c);
 
           // Three-color move indicator:
           //   RED  = piece can capture an enemy here (or juggernaut trample target).
           //   GREEN= legal/pseudo move to an empty square (no attack threatened).
           //   ORANGE= square is threatened (could capture if enemy were here),
           //           but no enemy currently stands there.
-          let markerKind: "capture" | "move" | "attack" | "ranged" | null = null;
-          const isRanged = rangedAttackSet.has(`${r},${c}`);
+          let markerKind: MoveTarget["kind"] | null = null;
           if (juggTrample) {
             markerKind = "capture";
           } else if (juggFoot) {
             markerKind = null; // juggernaut footprint paints its own overlay
-          } else if (isEnemyInspect) {
-            if (isAttackPattern && piece && piece.color === humanColor) markerKind = isRanged ? "ranged" : "capture";
-            else if (isAttackPattern && !piece) markerKind = isRanged ? "ranged" : "attack";
-            else if (isEnemyMoveOnly && !piece) markerKind = "move";
           } else if (selectedPieceForInspect && selectedPieceForInspect.color === humanColor) {
-            if (showHints) {
-              if (isLegalRaw && piece && piece.color !== humanColor) markerKind = isRanged ? "ranged" : "capture";
-              else if (isAttackPattern && !piece) markerKind = isRanged ? "ranged" : "attack";
-              else if (isLegalRaw && !piece) markerKind = "move";
-            }
+            if (showHints) markerKind = targetKindBySquare.get(`${r},${c}`) ?? null;
+          } else if (isEnemyInspect) {
+            markerKind = targetKindBySquare.get(`${r},${c}`) ?? null;
           }
 
           const isLast = last && (last.from && last.from.r === r && last.from.c === c) || (last && last.to.r === r && last.to.c === c);
@@ -417,19 +370,27 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                 <div className="absolute rounded-full pointer-events-none"
                   style={{ width: "30%", height: "30%", background: "var(--color-board-attack)" }} />
               )}
-              {markerKind === "ranged" && (
+              {(markerKind === "ranged" || markerKind === "rangedCapture") && (
                 <div
                   className="absolute rounded-full pointer-events-none flex items-center justify-center"
                   style={{
                     width: "42%",
                     height: "42%",
-                    border: "3px solid var(--color-board-attack)",
+                    border: `3px solid var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})`,
                     background: "transparent",
                   }}
                 >
                   <div
+                    className="absolute"
+                    style={{ width: "78%", height: "3px", background: `var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})` }}
+                  />
+                  <div
+                    className="absolute"
+                    style={{ width: "3px", height: "78%", background: `var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})` }}
+                  />
+                  <div
                     className="rounded-full"
-                    style={{ width: "28%", height: "28%", background: "var(--color-board-attack)" }}
+                    style={{ width: "20%", height: "20%", background: `var(${markerKind === "rangedCapture" ? "--color-board-capture" : "--color-board-attack"})` }}
                   />
                 </div>
               )}
