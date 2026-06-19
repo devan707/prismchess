@@ -41,6 +41,8 @@ function SharedGamePage() {
   const fetchLike = useServerFn(getMyLikeState);
   const { isModOrAdmin } = useIsAdmin();
   const adminDelCmt = useServerFn(adminDeleteGameComment);
+  const adminFlags = useServerFn(adminSetPublishedGameFlags);
+  const adminDelGame = useServerFn(adminDeletePublishedGame);
 
   type GameRes = Awaited<ReturnType<typeof getPublishedGame>>;
   type Comment = Awaited<ReturnType<typeof listComments>>[number];
