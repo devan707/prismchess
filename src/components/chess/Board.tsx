@@ -236,6 +236,9 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
     }
   }
 
+  const pendingHand = state.pendingHand ?? null;
+  const isPendingHandTurn = !!pendingHand;
+
   const handleSquareClick = (sq: Square) => {
     if (disabled) return;
     if (dropPiece && dropTargets?.some((t) => t.r === sq.r && t.c === sq.c)) {
@@ -253,7 +256,16 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
           if (ok) { setSelected(null); return; }
         }
       }
-      if (selected.r === sq.r && selected.c === sq.c) { setSelected(null); return; }
+      if (selected.r === sq.r && selected.c === sq.c) {
+        // King's Hand 2nd step is optional: clicking the pending piece's
+        // own square commits a handPass (stay put, end the turn).
+        if (isPendingHandTurn && pendingHand && pendingHand.r === sq.r && pendingHand.c === sq.c) {
+          const ok = onMove(selected, sq);
+          if (ok) { setSelected(null); return; }
+        }
+        setSelected(null);
+        return;
+      }
       // Clicking the partner half of the selected juggernaut keeps it selected.
       if (selectedPartner && selectedPartner.r === sq.r && selectedPartner.c === sq.c) {
         setSelected(sq); return;
