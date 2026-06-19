@@ -345,6 +345,27 @@ export function runSearch(state: GameState, opts: SearchOptions): SearchResult {
     const all = allLegalMoves(state);
     if (all.length > 1) chosen = pickRandom(all);
   }
+  // Blunder guard: if the chosen move immediately hangs significant material
+  // (negative SEE on the move itself, not counted in deep search because
+  // hangingTerm can be smoothed away by other positional terms), look for an
+  // alternative whose search score is within ~150 cp and whose SEE is safe.
+  if (chosen && opts.difficulty !== "easy" && searcher.rootScores.length > 1) {
+    const chosenSee = seeMove(state, chosen);
+    if (chosenSee <= -150) {
+      const tolerance = Math.min(220, -chosenSee + 60);
+      let safest: { move: Move; score: number; see: number } | null = null;
+      for (const r of searcher.rootScores) {
+        if (sameMove(r.move, chosen)) continue;
+        if (r.score < searcher.bestScoreAtRoot - tolerance) continue;
+        const see = seeMove(state, r.move);
+        if (see < -25) continue; // still a sac, keep looking
+        if (!safest || see > safest.see || (see === safest.see && r.score > safest.score)) {
+          safest = { move: r.move, score: r.score, see };
+        }
+      }
+      if (safest) chosen = safest.move;
+    }
+  }
   return {
     move: chosen,
     depthReached,
