@@ -536,22 +536,8 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
               {piece && (() => {
                 const isJugg = state.registry[piece.id]?.special === "juggernaut";
                 if (isJugg) {
-                  // Find partner (perpendicular to facing). Wide boards face along
-                  // columns → partners differ by row; otherwise partners differ by column.
                   const wide = cols > rows;
-                  const perpOffsets = wide
-                    ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }]
-                    : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
-                  let partner: Square | null = null;
-                  for (const o of perpOffsets) {
-                    const nr = r + o.dr, nc = c + o.dc;
-                    if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
-                    const t = state.board[nr][nc];
-                    if (t && t.color === piece.color && state.registry[t.id]?.special === "juggernaut") {
-                      partner = { r: nr, c: nc };
-                      break;
-                    }
-                  }
+                  const partner = juggPartnerMap.get(`${r},${c}`) ?? null;
                   // Render the unified 2-cell glyph only on the "lead" half (lower index
                   // on the perpendicular axis); the trailing half stays visually empty
                   // but still clickable/highlightable as its own square.
@@ -582,6 +568,7 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
                   }
                   // Orphan juggernaut (no partner) — fall through to normal glyph.
                 }
+
                 const animate = slideAnim && slideAnim.to.r === r && slideAnim.to.c === c;
                 return (
                   <div
