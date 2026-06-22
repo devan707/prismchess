@@ -98,21 +98,62 @@ export function Board({ state, humanColor, flipped, legalFor, onMove, dropPiece,
   })();
 
 
+  // ── Juggernaut partner map (deterministic) ─────────────────────────────
+  // A juggernaut is a 2-cell piece. When multiple same-color juggernauts sit
+  // adjacent along the pairing axis (e.g. four in a row), we must pair them
+  // sequentially from the start of each run — pairs (0,1), (2,3), … — instead
+  // of letting each cell pick its first neighbor independently. Otherwise the
+  // overlapping partner picks render the titan as three (or more) overlapping
+  // halves and capturing one cell appears to "split" them further.
+  const juggPartnerMap: Map<string, Square> = (() => {
+    const map = new Map<string, Square>();
+    const wide = cols > rows;
+    const isJugg = (r: number, c: number) =>
+      !!state.board[r]?.[c] && state.registry[state.board[r][c]!.id]?.special === "juggernaut";
+    if (wide) {
+      // Pair vertically within each column.
+      for (let c = 0; c < cols; c++) {
+        let r = 0;
+        while (r < rows) {
+          if (!isJugg(r, c)) { r++; continue; }
+          const color = state.board[r][c]!.color;
+          let end = r;
+          while (end + 1 < rows && isJugg(end + 1, c) && state.board[end + 1][c]!.color === color) end++;
+          for (let i = r; i + 1 <= end; i += 2) {
+            map.set(`${i},${c}`, { r: i + 1, c });
+            map.set(`${i + 1},${c}`, { r: i, c });
+          }
+          r = end + 1;
+        }
+      }
+    } else {
+      // Pair horizontally within each row.
+      for (let r = 0; r < rows; r++) {
+        let c = 0;
+        while (c < cols) {
+          if (!isJugg(r, c)) { c++; continue; }
+          const color = state.board[r][c]!.color;
+          let end = c;
+          while (end + 1 < cols && isJugg(r, end + 1) && state.board[r][end + 1]!.color === color) end++;
+          for (let i = c; i + 1 <= end; i += 2) {
+            map.set(`${r},${i}`, { r, c: i + 1 });
+            map.set(`${r},${i + 1}`, { r, c: i });
+          }
+          c = end + 1;
+        }
+      }
+    }
+    return map;
+  })();
+
   // If a juggernaut is selected, also highlight its partner square as "selected".
   const selectedPartner: Square | null = (() => {
     if (!selected) return null;
     const p = state.board[selected.r][selected.c];
     if (!p || state.registry[p.id]?.special !== "juggernaut") return null;
-    const wide = cols > rows;
-    const perp = wide ? [{ dr: 1, dc: 0 }, { dr: -1, dc: 0 }] : [{ dr: 0, dc: 1 }, { dr: 0, dc: -1 }];
-    for (const o of perp) {
-      const nr = selected.r + o.dr, nc = selected.c + o.dc;
-      if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
-      const t = state.board[nr][nc];
-      if (t && t.color === p.color && state.registry[t.id]?.special === "juggernaut") return { r: nr, c: nc };
-    }
-    return null;
+    return juggPartnerMap.get(`${selected.r},${selected.c}`) ?? null;
   })();
+
 
   // ── Juggernaut multi-cell move preview ─────────────────────────────────
   // When a juggernaut is selected we need to highlight the FULL 2-square
