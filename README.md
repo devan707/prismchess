@@ -82,7 +82,12 @@ See `PROJECT_ARCHITECTURE.md` for deeper context.
 
 ---
 
+## Contributing
+
+Ideas, bug reports and pull requests are welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+---
+
 ## License
 
-All rights reserved (pending choice of OSS license). Do not redistribute
-without permission.
+MIT. See [`LICENSE`](./LICENSE).
