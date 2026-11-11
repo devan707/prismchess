@@ -26,12 +26,13 @@ export function AdminBadge() {
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          aria-label={isAdmin ? "Admin tools" : "Moderator tools"}
           variant="outline"
           size="sm"
-          className="h-7 gap-1 border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400"
+          className="h-9 w-9 shrink-0 gap-1 border-red-500/40 bg-red-500/10 px-0 text-red-600 hover:bg-red-500/20 dark:text-red-400 sm:h-7 sm:w-auto sm:px-3"
         >
-          <Shield className="h-3 w-3" />
-          <span className="text-xs font-semibold tracking-wide">{isAdmin ? "ADMIN" : "MOD"}</span>
+          <Shield className="h-4 w-4 sm:h-3 sm:w-3" />
+          <span className="hidden text-xs font-semibold tracking-wide sm:inline">{isAdmin ? "ADMIN" : "MOD"}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-1">
