@@ -35,19 +35,19 @@ export function AppShell({ children, showPlayCta = false, showTopBar = true }: A
       <div className="prism-aura-bg" aria-hidden />
       {showTopBar && (
         <header className="sticky top-0 z-30 border-b border-foreground/10 bg-background/60 backdrop-blur-xl">
-          <div className="max-w-3xl mx-auto px-3 h-16 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-3 group">
-              <img src={logoUrl} alt="Prism Chess" width={44} height={44} className="h-11 w-11" />
-              <span className="flex flex-col leading-tight">
-                <span className="font-display font-bold text-lg tracking-[0.22em] uppercase text-foreground">
+          <div className="max-w-3xl mx-auto px-3 h-16 flex items-center justify-between gap-2">
+            <Link to="/" className="group flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+              <img src={logoUrl} alt="Prism Chess" width={44} height={44} className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="font-display whitespace-nowrap text-[13px] font-bold tracking-[0.08em] uppercase text-foreground sm:text-lg sm:tracking-[0.22em]">
                   Prism Chess
                 </span>
-                <span className="font-display text-[10px] tracking-[0.28em] uppercase text-foreground/55">
+                <span className="hidden font-display text-[10px] tracking-[0.28em] uppercase text-foreground/55 sm:block">
                   Design your own chess
                 </span>
               </span>
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
               <NotificationsBell />
               <AdminBadge />
               <UserMenu />
